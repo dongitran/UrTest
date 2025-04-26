@@ -13,19 +13,17 @@ export default function NewTestCasePage() {
   const router = useRouter();
   const [testName, setTestName] = useState("");
   const [tags, setTags] = useState([]);
-  const [scriptContent, setScriptContent] = useState('');
+  const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
 
   useEffect(() => {
     const updateEditorHeight = () => {
-      setEditorHeight(`calc(100vh - 320px)`);
+      setEditorHeight("calc(100vh - 260px)");
     };
-
     updateEditorHeight();
-
-    window.addEventListener('resize', updateEditorHeight);
-    return () => window.removeEventListener('resize', updateEditorHeight);
+    window.addEventListener("resize", updateEditorHeight);
+    return () => window.removeEventListener("resize", updateEditorHeight);
   }, []);
 
   const handleSave = async () => {
@@ -33,11 +31,9 @@ export default function NewTestCasePage() {
       toast.error("Test name is required");
       return;
     }
-
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      await new Promise((r) => setTimeout(r, 500));
       toast.success("Test case saved successfully");
       router.push("/test-management");
     } catch (error) {
@@ -58,10 +54,13 @@ export default function NewTestCasePage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
-        <div className="grid gap-4 p-6 border rounded-lg bg-white dark:bg-zinc-800">
+        <div className="grid gap-4 p-6 border rounded-lg bg-card">
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2 flex-1">
-              <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
+              <label
+                htmlFor="test-name"
+                className="text-sm font-medium whitespace-nowrap"
+              >
                 Test Name
               </label>
               <Input
@@ -74,7 +73,10 @@ export default function NewTestCasePage() {
             </div>
 
             <div className="flex items-center gap-2 w-1/3">
-              <label htmlFor="tags" className="text-sm font-medium whitespace-nowrap">
+              <label
+                htmlFor="tags"
+                className="text-sm font-medium whitespace-nowrap"
+              >
                 Tags
               </label>
               <TagInput
@@ -86,9 +88,8 @@ export default function NewTestCasePage() {
           </div>
 
           <div className="grid gap-2">
-            <label className="text-sm font-medium">Test Script</label>
             <div
-              className="border rounded-sm bg-white dark:bg-zinc-800"
+              className="border rounded-sm bg-card overflow-hidden"
               style={{ height: editorHeight }}
             >
               <MonacoEditor

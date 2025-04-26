@@ -27,11 +27,12 @@ export function NavMain({ items }) {
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
-          {compact(castArray(items)).map((item) => {
-            return <MySidebarMenuItem item={item} key={item.id} />;
-          })}
+          {compact(castArray(items)).map((item) => (
+            <MySidebarMenuItem key={item.id} item={item} />
+          ))}
         </SidebarMenu>
       </SidebarGroupContent>
+
       <WorkspaceModal
         openWorkspaceModal={openWorkspaceModal}
         setOpenWorkspaceModal={setOpenWorkspaceModal}
@@ -40,29 +41,33 @@ export function NavMain({ items }) {
   );
 }
 
+const stripTrailingSlash = (p) => (p.length > 1 ? p.replace(/\/+$/, "") : p);
+
 const MySidebarMenuItem = ({ item = {} }) => {
   const { isMobile } = useSidebar();
   const router = useRouter();
   const pathname = usePathname();
 
-  const isActive = pathname === item.url;
+  const current = stripTrailingSlash(pathname);
+  const target = stripTrailingSlash(item.url);
+  const isActive = current === target || current.startsWith(`${target}/`);
 
   const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
+
   return (
     <Fragment>
-      <SidebarMenuItem
-        key={item.id}
-        onClick={() => {
-          router.push(item.url || "/");
-        }}
-      >
-        <SidebarMenuButton 
-          tooltip={item.description} 
+      <SidebarMenuItem onClick={() => router.push(item.url || "/")}>
+        <SidebarMenuButton
+          tooltip={item.description}
           isActive={isActive}
           className="flex items-center gap-3"
         >
           {item.icon && (
-            <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`} />
+            <item.icon
+              className={`h-4 w-4 shrink-0 ${
+                isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70"
+              }`}
+            />
           )}
           <span>{item.name}</span>
         </SidebarMenuButton>

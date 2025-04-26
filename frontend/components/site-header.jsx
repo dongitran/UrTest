@@ -15,7 +15,7 @@ export function SiteHeader() {
 
   const pageInfo = useMemo(() => {
     if (pathname.startsWith("/test-management/new-test-case")) {
-      const projectName = searchParams.get("project") || "E-Commerce Platform";
+      const projectName = searchParams.get("project");
       return {
         title: "Test Management",
         isBreadcrumb: true,

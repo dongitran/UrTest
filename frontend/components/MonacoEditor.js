@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "next-themes";
 
-import dynamic from 'next/dynamic';
-const MonacoEditorLib = dynamic(() => import('@monaco-editor/react'), {
+import dynamic from "next/dynamic";
+const MonacoEditorLib = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => <Skeleton className="w-full h-full" />,
 });
@@ -14,7 +14,7 @@ export default function MonacoEditor({
   language = "javascript",
   value = "",
   onChange,
-  readOnly = false
+  readOnly = false,
 }) {
   const editorRef = useRef(null);
   const { theme } = useTheme();
@@ -44,6 +44,7 @@ export default function MonacoEditor({
     wordWrap: "on",
     fontFamily: "Menlo, Monaco, 'Courier New', monospace",
     fontSize: 14,
+    padding: { top: 8, bottom: 8 },
   };
 
   return (

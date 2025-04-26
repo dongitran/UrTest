@@ -3,25 +3,29 @@
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
 
-export default function TagInput({ value = [], onChange, placeholder = "Add tags..." }) {
+export default function TagInput({
+  value = [],
+  onChange,
+  placeholder = "Add tags...",
+}) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef(null);
   const containerRef = useRef(null);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
+    if (e.key === "Enter" && inputValue.trim()) {
       e.preventDefault();
       if (!value.includes(inputValue.trim())) {
         onChange([...value, inputValue.trim()]);
       }
       setInputValue("");
-    } else if (e.key === 'Backspace' && !inputValue && value.length > 0) {
+    } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
       onChange(value.slice(0, -1));
     }
   };
 
   const removeTag = (tagToRemove) => {
-    onChange(value.filter(tag => tag !== tagToRemove));
+    onChange(value.filter((tag) => tag !== tagToRemove));
   };
 
   const focusInput = () => {
@@ -39,7 +43,7 @@ export default function TagInput({ value = [], onChange, placeholder = "Add tags
       {value.map((tag, index) => (
         <div
           key={index}
-          className="flex items-center gap-1 rounded-md bg-blue-100 dark:bg-blue-900 px-2 py-0.5 text-xs my-1 h-6"
+          className="flex items-center gap-1 rounded-md bg-blue-100 text-blue-900 dark:bg-blue-700/40 dark:text-blue-50 px-2 py-0.5 text-xs my-1 h-6"
         >
           <span>{tag}</span>
           <X
@@ -55,11 +59,7 @@ export default function TagInput({ value = [], onChange, placeholder = "Add tags
         ref={inputRef}
         type="text"
         className="flex-1 min-w-[120px] bg-transparent h-full py-0 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        style={{
-          border: 'none',
-          outline: 'none',
-          boxShadow: 'none'
-        }}
+        style={{ border: "none", outline: "none", boxShadow: "none" }}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
