@@ -9,7 +9,7 @@ import VerifyToken from "@middlewars/VerifyToken";
 
 const app = new Hono();
 
-MongoConfig.connectToMongoDB();
+// MongoConfig.connectToMongoDB();
 
 app.use(cors());
 app.use(logger(customLogger));

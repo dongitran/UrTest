@@ -28,7 +28,7 @@ ProjectRoute.post(
       description: body.description,
       id: ulid(),
       title: body.title,
-      createdBy: user.id,
+      createdBy: user.email,
     });
     return ctx.json({ message: "ok" });
   }
