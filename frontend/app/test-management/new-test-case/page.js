@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Play } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
+import TagInput from "@/components/TagInput";
 
 export default function NewTestCasePage() {
   const router = useRouter();
   const [testName, setTestName] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState([]);
   const [scriptContent, setScriptContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
@@ -57,7 +58,7 @@ export default function NewTestCasePage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
-        <div className="grid gap-4 p-6 border rounded-lg">
+        <div className="grid gap-4 p-6 border rounded-lg bg-white dark:bg-zinc-800">
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2 flex-1">
               <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
@@ -76,12 +77,10 @@ export default function NewTestCasePage() {
               <label htmlFor="tags" className="text-sm font-medium whitespace-nowrap">
                 Tags
               </label>
-              <Input
-                id="tags"
+              <TagInput
                 value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="login, robot, api, etc."
-                className="w-full"
+                onChange={setTags}
+                placeholder="Press Enter to add tags"
               />
             </div>
           </div>
@@ -89,7 +88,7 @@ export default function NewTestCasePage() {
           <div className="grid gap-2">
             <label className="text-sm font-medium">Test Script</label>
             <div
-              className="border rounded-sm"
+              className="border rounded-sm bg-white dark:bg-zinc-800"
               style={{ height: editorHeight }}
             >
               <MonacoEditor
