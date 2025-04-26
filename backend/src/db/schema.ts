@@ -1,4 +1,4 @@
-import { jsonb, pgEnum, timestamp, varchar } from "drizzle-orm/pg-core";
+import { jsonb, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const enumCollectionSharesPermission = pgEnum("enum_collection_shares_permission", ["view", "edit"]);
 export const enumCollectionSharesStatus = pgEnum("enum_collection_shares_status", ["pending", "accepted"]);
@@ -12,3 +12,8 @@ const commonTable = {
   deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
   deletedBy: varchar("deleted_by", { length: 255 }),
 };
+export const ProjectTable = pgTable("tbl_projects", {
+  title: varchar({ length: 255 }).notNull(),
+  description: text().notNull(),
+  ...commonTable,
+});
