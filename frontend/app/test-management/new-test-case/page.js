@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
 import { toast } from "sonner";
-import { ChevronRight, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 
 export default function NewTestCasePage() {
@@ -41,24 +40,10 @@ export default function NewTestCasePage() {
       toast.error("Test name is required");
       return;
     }
-
   };
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center text-sm">
-          <Link href="/test-management" className="text-blue-500 hover:underline">
-            Projects
-          </Link>
-          <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />
-          <Link href="/test-management" className="text-blue-500 hover:underline">
-            E-Commerce Platform
-          </Link>
-          <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />
-          <span>New Test Case</span>
-        </div>
-      </div>
 
       <div className="grid gap-6">
         <div className="grid gap-2">

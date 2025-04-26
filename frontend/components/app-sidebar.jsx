@@ -80,7 +80,7 @@ export function AppSidebar({ ...props }) {
             >
               <a href="#">
                 <Lightbulb className="h-5 w-5" />
-                <span className="text-base font-semibold">Ur Draw</span>
+                <span className="text-base font-semibold">UrTest</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

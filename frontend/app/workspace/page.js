@@ -89,13 +89,6 @@ export default function WorkspacePageV2() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="text-sm text-muted-foreground">
-          Today: {dayjs().format("DD/MM/YYYY")} | Last updated: {dayjs().format("HH:mm A")}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="flex items-center p-6">

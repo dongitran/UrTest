@@ -85,7 +85,6 @@ export default function TestManagement() {
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalTests / itemsPerPage);
 
-
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -117,18 +116,11 @@ export default function TestManagement() {
   };
 
   const navigateToNewTestCase = () => {
-    router.push("/test-management/new-test-case");
+    router.push("/test-management/new-test-case?project=E-Commerce%20Platform");
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Test Management</h1>
-        <div className="text-sm text-muted-foreground">
-          Today: {dayjs().format("DD/MM/YYYY")} | Last updated: {dayjs().format("HH:mm A")}
-        </div>
-      </div>
-
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
