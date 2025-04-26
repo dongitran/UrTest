@@ -17,15 +17,8 @@ import {
 } from "@/components/ui/sidebar";
 import WorkspaceModal from "@/components/v2/Workspace/Modal";
 import { castArray, compact } from "lodash";
-import {
-  FolderIcon,
-  MoreHorizontalIcon,
-  Pen,
-  PlusCircleIcon,
-  ShareIcon,
-  Trash2,
-} from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { MoreHorizontalIcon, Pen, Trash2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 export function NavMain({ items }) {
@@ -33,20 +26,6 @@ export function NavMain({ items }) {
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarMenuButton
-              tooltip="Create workspace"
-              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-              onClick={() => {
-                setOpenWorkspaceModal("create");
-              }}
-            >
-              <PlusCircleIcon />
-              <span>Create workspace</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <SidebarMenu>
           {compact(castArray(items)).map((item) => {
             return <MySidebarMenuItem item={item} key={item.id} />;
@@ -60,10 +39,13 @@ export function NavMain({ items }) {
     </SidebarGroup>
   );
 }
+
 const MySidebarMenuItem = ({ item = {} }) => {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const { id } = useParams();
+  const pathname = usePathname();
+
+  const isActive = pathname === item.url;
 
   const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
   return (
@@ -71,10 +53,10 @@ const MySidebarMenuItem = ({ item = {} }) => {
       <SidebarMenuItem
         key={item.id}
         onClick={() => {
-          router.push(`/workspace/${item.id}`);
+          router.push(item.url || "/");
         }}
       >
-        <SidebarMenuButton tooltip={item.description} isActive={id === item.id}>
+        <SidebarMenuButton tooltip={item.description} isActive={isActive}>
           <span>{item.name}</span>
         </SidebarMenuButton>
         <DropdownMenu>
@@ -100,7 +82,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
               }}
             >
               <Pen />
-              <span>{"Chỉnh sửa"}</span>
+              <span>Edit</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
@@ -110,7 +92,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
               }}
             >
               <Trash2 />
-              <span>{"Xóa"}</span>
+              <span>Delete</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

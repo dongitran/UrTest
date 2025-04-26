@@ -2,12 +2,6 @@
 
 import {
   BarChartIcon,
-  CameraIcon,
-  ClipboardListIcon,
-  DatabaseIcon,
-  FileCodeIcon,
-  FileIcon,
-  FileTextIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
   Lightbulb,
@@ -16,7 +10,6 @@ import {
   SettingsIcon,
 } from "lucide-react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -30,121 +23,52 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { WorkspaceApi } from "@/lib/api";
-import { get } from "lodash";
 
-const initData = {
-  navMain: [
-    {
-      title: "My Workspace",
-      url: "/workspace/1",
-      icon: LayoutDashboardIcon,
-    },
-    {
-      title: "My Workspace 2",
-      url: "/workspace/2",
-      icon: ListIcon,
-    },
-    {
-      title: "My UrBox Workspace",
-      url: "/workspace/3",
-      icon: BarChartIcon,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: CameraIcon,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: FileTextIcon,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: FileCodeIcon,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: SettingsIcon,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: HelpCircleIcon,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: SearchIcon,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: DatabaseIcon,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: ClipboardListIcon,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: FileIcon,
-    },
-  ],
-};
+const navMainItems = [
+  {
+    id: "1",
+    name: "Dashboard",
+    description: "View dashboard",
+    icon: LayoutDashboardIcon,
+    url: "/workspace",
+  },
+  {
+    id: "2",
+    name: "Test Management",
+    description: "Manage your tests",
+    icon: ListIcon,
+    url: "/test-management",
+  },
+  {
+    id: "3",
+    name: "Reports",
+    description: "View reports",
+    icon: BarChartIcon,
+    url: "/reports",
+  },
+];
+
+const navSecondaryItems = [
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: SettingsIcon,
+  },
+  {
+    title: "Help",
+    url: "/help",
+    icon: HelpCircleIcon,
+  },
+  {
+    title: "Search",
+    url: "/search",
+    icon: SearchIcon,
+  },
+];
 
 export function AppSidebar({ ...props }) {
   const { user } = useAuth();
-  const { data: workspaces } = useQuery({
-    queryKey: ["/workspaces"],
-    queryFn: () => {
-      return WorkspaceApi().get();
-    },
-    enabled: !!user,
-  });
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -163,10 +87,8 @@ export function AppSidebar({ ...props }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={workspaces} />
-
-        <NavDocuments items={initData.documents} />
-        <NavSecondary items={initData.navSecondary} className="mt-auto" />
+        <NavMain items={navMainItems} />
+        <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser

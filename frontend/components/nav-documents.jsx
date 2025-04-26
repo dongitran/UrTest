@@ -23,7 +23,7 @@ export function NavDocuments({ items }) {
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Share with my</SidebarGroupLabel>
+      <SidebarGroupLabel>Share with me</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -35,7 +35,10 @@ export function NavDocuments({ items }) {
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover className="rounded-sm data-[state=open]:bg-accent">
+                <SidebarMenuAction
+                  showOnHover
+                  className="rounded-sm data-[state=open]:bg-accent"
+                >
                   <MoreHorizontalIcon />
                   <span className="sr-only">More</span>
                 </SidebarMenuAction>
