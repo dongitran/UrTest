@@ -19,7 +19,7 @@ export default function WorkspaceLayout({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.push("/");
+      router.push("/login");
     }
   }, [isAuthenticated, loading, router]);
 

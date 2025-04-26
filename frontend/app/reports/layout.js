@@ -13,7 +13,7 @@ import { getCookie } from "@/helpers";
 
 const queryClient = new QueryClient();
 
-export default function WorkspaceLayout({ children }) {
+export default function ReportsLayout({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
@@ -26,7 +26,7 @@ export default function WorkspaceLayout({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" message="Loading workspace..." />
+        <LoadingSpinner size="large" message="Loading reports..." />
       </div>
     );
   } else if (!isAuthenticated()) {

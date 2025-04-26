@@ -13,30 +13,29 @@ import { getCookie } from "@/helpers";
 
 const queryClient = new QueryClient();
 
-export default function WorkspaceLayout({ children }) {
+export default function TestExecutionLayout({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push("/login");
-    }
+    if (!isAuthenticated()) router.push("/login");
   }, [isAuthenticated, loading, router]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="large" message="Loading workspace..." />
+        <LoadingSpinner size="large" message="Loading test execution..." />
       </div>
     );
-  } else if (!isAuthenticated()) {
-    return;
   }
+  if (!isAuthenticated()) return null;
 
   return (
     <Fragment>
       <QueryClientProvider client={queryClient}>
-        <SidebarProvider defaultOpen={getCookie("sidebar_state") === "true" ? true : false}>
+        <SidebarProvider
+          defaultOpen={getCookie("sidebar_state") === "true"}
+        >
           <AppSidebar variant="inset" />
           <SidebarInset>
             <SiteHeader />

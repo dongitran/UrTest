@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme-toggle"; // Import the ThemeToggle component
+import { ThemeToggle } from "@/components/theme-toggle";
 
 dayjs.extend(advancedFormat);
 
@@ -16,24 +16,22 @@ export function SiteHeader() {
   const pageInfo = useMemo(() => {
     if (pathname.startsWith("/test-management/new-test-case")) {
       const projectName = searchParams.get("project") || "E-Commerce Platform";
-
       return {
         title: "Test Management",
         isBreadcrumb: true,
         breadcrumbs: [
           { title: "Test Management", path: "/test-management" },
           { title: projectName, path: "/test-management" },
-          { title: "New Test Case", path: "/test-management/new-test-case" },
+          { title: "New Test Case", path: pathname },
         ],
       };
-    } else if (pathname.startsWith("/test-management")) {
-      return { title: "Test Management" };
-    } else if (pathname.startsWith("/workspace")) {
-      return { title: "Dashboard" };
-    } else if (pathname.startsWith("/reports")) {
-      return { title: "Reports" };
     }
-
+    if (pathname.startsWith("/test-management"))
+      return { title: "Test Management" };
+    if (pathname.startsWith("/test-execution"))
+      return { title: "Test Execution" };
+    if (pathname.startsWith("/reports")) return { title: "Reports" };
+    if (pathname.startsWith("/workspace")) return { title: "Dashboard" };
     return { title: "" };
   }, [pathname, searchParams]);
 
@@ -48,7 +46,7 @@ export function SiteHeader() {
 
         <div className="flex justify-between items-center w-full">
           {pageInfo.isBreadcrumb ? (
-            <div className="flex items-center gap-1 text-sm">
+            <nav className="flex items-center gap-1 text-sm">
               {pageInfo.breadcrumbs.map((crumb, idx) => (
                 <div key={idx} className="flex items-center">
                   {idx > 0 && (
@@ -64,7 +62,7 @@ export function SiteHeader() {
                       strokeLinejoin="round"
                       className="mx-1 text-muted-foreground"
                     >
-                      <polyline points="9 18 15 12 9 6"></polyline>
+                      <polyline points="9 18 15 12 9 6" />
                     </svg>
                   )}
                   {idx < pageInfo.breadcrumbs.length - 1 ? (
@@ -79,14 +77,14 @@ export function SiteHeader() {
                   )}
                 </div>
               ))}
-            </div>
+            </nav>
           ) : (
             <h1 className="text-xl font-bold">{pageInfo.title}</h1>
           )}
 
           <div className="flex items-center gap-4">
             {pageInfo.title && (
-              <div className="text-sm text-muted-foreground hidden md:block">
+              <div className="hidden md:block text-sm text-muted-foreground">
                 Today: {dayjs().format("DD/MM/YYYY")} | Last updated:{" "}
                 {dayjs().format("HH:mm A")}
               </div>
