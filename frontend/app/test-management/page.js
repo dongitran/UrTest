@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(advancedFormat);
 
@@ -78,12 +79,13 @@ const testCases = [
 ];
 
 export default function TestManagement() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const totalTests = 32;
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalTests / itemsPerPage);
 
-  // Status badge color helper
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -97,7 +99,6 @@ export default function TestManagement() {
     }
   };
 
-  // Type badge color helper
   const getTypeBadgeClass = (type) => {
     switch (type) {
       case "Authentication":
@@ -113,6 +114,10 @@ export default function TestManagement() {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const navigateToNewTestCase = () => {
+    router.push("/test-management/new-test-case");
   };
 
   return (
@@ -240,7 +245,7 @@ export default function TestManagement() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search test cases..." className="pl-8" />
               </div>
-              <Button className="gap-1 items-center">
+              <Button className="gap-1 items-center" onClick={navigateToNewTestCase}>
                 <Plus className="h-4 w-4" />
                 New Test Case
               </Button>
@@ -550,5 +555,5 @@ export default function TestManagement() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
