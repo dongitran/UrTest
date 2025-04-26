@@ -56,7 +56,14 @@ const MySidebarMenuItem = ({ item = {} }) => {
           router.push(item.url || "/");
         }}
       >
-        <SidebarMenuButton tooltip={item.description} isActive={isActive}>
+        <SidebarMenuButton 
+          tooltip={item.description} 
+          isActive={isActive}
+          className="flex items-center gap-3"
+        >
+          {item.icon && (
+            <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`} />
+          )}
           <span>{item.name}</span>
         </SidebarMenuButton>
         <DropdownMenu>
@@ -81,7 +88,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
                 setOpenWorkspaceModal("edit");
               }}
             >
-              <Pen />
+              <Pen className="mr-2 h-4 w-4" />
               <span>Edit</span>
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -91,7 +98,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
                 setOpenWorkspaceModal("delete");
               }}
             >
-              <Trash2 />
+              <Trash2 className="mr-2 h-4 w-4" />
               <span>Delete</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

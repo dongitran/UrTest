@@ -168,7 +168,6 @@ export default function TestManagement() {
         <CardContent>
           <div className="rounded-md border">
             <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
-              <div className="col-span-1"></div>
               <div className="col-span-4">TEST CASE</div>
               <div className="col-span-2">TYPE</div>
               <div className="col-span-1">STATUS</div>
@@ -179,9 +178,6 @@ export default function TestManagement() {
             <div className="divide-y">
               {testCases.map((test) => (
                 <div key={test.id} className="grid grid-cols-12 items-center p-3">
-                  <div className="col-span-1">
-                    <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
-                  </div>
                   <div className="col-span-4">
                     <div className="font-medium">{test.name}</div>
                     <div className="text-xs text-muted-foreground">{test.fileName}</div>

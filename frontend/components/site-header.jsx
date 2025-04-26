@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle"; // Import the ThemeToggle component
 
 dayjs.extend(advancedFormat);
 
@@ -83,12 +84,15 @@ export function SiteHeader() {
             <h1 className="text-xl font-bold">{pageInfo.title}</h1>
           )}
 
-          {pageInfo.title && (
-            <div className="text-sm text-muted-foreground hidden md:block">
-              Today: {dayjs().format("DD/MM/YYYY")} | Last updated:{" "}
-              {dayjs().format("HH:mm A")}
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {pageInfo.title && (
+              <div className="text-sm text-muted-foreground hidden md:block">
+                Today: {dayjs().format("DD/MM/YYYY")} | Last updated:{" "}
+                {dayjs().format("HH:mm A")}
+              </div>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </header>

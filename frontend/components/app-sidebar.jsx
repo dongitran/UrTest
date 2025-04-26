@@ -1,13 +1,17 @@
 "use client";
 
 import {
-  BarChartIcon,
+  BarChart3Icon,
+  BookOpenIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
   Lightbulb,
-  ListIcon,
   SearchIcon,
   SettingsIcon,
+  ClipboardListIcon,
+  BugIcon,
+  ZapIcon,
+  CodeIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -28,27 +32,39 @@ const navMainItems = [
   {
     id: "1",
     name: "Dashboard",
-    description: "View dashboard",
+    description: "View dashboard and analytics",
     icon: LayoutDashboardIcon,
     url: "/workspace",
   },
   {
     id: "2",
     name: "Test Management",
-    description: "Manage your tests",
-    icon: ListIcon,
+    description: "Manage your test cases",
+    icon: ClipboardListIcon,
     url: "/test-management",
   },
   {
     id: "3",
     name: "Reports",
-    description: "View reports",
-    icon: BarChartIcon,
+    description: "View test reports and metrics",
+    icon: BarChart3Icon,
     url: "/reports",
+  },
+  {
+    id: "4",
+    name: "Test Execution",
+    description: "Execute test cases",
+    icon: ZapIcon,
+    url: "/test-execution",
   },
 ];
 
 const navSecondaryItems = [
+  {
+    title: "Documentation",
+    url: "/documentation",
+    icon: BookOpenIcon,
+  },
   {
     title: "Settings",
     url: "/settings",
@@ -78,8 +94,8 @@ export function AppSidebar({ ...props }) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <Lightbulb className="h-5 w-5" />
+              <a href="#" className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-yellow-500" />
                 <span className="text-base font-semibold">UrTest</span>
               </a>
             </SidebarMenuButton>
