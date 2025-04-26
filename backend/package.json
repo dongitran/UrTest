@@ -1,7 +1,7 @@
 {
   "name": "urdraw-workspace-be",
   "version": "1.0.0",
-  "description": "Backend for managing UrDraw drawings",
+  "description": "Backend for managing UrTest",
   "main": "server.js",
   "scripts": {
     "dev": "bun --watch server.ts",

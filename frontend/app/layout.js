@@ -6,8 +6,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "UrDraw Workspace",
-  description: "Unleash your creativity with UrDraw",
+  title: "UrTest",
+  description: "",
 };
 
 export default function RootLayout({ children }) {
