@@ -129,111 +129,36 @@ export default function TestManagement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="mr-4 bg-blue-100 rounded-full p-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-blue-500"
-              >
-                <path d="M8 3H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1"></path>
-                <path d="M12 2v4h4M12 2H8"></path>
-                <path d="M9 12h6"></path>
-                <path d="M9 16h6"></path>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Total Tests</p>
-              <h2 className="text-3xl font-bold">{totalTests}</h2>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="mr-4 bg-green-100 rounded-full p-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-green-500"
-              >
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Passed</p>
-              <h2 className="text-3xl font-bold">24</h2>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="mr-4 bg-red-100 rounded-full p-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-red-500"
-              >
-                <path d="M12 2a10 10 0 1 0 10 10H12V2Z"></path>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Failed</p>
-              <h2 className="text-3xl font-bold">5</h2>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center p-6">
-            <div className="mr-4 bg-gray-100 rounded-full p-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-gray-500"
-              >
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M12 6v6l4 2"></path>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Not Run</p>
-              <h2 className="text-3xl font-bold">3</h2>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">Project:</span>
+            <Select defaultValue="e-commerce">
+              <SelectTrigger className="w-[400px]">
+                <SelectValue placeholder="E-Commerce Platform" />
+              </SelectTrigger>
+              <SelectContent className="min-w-[200px] w-auto">
+                <SelectItem value="e-commerce">E-Commerce Platform</SelectItem>
+                <SelectItem value="mobile-app">Mobile App</SelectItem>
+                <SelectItem value="payment">Payment Gateway</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">Test cases:</span>
+            <span>{totalTests}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button className="gap-1 items-center bg-blue-600 hover:bg-blue-700">
+            <Play className="h-4 w-4" />
+            Run All Tests
+          </Button>
+          <Button className="gap-1 items-center" onClick={navigateToNewTestCase}>
+            <Plus className="h-4 w-4" />
+            New Test Case
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -245,10 +170,6 @@ export default function TestManagement() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search test cases..." className="pl-8" />
               </div>
-              <Button className="gap-1 items-center" onClick={navigateToNewTestCase}>
-                <Plus className="h-4 w-4" />
-                New Test Case
-              </Button>
             </div>
           </div>
         </CardHeader>
