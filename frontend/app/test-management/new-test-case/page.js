@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,18 @@ export default function NewTestCasePage() {
   const [tags, setTags] = useState("");
   const [scriptContent, setScriptContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
+
+  useEffect(() => {
+    const updateEditorHeight = () => {
+      setEditorHeight(`calc(100vh - 320px)`);
+    };
+
+    updateEditorHeight();
+
+    window.addEventListener('resize', updateEditorHeight);
+    return () => window.removeEventListener('resize', updateEditorHeight);
+  }, []);
 
   const handleSave = async () => {
     if (!testName.trim()) {
@@ -44,42 +56,42 @@ export default function NewTestCasePage() {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-
       <div className="grid gap-6">
-        <div className="grid gap-2">
-          <h1 className="text-2xl font-bold">New Test Case</h1>
-        </div>
-
         <div className="grid gap-4 p-6 border rounded-lg">
-          <div className="grid gap-2">
-            <label htmlFor="test-name" className="text-sm font-medium">
-              Test Name*
-            </label>
-            <Input
-              id="test-name"
-              value={testName}
-              onChange={(e) => setTestName(e.target.value)}
-              placeholder="Enter test case name"
-              className="w-full"
-            />
-          </div>
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2 flex-1">
+              <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
+                Test Name
+              </label>
+              <Input
+                id="test-name"
+                value={testName}
+                onChange={(e) => setTestName(e.target.value)}
+                placeholder="Enter test case name"
+                className="w-full"
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="tags" className="text-sm font-medium">
-              Tags
-            </label>
-            <Input
-              id="tags"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="login, robot, api, etc."
-              className="w-full"
-            />
+            <div className="flex items-center gap-2 w-1/3">
+              <label htmlFor="tags" className="text-sm font-medium whitespace-nowrap">
+                Tags
+              </label>
+              <Input
+                id="tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="login, robot, api, etc."
+                className="w-full"
+              />
+            </div>
           </div>
 
           <div className="grid gap-2">
             <label className="text-sm font-medium">Test Script</label>
-            <div className="h-[500px] border rounded-sm">
+            <div
+              className="border rounded-sm"
+              style={{ height: editorHeight }}
+            >
               <MonacoEditor
                 language="javascript"
                 value={scriptContent}
