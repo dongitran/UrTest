@@ -205,21 +205,6 @@ export default function WorkspacePageV2() {
           <div className="flex justify-between items-center">
             <CardTitle>Project List</CardTitle>
             <div className="flex gap-2">
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4">
-                    <path d="M1.5 3C1.22386 3 1 3.22386 1 3.5C1 3.77614 1.22386 4 1.5 4H13.5C13.7761 4 14 3.77614 14 3.5C14 3.22386 13.7761 3 13.5 3H1.5ZM1 7.5C1 7.22386 1.22386 7 1.5 7H13.5C13.7761 7 14 7.22386 14 7.5C14 7.77614 13.7761 8 13.5 8H1.5C1.22386 8 1 7.77614 1 7.5ZM1 11.5C1 11.2239 1.22386 11 1.5 11H13.5C13.7761 11 14 11.2239 14 11.5C14 11.7761 13.7761 12 13.5 12H1.5C1.22386 12 1 11.7761 1 11.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                  </svg>
-                  Table View
-                </Button>
-                <Button variant="outline" size="sm">
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4">
-                    <path d="M7.49991 0.876892C3.84222 0.876892 0.877075 3.84204 0.877075 7.49972C0.877075 11.1574 3.84222 14.1226 7.49991 14.1226C11.1576 14.1226 14.1227 11.1574 14.1227 7.49972C14.1227 3.84204 11.1576 0.876892 7.49991 0.876892ZM7.49988 1.82689C4.36688 1.82689 1.82708 4.36668 1.82708 7.49968C1.82708 10.6327 4.36688 13.1725 7.49988 13.1725C10.6329 13.1725 13.1727 10.6327 13.1727 7.49968C13.1727 4.36668 10.6329 1.82689 7.49988 1.82689Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                    <path d="M10 7.5C10 8.88071 8.88071 10 7.5 10C6.11929 10 5 8.88071 5 7.5C5 6.11929 6.11929 5 7.5 5C8.88071 5 10 6.11929 10 7.5Z" fill="currentColor"></path>
-                  </svg>
-                  Card View
-                </Button>
-              </div>
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search projects..." className="pl-8" />
