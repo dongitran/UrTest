@@ -17,7 +17,14 @@ import {
 } from "@/components/ui/sidebar";
 import WorkspaceModal from "@/components/v2/Workspace/Modal";
 import { castArray, compact } from "lodash";
-import { FolderIcon, MoreHorizontalIcon, Pen, PlusCircleIcon, ShareIcon, Trash2 } from "lucide-react";
+import {
+  FolderIcon,
+  MoreHorizontalIcon,
+  Pen,
+  PlusCircleIcon,
+  ShareIcon,
+  Trash2,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
@@ -46,7 +53,10 @@ export function NavMain({ items }) {
           })}
         </SidebarMenu>
       </SidebarGroupContent>
-      <WorkspaceModal openWorkspaceModal={openWorkspaceModal} setOpenWorkspaceModal={setOpenWorkspaceModal} />
+      <WorkspaceModal
+        openWorkspaceModal={openWorkspaceModal}
+        setOpenWorkspaceModal={setOpenWorkspaceModal}
+      />
     </SidebarGroup>
   );
 }
@@ -61,7 +71,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
       <SidebarMenuItem
         key={item.id}
         onClick={() => {
-          router.push(`/workspace-v2/${item.id}`);
+          router.push(`/workspace/${item.id}`);
         }}
       >
         <SidebarMenuButton tooltip={item.description} isActive={id === item.id}>
@@ -69,7 +79,10 @@ const MySidebarMenuItem = ({ item = {} }) => {
         </SidebarMenuButton>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuAction showOnHover className="rounded-sm data-[state=open]:bg-accent">
+            <SidebarMenuAction
+              showOnHover
+              className="rounded-sm data-[state=open]:bg-accent"
+            >
               <MoreHorizontalIcon />
               <span className="sr-only">More</span>
             </SidebarMenuAction>

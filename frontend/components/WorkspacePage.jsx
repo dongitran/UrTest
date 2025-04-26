@@ -20,9 +20,11 @@ export function WorkspacePage() {
       return WorkspaceApi().detail(id);
     },
     throwOnError: (error) => {
-      const message = get(error, "response.data.message") || "Xảy ra lỗi trong quá trình lấy thông tin workspace";
+      const message =
+        get(error, "response.data.message") ||
+        "Xảy ra lỗi trong quá trình lấy thông tin workspace";
       toast.error(message);
-      router.push("/workspace-v2");
+      router.push("/workspace");
     },
   });
 
@@ -48,7 +50,13 @@ export function WorkspacePage() {
       </div>
       <div className="grid lg:grid-cols-5 md:grid-cols-3 grid-cols-1 gap-3">
         {castArray(compact(get(data, "collections"))).map((collection) => {
-          return <CollectionCard queryKey={queryKey} collection={collection} key={collection.id} />;
+          return (
+            <CollectionCard
+              queryKey={queryKey}
+              collection={collection}
+              key={collection.id}
+            />
+          );
         })}
       </div>
       <CollectionModal

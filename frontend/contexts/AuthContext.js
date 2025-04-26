@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
       const userInfo = getUserInfo();
       setUser(userInfo);
 
-      router.push("/workspace-v2");
+      router.push("/workspace");
 
       return { success: true };
     } catch (error) {

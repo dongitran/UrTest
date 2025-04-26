@@ -38,17 +38,17 @@ const initData = {
   navMain: [
     {
       title: "My Workspace",
-      url: "/workspace-v2/1",
+      url: "/workspace/1",
       icon: LayoutDashboardIcon,
     },
     {
       title: "My Workspace 2",
-      url: "/workspace-v2/2",
+      url: "/workspace/2",
       icon: ListIcon,
     },
     {
       title: "My UrBox Workspace",
-      url: "/workspace-v2/3",
+      url: "/workspace/3",
       icon: BarChartIcon,
     },
   ],
@@ -150,7 +150,10 @@ export function AppSidebar({ ...props }) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
               <a href="#">
                 <Lightbulb className="h-5 w-5" />
                 <span className="text-base font-semibold">Ur Draw</span>

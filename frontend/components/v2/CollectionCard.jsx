@@ -1,5 +1,11 @@
 const { Fragment, useState } = require("react");
-import { Card, CardHeader, CardDescription, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardDescription,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import dayjs from "dayjs";
 import {
@@ -37,7 +43,7 @@ const CollectionCard = ({ queryKey, collection = {} }) => {
           <Card
             className="@container/card rounded-sm shadow-lg hover:shadow-slate-700"
             onDoubleClick={() => {
-              router.push(`/workspace-v2/collection/${collection.id}`);
+              router.push(`/workspace/collection/${collection.id}`);
             }}
           >
             <CardHeader className="relative">
@@ -52,7 +58,9 @@ const CollectionCard = ({ queryKey, collection = {} }) => {
               </div>
             </CardHeader>
             <CardFooter className="flex-col items-start gap-1 text-sm">
-              <div className="font-medium truncate w-full">{collection.userId}</div>
+              <div className="font-medium truncate w-full">
+                {collection.userId}
+              </div>
               <div className="text-muted-foreground text-xs">
                 {dayjs(collection.createdAt).format("HH:mm - DD/MM/YYYY")}
               </div>
@@ -101,7 +109,9 @@ const CollectionCard = ({ queryKey, collection = {} }) => {
           <ContextMenuRadioGroup value="pedro">
             <ContextMenuLabel inset>People</ContextMenuLabel>
             <ContextMenuSeparator />
-            <ContextMenuRadioItem value="pedro">Pedro Duarte</ContextMenuRadioItem>
+            <ContextMenuRadioItem value="pedro">
+              Pedro Duarte
+            </ContextMenuRadioItem>
             <ContextMenuRadioItem value="colm">Colm Tuite</ContextMenuRadioItem>
           </ContextMenuRadioGroup>
         </ContextMenuContent>
