@@ -1,9 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function DashboardStats({ stats }) {
-  const { totalProjects, totalTestCases, avgSuccessRate, activeProjects } =
-    stats;
-
+export default function DashboardStats({ data = {} }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Card>
@@ -26,7 +23,7 @@ export default function DashboardStats({ stats }) {
           </div>
           <div>
             <p className="text-sm font-medium">Total Projects</p>
-            <h2 className="text-3xl font-bold">{totalProjects}</h2>
+            <h2 className="text-3xl font-bold">{data.totalProject}</h2>
           </div>
         </CardContent>
       </Card>
@@ -52,7 +49,7 @@ export default function DashboardStats({ stats }) {
           </div>
           <div>
             <p className="text-sm font-medium">Total Test Cases</p>
-            <h2 className="text-3xl font-bold">{totalTestCases}</h2>
+            <h2 className="text-3xl font-bold">{data.totalTestcase}</h2>
           </div>
         </CardContent>
       </Card>
@@ -77,7 +74,7 @@ export default function DashboardStats({ stats }) {
           </div>
           <div>
             <p className="text-sm font-medium">Success Rate</p>
-            <h2 className="text-3xl font-bold">{avgSuccessRate}%</h2>
+            <h2 className="text-3xl font-bold">{data.totalAvgSuccessRate}%</h2>
           </div>
         </CardContent>
       </Card>
@@ -103,7 +100,7 @@ export default function DashboardStats({ stats }) {
           </div>
           <div>
             <p className="text-sm font-medium">Active</p>
-            <h2 className="text-3xl font-bold">{activeProjects}</h2>
+            <h2 className="text-3xl font-bold">{data.totalActive}</h2>
           </div>
         </CardContent>
       </Card>

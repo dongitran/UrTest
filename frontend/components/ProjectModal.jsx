@@ -37,8 +37,7 @@ const ProjectModal = ({ open, setOpen }) => {
           headers: {
             Authorization: `Bearer ${
               localStorage.getItem("keycloak_token")
-                ? JSON.parse(localStorage.getItem("keycloak_token"))
-                    .access_token
+                ? JSON.parse(localStorage.getItem("keycloak_token")).access_token
                 : ""
             }`,
           },
@@ -64,9 +63,7 @@ const ProjectModal = ({ open, setOpen }) => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create Project</DialogTitle>
-            <DialogDescription>
-              Create a new project to manage your test cases.
-            </DialogDescription>
+            <DialogDescription>Create a new project to manage your test cases.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 items-center gap-4">
@@ -104,18 +101,11 @@ const ProjectModal = ({ open, setOpen }) => {
                 if (setOpen) setOpen(false);
               }}
               disabled={loading}
-              variant="outline"
             >
               Cancel
             </Button>
-            <Button
-              disabled={loading}
-              onClick={onCreateProject}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {loading && (
-                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
-              )}
+            <Button disabled={loading} onClick={onCreateProject} className="bg-blue-700 hover:bg-blue-800 text-white">
+              {loading && <LoaderCircle className="animate-spin mr-2 h-4 w-4" />}
               Create
             </Button>
           </DialogFooter>
