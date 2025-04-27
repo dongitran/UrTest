@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { Textarea } from "@/components/ui/textarea";
 import { ProjectApi } from "@/lib/api";
+import { toast } from "sonner";
 
 const { Fragment, memo, useEffect } = require("react");
 
@@ -15,7 +16,10 @@ const ProjectFields = memo(({ project }) => {
       const data = getValues();
       console.log("data :>> ", data);
       await ProjectApi().patch(project.id, data);
-    } catch (error) {}
+      toast.success("Cập nhập dữ liệu thành công");
+    } catch (error) {
+      toast.error("Có lỗi khi cập nhập dữ liệu");
+    }
   };
 
   useEffect(() => {
