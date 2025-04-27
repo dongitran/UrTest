@@ -92,14 +92,20 @@ export default function TestCaseList() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
+        <div className="flex gap-3 items-center">
           <CardTitle>Danh sách testcases</CardTitle>
+          <div className="ml-auto"></div>
           <div className="flex gap-2">
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search test cases..." className="pl-8" />
             </div>
           </div>
+
+          <Button className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
+            <Play className="h-4 w-4" />
+            Run All Tests
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
