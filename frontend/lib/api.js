@@ -164,6 +164,13 @@ export const createCollection = async (collectionData) => {
     throw error;
   }
 };
+export const DashboardApi = (path = "/api/dashboard") => {
+  const get = async () => {
+    const res = await apiClient.get(path);
+    return res.data;
+  };
+  return { get };
+};
 export const WorkspaceApi = () => {
   const path = "/workspaces";
   const post = async ({ name, description }) => {
