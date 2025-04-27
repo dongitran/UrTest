@@ -19,6 +19,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -49,7 +51,7 @@ export const columns = [
             </svg>
           </div>
           <div>
-            <div className="font-medium">{row.getValue("title")}</div>
+            <div className="font-semibold text-base">{row.getValue("title")}</div>
             <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
           </div>
         </div>
@@ -82,8 +84,13 @@ export const columns = [
   },
   {
     accessorKey: "progress",
-    header: () => <div className="text-right">Tiến trình</div>,
-    cell: ({ row }) => <div className="lowercase">{row.getValue("progress")}</div>,
+    header: () => <div className="text-center">Tiến trình</div>,
+    cell: ({ row }) => (
+      <div className="flex gap-3 items-center">
+        <Progress value={33} className="" indicatorColor="bg-green-700" />
+        <span className="text-xs">33%</span>
+      </div>
+    ),
   },
   {
     accessorKey: "successRate",
