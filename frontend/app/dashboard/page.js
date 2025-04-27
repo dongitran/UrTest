@@ -6,12 +6,12 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ProjectModal from "@/components/ProjectModal";
 import { fetchProjects } from "@/services/api";
 import { mapProjectToUIFormat, calculateProjectStats } from "@/utils/projectUtils";
-import DashboardStats from "@/components/workspace/DashboardStats";
-import ProjectList from "@/components/workspace/ProjectList";
-import ActivityFeed from "@/components/workspace/ActivityFeed";
-import TestTypeStats from "@/components/workspace/TestTypeStats";
+import DashboardStats from "@/components/dashboard/DashboardStats";
+import ProjectList from "@/components/dashboard/ProjectList";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import TestTypeStats from "@/components/dashboard/TestTypeStats";
 import { DashboardApi } from "@/lib/api";
-import ProjectTable from "@/components/workspace/ProjectTable";
+import ProjectTable from "@/components/dashboard/ProjectTable";
 
 export default function WorkspacePageV2() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
