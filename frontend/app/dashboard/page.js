@@ -1,20 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import DashboardStats from "@/components/dashboard/DashboardStats";
+import ProjectTable from "@/components/dashboard/ProjectTable";
+import TestTypeStats from "@/components/dashboard/TestTypeStats";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ProjectModal from "@/components/ProjectModal";
-import { fetchProjects } from "@/services/api";
-import { mapProjectToUIFormat, calculateProjectStats } from "@/utils/projectUtils";
-import DashboardStats from "@/components/dashboard/DashboardStats";
-import ProjectList from "@/components/dashboard/ProjectList";
-import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import TestTypeStats from "@/components/dashboard/TestTypeStats";
 import { DashboardApi } from "@/lib/api";
-import ProjectTable from "@/components/dashboard/ProjectTable";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export default function WorkspacePageV2() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [dataTable, setDataTable] = useState([]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["/api/dashboard"],
@@ -22,7 +20,11 @@ export default function WorkspacePageV2() {
       return DashboardApi().get();
     },
   });
-
+  useEffect(() => {
+    if (data) {
+      setDataTable(data.dataTable);
+    }
+  }, [data]);
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -45,7 +47,13 @@ export default function WorkspacePageV2() {
     <div className="flex flex-col gap-6">
       <DashboardStats data={data} />
 
-      <ProjectTable refetch={refetch} dataTable={data.dataTable} setProjectModalOpen={setProjectModalOpen} />
+      <ProjectTable
+        dataTable={dataTable}
+        setDataTable={setDataTable}
+        refetch={refetch}
+        setProjectModalOpen={setProjectModalOpen}
+        initDataTable={data.dataTable}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActivityFeed />
         <TestTypeStats />

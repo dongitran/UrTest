@@ -28,15 +28,14 @@ import dayjs from "dayjs";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 
-export default function ProjectTable({ refetch, dataTable = [], setProjectModalOpen }) {
+export default function ProjectTable({ initDataTable, setDataTable, refetch, dataTable = [], setProjectModalOpen }) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
-
-  const table = useReactTable({
-    data: dataTable,
-    columns: [
+  const [projectNameFilter, setProjectNameFilter] = React.useState("");
+  const columns = React.useMemo(() => {
+    return [
       {
         accessorKey: "title",
         header: "Tên Project",
@@ -144,7 +143,11 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
           </DropdownMenu>
         ),
       },
-    ],
+    ];
+  }, []);
+  const table = useReactTable({
+    data: dataTable,
+    columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -171,6 +174,11 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
       }
     };
   };
+  const handleFilterDataTable = () => {
+    if (projectNameFilter) {
+      setDataTable(initDataTable.filter((item) => new RegExp(projectNameFilter, "i").test(item.title)));
+    } else setDataTable(initDataTable);
+  };
   return (
     <div className="w-full">
       <div className="flex gap-3 items-center py-4">
@@ -179,12 +187,23 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
         <div className="ml-auto"></div>
         <div className="relative w-80">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Nhập tên Project và Enter để tìm kiếm" className="pl-8" />
+          <Input
+            value={projectNameFilter}
+            onChange={(e) => {
+              setProjectNameFilter(e.target.value);
+            }}
+            placeholder="Nhập tên Project và Enter để tìm kiếm"
+            className="pl-8"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleFilterDataTable();
+              }
+            }}
+          />
         </div>
         <Button
           className="rounded-sm"
           onClick={() => {
-            console.log("12321 :>> ", 12321);
             if (setProjectModalOpen) {
               setProjectModalOpen(true);
             }
@@ -228,9 +247,6 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          Total {table.getFilteredRowModel().rows.length} row(s).
-        </div>
         <div className="space-x-2">
           <Button
             variant="outline"
