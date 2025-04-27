@@ -9,6 +9,7 @@ DashboardRoute.get("/", async (ctx) => {
   const dataTable = [];
   for (const item of projects) {
     dataTable.push({
+      id: item.id,
       title: item.title,
       description: item.description,
       status: "Stable",
