@@ -126,12 +126,14 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>
-                <Link href={`/test-management?id=${row.original["id"]}`}>Chỉnh sửa</Link>
-                <DropdownMenuShortcut>
-                  <SquarePen className="size-4" />
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
+              <Link href={`/test-management?id=${row.original["id"]}`}>
+                <DropdownMenuItem>
+                  Chỉnh sửa
+                  <DropdownMenuShortcut>
+                    <SquarePen className="size-4" />
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuItem onClick={handleDeleteProject(row.original["id"])}>
                 Xóa
                 <DropdownMenuShortcut>
