@@ -180,8 +180,10 @@ export const ProjectApi = (path = "/api/project") => {
   return { detail, delete: _delete, get };
 };
 export const DashboardApi = (path = "/api/dashboard") => {
-  const get = async () => {
-    const res = await apiClient.get(path);
+  const get = async (params) => {
+    const res = await apiClient.get(path, {
+      params,
+    });
     return res.data;
   };
   return { get };
