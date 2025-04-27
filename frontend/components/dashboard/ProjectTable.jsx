@@ -120,7 +120,7 @@ export default function ProjectTable({ refetch, dataTable = [], setProjectModalO
         header: () => <div className="text-center"></div>,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <Button size="icon" variant="ghost">
                 <EllipsisVertical className="!size-5" />
               </Button>
