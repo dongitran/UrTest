@@ -5,6 +5,7 @@ const DashboardRoute = new Hono();
 DashboardRoute.get("/", async (ctx) => {
   const projects = await db.query.ProjectTable.findMany({
     where: (clm, { isNull }) => isNull(clm.deletedAt),
+    orderBy: (clm, { desc }) => desc(clm.id),
   });
   const dataTable = [];
   for (const item of projects) {
