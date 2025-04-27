@@ -6,6 +6,7 @@ import { logger } from "hono/logger";
 import MongoConfig from "./config/mongodb";
 import ProjectRoute from "@route/project.route";
 import VerifyToken from "@middlewars/VerifyToken";
+import DashboardRoute from "@route/dashboard.route";
 
 const app = new Hono();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(logger(customLogger));
 app.use("/api/*", VerifyToken());
 
+app.route("/api/dashboard", DashboardRoute);
 app.route("/api/project", ProjectRoute);
 
 app.onError(ErrorLog);
