@@ -5,13 +5,18 @@ import { ProjectTable } from "db/schema";
 import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
-import { eq, isNull, and } from "drizzle-orm";
+import { eq, isNull, and, desc } from "drizzle-orm";
 
 const ProjectRoute = new Hono();
 
 ProjectRoute.get("/", async (ctx) => {
   try {
-    const projects = await db.select().from(ProjectTable).where(isNull(ProjectTable.deletedAt)).execute();
+    const projects = await db
+      .select()
+      .from(ProjectTable)
+      .where(isNull(ProjectTable.deletedAt))
+      .orderBy(desc(ProjectTable.id))
+      .execute();
     return ctx.json({ projects });
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -62,6 +67,41 @@ ProjectRoute.post(
       title: body.title,
       createdBy: user.email,
     });
+    return ctx.json({ message: "ok" });
+  }
+);
+ProjectRoute.patch(
+  "/:id",
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  zValidator(
+    "json",
+    z.object({
+      title: z.string(),
+      description: z.string(),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+    const body = ctx.req.valid("json");
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+    });
+    if (!project) {
+      return ctx.json({ message: "Không tìm thấy thông tin Project theo mã ID", code: "NOT_FOUND" }, 404);
+    }
+    console.log("21312 :>> ", 21312);
+    await db
+      .update(ProjectTable)
+      .set({
+        title: body.title,
+        description: body.description,
+      })
+      .where(eq(ProjectTable.id, project.id));
     return ctx.json({ message: "ok" });
   }
 );
