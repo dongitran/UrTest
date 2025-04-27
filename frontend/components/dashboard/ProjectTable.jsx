@@ -22,13 +22,27 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ProjectApi } from "@/lib/api";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function ProjectTable({ initDataTable, setDataTable, refetch, dataTable = [], setProjectModalOpen }) {
+export default function ProjectTable({
+  initDataTable,
+  setDataTable,
+  refetch,
+  dataTable = [],
+  setProjectModalOpen,
+}) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -38,7 +52,7 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
     return [
       {
         accessorKey: "title",
-        header: "Tên Project",
+        header: "Project Name",
         cell: ({ row }) => {
           return (
             <div className="col-span-2 flex items-center">
@@ -58,9 +72,13 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 </svg>
               </div>
-              <div>
-                <div className="font-semibold text-base">{row.getValue("title")}</div>
-                <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
+              <div className="min-w-[200px] flex-1 pr-4">
+                <div className="font-semibold text-base">
+                  {row.getValue("title")}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {row.original["description"]}
+                </div>
               </div>
             </div>
           );
@@ -68,7 +86,7 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       },
       {
         accessorKey: "status",
-        header: "Trạng thái",
+        header: "Status",
         cell: ({ row }) => (
           <div>
             <Badge
@@ -92,7 +110,7 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       },
       {
         accessorKey: "progress",
-        header: () => <div className="text-center">Tiến trình</div>,
+        header: () => <div className="text-center">Progress</div>,
         cell: ({ row }) => (
           <div className="flex gap-3 items-center">
             <Progress value={33} className="" indicatorColor="bg-green-700" />
@@ -101,16 +119,12 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
         ),
       },
       {
-        accessorKey: "successRate",
-        header: () => <div className="text-right">Tỉ lệ thành công</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("successRate")}</div>,
-      },
-      {
         accessorKey: "updatedAt",
-        header: () => <div className="text-center">Lần chạy gần nhất</div>,
+        header: () => <div className="text-center">Last Run</div>,
         cell: ({ row }) => (
           <div className="lowercase">
-            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
+            {row.getValue("updatedAt") &&
+              dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
           </div>
         ),
       },
@@ -127,14 +141,16 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
             <DropdownMenuContent>
               <Link href={`/test-management?id=${row.original["id"]}`}>
                 <DropdownMenuItem>
-                  Chỉnh sửa
+                  Edit
                   <DropdownMenuShortcut>
                     <SquarePen className="size-4" />
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
               </Link>
-              <DropdownMenuItem onClick={handleDeleteProject(row.original["id"])}>
-                Xóa
+              <DropdownMenuItem
+                onClick={handleDeleteProject(row.original["id"])}
+              >
+                Delete
                 <DropdownMenuShortcut>
                   <Trash2 className="size-4" />
                 </DropdownMenuShortcut>
@@ -168,99 +184,130 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       try {
         await ProjectApi().delete(id);
         if (refetch) refetch();
-        toast.success("Bạn đã xóa Project thành công");
+        toast.success("Project deleted successfully");
       } catch (error) {
-        toast.error("Có lỗi khi xóa Project");
+        toast.error("Error deleting project");
       }
     };
   };
-  const handleFilterDataTable = () => {
-    if (projectNameFilter) {
-      setDataTable(initDataTable.filter((item) => new RegExp(projectNameFilter, "i").test(item.title)));
-    } else setDataTable(initDataTable);
+  const handleFilterDataTable = (searchTerm = projectNameFilter) => {
+    if (searchTerm && searchTerm.trim() !== "") {
+      setDataTable(
+        initDataTable.filter((item) =>
+          new RegExp(searchTerm, "i").test(item.title)
+        )
+      );
+    } else {
+      setDataTable(initDataTable);
+    }
   };
   return (
-    <div className="w-full">
-      <div className="flex gap-3 items-center py-4">
-        <div className="text-xl font-semibold">Danh sách Project</div>
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex gap-3 items-center">
+          <CardTitle>Projects List</CardTitle>
 
-        <div className="ml-auto"></div>
-        <div className="relative w-80">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={projectNameFilter}
-            onChange={(e) => {
-              setProjectNameFilter(e.target.value);
-            }}
-            placeholder="Nhập tên Project và Enter để tìm kiếm"
-            className="pl-8"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleFilterDataTable();
+          <div className="ml-auto"></div>
+          <div className="relative w-80">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={projectNameFilter}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setProjectNameFilter(newValue);
+                handleFilterDataTable(newValue);
+              }}
+              placeholder="Search projects..."
+              className="pl-8"
+            />
+          </div>
+          <Button
+            className="rounded-sm"
+            onClick={() => {
+              if (setProjectModalOpen) {
+                setProjectModalOpen(true);
               }
             }}
-          />
-        </div>
-        <Button
-          className="rounded-sm"
-          onClick={() => {
-            if (setProjectModalOpen) {
-              setProjectModalOpen(true);
-            }
-          }}
-        >
-          Tạo Project
-        </Button>
-      </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
           >
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
+            Create Project
           </Button>
         </div>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table className="table-fixed">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={header.id.includes("title") ? "w-1/2" : ""}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
