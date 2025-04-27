@@ -34,7 +34,7 @@ const navMainItems = [
     name: "Dashboard",
     description: "View dashboard and analytics",
     icon: LayoutDashboardIcon,
-    url: "/workspace",
+    url: "/dashboard",
   },
   {
     id: "2",
@@ -90,10 +90,7 @@ export function AppSidebar({ ...props }) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <a href="#" className="flex items-center gap-2">
                 <Lightbulb className="h-5 w-5 text-yellow-500" />
                 <span className="text-base font-semibold">UrTest</span>
