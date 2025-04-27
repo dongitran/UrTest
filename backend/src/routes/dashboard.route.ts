@@ -1,11 +1,15 @@
+import db from "db/db";
 import { Hono } from "hono";
 
 const DashboardRoute = new Hono();
 DashboardRoute.get("/", async (ctx) => {
+  const projects = await db.query.ProjectTable.findMany({
+    where: (clm, { isNotNull }) => isNotNull(clm.deletedAt),
+  });
   return ctx.json({
-    totalProject: 0,
+    totalProject: projects.length,
     totalTestcase: 0,
-    totalSuccessRate: 0,
+    totalAvgSuccessRate: 0,
     totalActive: 0,
   });
 });
