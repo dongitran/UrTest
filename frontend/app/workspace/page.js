@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Eye, MoreVertical, Plus, Search, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import ProjectModal from "@/components/ProjectModal";
 
 dayjs.extend(advancedFormat);
 
@@ -81,6 +82,7 @@ const testTypeStats = [
 export default function WorkspacePageV2() {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 5;
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
 
   const totalProjects = mockProjects.length;
   const totalTestCases = mockProjects.reduce((sum, project) => sum + project.testCases, 0);
@@ -202,7 +204,10 @@ export default function WorkspacePageV2() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search projects..." className="pl-8" />
               </div>
-              <Button className="gap-1 items-center">
+              <Button
+                className="gap-1 items-center"
+                onClick={() => setProjectModalOpen(true)}
+              >
                 <Plus className="h-4 w-4" />
                 New Project
               </Button>
@@ -449,6 +454,11 @@ export default function WorkspacePageV2() {
           </CardContent>
         </Card>
       </div>
+
+      <ProjectModal
+        open={projectModalOpen}
+        setOpen={setProjectModalOpen}
+      />
     </div>
   );
 }
