@@ -1,6 +1,14 @@
 "use client";
 
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -8,135 +16,19 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, Eye, Search, SquarePen, Trash2 } from "lucide-react";
+import { EllipsisVertical, Search, SquarePen, Trash2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "../ui/badge";
+import { ProjectApi } from "@/lib/api";
 import dayjs from "dayjs";
+import { toast } from "sonner";
+import { Badge } from "../ui/badge";
 
-export const columns = [
-  {
-    accessorKey: "title",
-    header: "Tên Project",
-    cell: ({ row }) => {
-      return (
-        <div className="col-span-2 flex items-center">
-          <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-blue-700"
-            >
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </div>
-          <div>
-            <div className="font-semibold text-base">{row.getValue("title")}</div>
-            <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "status",
-    header: "Trạng thái",
-    cell: ({ row }) => (
-      <div>
-        <Badge
-          variant="outline"
-          className={`px-2 py-0.5 rounded-sm ${
-            row.getValue("status") === "Stable"
-              ? "bg-green-100 text-green-800 border-green-200"
-              : row.getValue("status") === "Needs Attention"
-              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-              : row.getValue("status") === "Critical Error"
-              ? "bg-red-100 text-red-800 border-red-200"
-              : row.getValue("status") === "In Development"
-              ? "bg-blue-100 text-blue-800 border-blue-200"
-              : "bg-gray-100 text-gray-800 border-gray-200"
-          }`}
-        >
-          {row.getValue("status")}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "progress",
-    header: () => <div className="text-center">Tiến trình</div>,
-    cell: ({ row }) => (
-      <div className="flex gap-3 items-center">
-        <Progress value={33} className="" indicatorColor="bg-green-700" />
-        <span className="text-xs">33%</span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "successRate",
-    header: () => <div className="text-right">Tỉ lệ thành công</div>,
-    cell: ({ row }) => <div className="lowercase">{row.getValue("successRate")}</div>,
-  },
-  {
-    accessorKey: "updatedAt",
-    header: () => <div className="text-center">Lần chạy gần nhất</div>,
-    cell: ({ row }) => (
-      <div className="lowercase">
-        {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "actions",
-    header: () => <div className="text-center"></div>,
-    cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          <Button size="icon" variant="ghost">
-            <EllipsisVertical className="!size-5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <Link href={`/test-management?id=${row.original["id"]}`}>Chỉnh sửa</Link>
-            <DropdownMenuShortcut>
-              <SquarePen className="size-4" />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Xóa
-            <DropdownMenuShortcut>
-              <Trash2 className="size-4" />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-  },
-];
-
-export default function ProjectTable({ dataTable = [], setProjectModalOpen }) {
+export default function ProjectTable({ refetch, dataTable = [], setProjectModalOpen }) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -144,7 +36,113 @@ export default function ProjectTable({ dataTable = [], setProjectModalOpen }) {
 
   const table = useReactTable({
     data: dataTable,
-    columns,
+    columns: [
+      {
+        accessorKey: "title",
+        header: "Tên Project",
+        cell: ({ row }) => {
+          return (
+            <div className="col-span-2 flex items-center">
+              <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-blue-700"
+                >
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold text-base">{row.getValue("title")}</div>
+                <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Trạng thái",
+        cell: ({ row }) => (
+          <div>
+            <Badge
+              variant="outline"
+              className={`px-2 py-0.5 rounded-sm ${
+                row.getValue("status") === "Stable"
+                  ? "bg-green-100 text-green-800 border-green-200"
+                  : row.getValue("status") === "Needs Attention"
+                  ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                  : row.getValue("status") === "Critical Error"
+                  ? "bg-red-100 text-red-800 border-red-200"
+                  : row.getValue("status") === "In Development"
+                  ? "bg-blue-100 text-blue-800 border-blue-200"
+                  : "bg-gray-100 text-gray-800 border-gray-200"
+              }`}
+            >
+              {row.getValue("status")}
+            </Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "progress",
+        header: () => <div className="text-center">Tiến trình</div>,
+        cell: ({ row }) => (
+          <div className="flex gap-3 items-center">
+            <Progress value={33} className="" indicatorColor="bg-green-700" />
+            <span className="text-xs">33%</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "successRate",
+        header: () => <div className="text-right">Tỉ lệ thành công</div>,
+        cell: ({ row }) => <div className="lowercase">{row.getValue("successRate")}</div>,
+      },
+      {
+        accessorKey: "updatedAt",
+        header: () => <div className="text-center">Lần chạy gần nhất</div>,
+        cell: ({ row }) => (
+          <div className="lowercase">
+            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "actions",
+        header: () => <div className="text-center"></div>,
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button size="icon" variant="ghost">
+                <EllipsisVertical className="!size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem>
+                <Link href={`/test-management?id=${row.original["id"]}`}>Chỉnh sửa</Link>
+                <DropdownMenuShortcut>
+                  <SquarePen className="size-4" />
+                </DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDeleteProject(row.original["id"])}>
+                Xóa
+                <DropdownMenuShortcut>
+                  <Trash2 className="size-4" />
+                </DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
+    ],
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -160,7 +158,17 @@ export default function ProjectTable({ dataTable = [], setProjectModalOpen }) {
       rowSelection,
     },
   });
-
+  const handleDeleteProject = (id) => {
+    return async () => {
+      try {
+        await ProjectApi().delete(id);
+        if (refetch) refetch();
+        toast.success("Bạn đã xóa Project thành công");
+      } catch (error) {
+        toast.error("Có lỗi khi xóa Project");
+      }
+    };
+  };
   return (
     <div className="w-full">
       <div className="flex gap-3 items-center py-4">

@@ -16,7 +16,7 @@ import ProjectTable from "@/components/dashboard/ProjectTable";
 export default function WorkspacePageV2() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["/api/dashboard"],
     queryFn: () => {
       return DashboardApi().get();
@@ -45,7 +45,7 @@ export default function WorkspacePageV2() {
     <div className="flex flex-col gap-6">
       <DashboardStats data={data} />
 
-      <ProjectTable dataTable={data.dataTable} setProjectModalOpen={setProjectModalOpen} />
+      <ProjectTable refetch={refetch} dataTable={data.dataTable} setProjectModalOpen={setProjectModalOpen} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActivityFeed />
         <TestTypeStats />
