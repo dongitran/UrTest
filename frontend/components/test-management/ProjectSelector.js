@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function ProjectSelector({ setProject }) {
+export default function ProjectSelector({ setProject, projectId }) {
   const router = useRouter();
   const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProject] = useState("");
+  const [selectedProjectId, setSelectedProject] = useState(projectId || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const handleNavigateToNewTestCase = (projectName) => {
