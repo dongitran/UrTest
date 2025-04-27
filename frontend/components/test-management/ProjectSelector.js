@@ -84,10 +84,6 @@ export default function ProjectSelector({ setProject, projectId }) {
         </div>
       </div>
       <div className="flex gap-2">
-        <Button className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
-          <Play className="h-4 w-4" />
-          Run All Tests
-        </Button>
         <Button
           className="gap-1 items-center rounded-sm"
           disabled={!selectedProjectId}
