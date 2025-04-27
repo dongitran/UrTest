@@ -169,6 +169,7 @@ export const ProjectApi = (path = "/api/project") => {
     const res = await apiClient.delete(`${path}/${id}`);
     return res;
   };
+
   const get = async () => {
     const res = await apiClient.get(`${path}`);
     return res.data;
@@ -177,7 +178,11 @@ export const ProjectApi = (path = "/api/project") => {
     const res = await apiClient.get(`${path}/${id}`);
     return res.data;
   };
-  return { detail, delete: _delete, get };
+  const patch = async (id, data) => {
+    const res = await apiClient.patch(`${path}/${id}`, data);
+    return res;
+  };
+  return { patch, detail, delete: _delete, get };
 };
 export const DashboardApi = (path = "/api/dashboard") => {
   const get = async (params) => {
