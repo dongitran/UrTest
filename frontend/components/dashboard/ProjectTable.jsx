@@ -9,6 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { EllipsisVertical, Eye, Search, SquarePen, Trash2 } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 import {
   DropdownMenu,
@@ -109,7 +110,7 @@ export const columns = [
   {
     accessorKey: "actions",
     header: () => <div className="text-center"></div>,
-    cell: () => (
+    cell: ({ row }) => (
       <DropdownMenu>
         <DropdownMenuTrigger>
           <Button size="icon" variant="ghost">
@@ -118,7 +119,7 @@ export const columns = [
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
-            Chỉnh sửa
+            <Link href={`/test-management?id=${row.original["id"]}`}>Chỉnh sửa</Link>
             <DropdownMenuShortcut>
               <SquarePen className="size-4" />
             </DropdownMenuShortcut>
