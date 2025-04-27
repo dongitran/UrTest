@@ -90,8 +90,12 @@ export default function ProjectSelector({ setProject }) {
         </Button>
         <Button
           className="gap-1 items-center rounded-sm"
+          disabled={!selectedProjectId}
           onClick={() => {
-            handleNavigateToNewTestCase(selectedProjectId);
+            const project = projects.find((p) => p.id === selectedProjectId);
+            if (project) {
+              handleNavigateToNewTestCase(project.title);
+            }
           }}
         >
           <Plus className="h-4 w-4" />
