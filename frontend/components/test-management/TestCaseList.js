@@ -2,17 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Edit,
-  Eye,
-  FileText,
-  Play,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, Play, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const testCases = [
@@ -103,7 +93,7 @@ export default function TestCaseList() {
     <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle>Test Cases</CardTitle>
+          <CardTitle>Danh sách testcases</CardTitle>
           <div className="flex gap-2">
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -127,34 +117,20 @@ export default function TestCaseList() {
               <div key={test.id} className="grid grid-cols-12 items-center p-3">
                 <div className="col-span-4">
                   <div className="font-medium">{test.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {test.fileName}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{test.fileName}</div>
                 </div>
                 <div className="col-span-2">
-                  <Badge
-                    variant="outline"
-                    className={`px-2 py-0.5 ${getTypeBadgeClass(test.type)}`}
-                  >
+                  <Badge variant="outline" className={`px-2 py-0.5 ${getTypeBadgeClass(test.type)}`}>
                     {test.type}
                   </Badge>
                 </div>
                 <div className="col-span-1">
-                  <Badge
-                    variant="outline"
-                    className={`px-2 py-0.5 ${getStatusBadgeClass(
-                      test.status
-                    )}`}
-                  >
+                  <Badge variant="outline" className={`px-2 py-0.5 ${getStatusBadgeClass(test.status)}`}>
                     {test.status}
                   </Badge>
                 </div>
-                <div className="col-span-1 text-sm text-muted-foreground">
-                  {test.lastRun}
-                </div>
-                <div className="col-span-1 text-sm text-muted-foreground">
-                  {test.duration}
-                </div>
+                <div className="col-span-1 text-sm text-muted-foreground">{test.lastRun}</div>
+                <div className="col-span-1 text-sm text-muted-foreground">{test.duration}</div>
                 <div className="col-span-2 flex items-center justify-end gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Play className="h-4 w-4" />
@@ -178,43 +154,39 @@ export default function TestCaseList() {
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between p-3">
-            <div className="text-sm text-muted-foreground">
-              Showing 1 to 7 of 32 test cases
-            </div>
-            <div className="flex items-center gap-1">
+        </div>
+        <div className="flex items-center justify-between mt-3">
+          <div className="text-sm text-muted-foreground">Showing 1 to 7 of 32 test cases</div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {[1, 2, 3, 4, 5].map((page) => (
               <Button
-                variant="outline"
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
                 size="icon"
                 className="h-8 w-8"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                onClick={() => setCurrentPage(page)}
               >
-                <ChevronLeft className="h-4 w-4" />
+                {page}
               </Button>
-              {[1, 2, 3, 4, 5].map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={currentPage === totalPages}
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            ))}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardContent>

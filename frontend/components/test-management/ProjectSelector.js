@@ -1,34 +1,29 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Play, Plus } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { fetchProjects } from "@/services/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProjectApi } from "@/lib/api";
+import { Play, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-export default function ProjectSelector({ onNavigateToNewTestCase }) {
+export default function ProjectSelector({ setProject }) {
+  const router = useRouter();
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedProjectId, setSelectedProject] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const handleNavigateToNewTestCase = (projectName) => {
+    router.push(`/test-management/new-test-case?project=${encodeURIComponent(projectName)}`);
+  };
   useEffect(() => {
     const getProjects = async () => {
       try {
-        const projectData = await fetchProjects();
-        setProjects(projectData);
-
-        if (projectData.length > 0) {
-          setSelectedProject(projectData[0].id);
-        }
-
+        const data = await ProjectApi().get();
+        setProjects(data.projects);
         setLoading(false);
       } catch (err) {
+        toast.error("Không thể tải danh sách Project");
         console.error("Failed to fetch projects:", err);
         setError("Failed to load projects. Please try again later.");
         setLoading(false);
@@ -37,15 +32,21 @@ export default function ProjectSelector({ onNavigateToNewTestCase }) {
 
     getProjects();
   }, []);
+  const handleGetProjectDetail = async (projectId) => {
+    try {
+      const data = await ProjectApi().detail(projectId);
+      setProject(data.project);
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      handleGetProjectDetail(selectedProjectId);
+    }
+  }, [selectedProjectId]);
 
   const handleProjectChange = (value) => {
     setSelectedProject(value);
-  };
-
-  const navigateToNewTestCase = () => {
-    const selectedProjectName =
-      projects.find((p) => p.id === selectedProject)?.title || "";
-    onNavigateToNewTestCase(selectedProjectName);
   };
 
   if (loading) {
@@ -68,16 +69,9 @@ export default function ProjectSelector({ onNavigateToNewTestCase }) {
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-medium">Project:</span>
-          <Select value={selectedProject} onValueChange={handleProjectChange}>
+          <Select value={selectedProjectId} onValueChange={handleProjectChange}>
             <SelectTrigger className="w-[400px]">
-              <SelectValue
-                placeholder={
-                  projects.length > 0
-                    ? projects.find((p) => p.id === selectedProject)?.title
-                    : "Select a project"
-                }
-              />
+              <SelectValue placeholder={`Chọn Project để xem thông tin`} />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
               {projects.map((project) => (
@@ -88,17 +82,18 @@ export default function ProjectSelector({ onNavigateToNewTestCase }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Test cases:</span>
-          <span>32</span>
-        </div>
       </div>
       <div className="flex gap-2">
-        <Button className="gap-1 items-center bg-blue-600 hover:bg-blue-700">
+        <Button className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
           <Play className="h-4 w-4" />
           Run All Tests
         </Button>
-        <Button className="gap-1 items-center" onClick={navigateToNewTestCase}>
+        <Button
+          className="gap-1 items-center rounded-sm"
+          onClick={() => {
+            handleNavigateToNewTestCase(selectedProjectId);
+          }}
+        >
           <Plus className="h-4 w-4" />
           New Test Case
         </Button>
