@@ -8,9 +8,17 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+import { EllipsisVertical, Eye, Search, SquarePen, Trash2 } from "lucide-react";
 import * as React from "react";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -89,6 +97,33 @@ export const columns = [
       <div className="lowercase">
         {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
       </div>
+    ),
+  },
+  {
+    accessorKey: "actions",
+    header: () => <div className="text-center"></div>,
+    cell: () => (
+      <DropdownMenu>
+        <DropdownMenuTrigger>
+          <Button size="icon" variant="ghost">
+            <EllipsisVertical className="!size-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem>
+            Chỉnh sửa
+            <DropdownMenuShortcut>
+              <SquarePen className="size-4" />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            Xóa
+            <DropdownMenuShortcut>
+              <Trash2 className="size-4" />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     ),
   },
 ];
