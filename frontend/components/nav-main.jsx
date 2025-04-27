@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import WorkspaceModal from "@/components/v2/Workspace/Modal";
+import WorkspaceModal from "@/components/Modal";
 import { castArray, compact } from "lodash";
 import { MoreHorizontalIcon, Pen, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
