@@ -11,20 +11,12 @@ const ProjectRoute = new Hono();
 
 ProjectRoute.get("/", async (ctx) => {
   try {
-    const projects = await db
-      .select()
-      .from(ProjectTable)
-      .where(isNull(ProjectTable.deletedAt))
-      .execute();
+    const projects = await db.select().from(ProjectTable).where(isNull(ProjectTable.deletedAt)).execute();
     return ctx.json({ projects });
   } catch (error) {
     console.error("Error fetching projects:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return ctx.json(
-      { message: "Failed to fetch projects", error: errorMessage },
-      500
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return ctx.json({ message: "Failed to fetch projects", error: errorMessage }, 500);
   }
 });
 
@@ -45,12 +37,8 @@ ProjectRoute.get("/:id", async (ctx) => {
     return ctx.json({ project: project[0] });
   } catch (error) {
     console.error("Error fetching project by ID:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return ctx.json(
-      { message: "Failed to fetch project", error: errorMessage },
-      500
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return ctx.json({ message: "Failed to fetch project", error: errorMessage }, 500);
   }
 });
 
@@ -77,5 +65,28 @@ ProjectRoute.post(
     return ctx.json({ message: "ok" });
   }
 );
+ProjectRoute.delete(
+  "/:id",
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  async (ctx) => {
+    const user = ctx.get("user");
+    const { id } = ctx.req.valid("param");
+    const result = await db
+      .update(ProjectTable)
+      .set({
+        deletedAt: dayjs().toISOString(),
+        deletedBy: user.email,
+      })
+      .where(eq(ProjectTable.id, id))
+      .returning();
+    console.log("result :>> ", result);
 
+    return ctx.json({ message: "ok" });
+  }
+);
 export default ProjectRoute;
