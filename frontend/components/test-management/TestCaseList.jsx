@@ -6,8 +6,10 @@ import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, Play, Search, Tra
 import { Badge } from "@/components/ui/badge";
 import { TestSuiteApi } from "@/lib/api";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function TestCaseList({ project = {}, listTestSuite = [] }) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const totalTests = 32;
   const itemsPerPage = 7;
@@ -100,7 +102,12 @@ export default function TestCaseList({ project = {}, listTestSuite = [] }) {
                   </Button>
                   <Button
                     onClick={() => {
-                      console.log("project :>> ", project);
+                      console.log("project :>> ", project, `?`);
+                      router.push(
+                        `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
+                          project.id
+                        }&testSuiteId=${test.id}`
+                      );
                     }}
                     variant="ghost"
                     size="icon"

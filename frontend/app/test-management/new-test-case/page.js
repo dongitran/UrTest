@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,12 @@ import { TestSuiteApi } from "@/lib/api";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
+  const testSuiteId = searchParams.get("testSuiteId");
   const router = useRouter();
   const [tags, setTags] = useState([]);
   const [scriptContent, setScriptContent] = useState(
@@ -23,7 +25,14 @@ export default function NewTestCasePage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
-  const { register, getValues } = useForm();
+  const { data: testSuiteDetail } = useQuery({
+    queryKey: ["detail-test-suite" + testSuiteId],
+    queryFn: () => {
+      return TestSuiteApi().detail(testSuiteId);
+    },
+    enabled: testSuiteId ? true : false,
+  });
+  const { register, getValues, setValue } = useForm();
   useEffect(() => {
     const updateEditorHeight = () => {
       setEditorHeight("calc(100vh - 260px)");
@@ -32,7 +41,39 @@ export default function NewTestCasePage() {
     window.addEventListener("resize", updateEditorHeight);
     return () => window.removeEventListener("resize", updateEditorHeight);
   }, []);
-
+  useEffect(() => {
+    if (testSuiteDetail) {
+      setValue("name", testSuiteDetail.name);
+      setValue("description", testSuiteDetail.description);
+      setTags(testSuiteDetail.tags);
+      setScriptContent(testSuiteDetail.content);
+    }
+  }, [testSuiteDetail]);
+  const handleEdit = async () => {
+    const data = getValues();
+    if (!data.name?.trim()) {
+      toast.error("Test name is required");
+      return;
+    }
+    if (!testSuiteId) {
+      toast.error("Không có giá trị testSuiteId nên không thể chỉnh sửa");
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await TestSuiteApi().patch(testSuiteId, {
+        ...data,
+        tags,
+        content: scriptContent,
+        projectId,
+      });
+      toast.success(`Chỉnh sửa kịch bản test thành công`);
+    } catch (error) {
+      toast.error(`Có lỗi khi chỉnh sửa kịch bản test`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleSave = async () => {
     const data = getValues();
     if (!data.name?.trim()) {
@@ -101,10 +142,25 @@ export default function NewTestCasePage() {
                 {isLoading && <LoaderCircle className="animate-spin" />}
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
-                {isLoading && <LoaderCircle className="animate-spin" />}
-                Save
-              </Button>
+              {projectId && (
+                <Fragment>
+                  {testSuiteId ? (
+                    <Fragment>
+                      <Button onClick={handleEdit} disabled={isLoading} className="" size="sm">
+                        {isLoading && <LoaderCircle className="animate-spin" />}
+                        Edit
+                      </Button>
+                    </Fragment>
+                  ) : (
+                    <Fragment>
+                      <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
+                        {isLoading && <LoaderCircle className="animate-spin" />}
+                        Create
+                      </Button>
+                    </Fragment>
+                  )}
+                </Fragment>
+              )}
             </div>
             <Button
               onClick={handleRunTest}
