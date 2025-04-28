@@ -164,6 +164,13 @@ export const createCollection = async (collectionData) => {
     throw error;
   }
 };
+export const TestSuiteApi = (path = "/api/testsuite") => {
+  const post = async (data) => {
+    const res = await apiClient.post(path, data);
+    return res;
+  };
+  return { post };
+};
 export const ProjectApi = (path = "/api/project") => {
   const _delete = async (id) => {
     const res = await apiClient.delete(`${path}/${id}`);
