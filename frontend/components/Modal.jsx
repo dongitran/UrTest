@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { LoaderCircle } from "lucide-react";
-import { WorkspaceApi } from "@/lib/api";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +23,6 @@ const WorkspaceModal = ({ workspace = {}, openWorkspaceModal, setOpenWorkspaceMo
   const onCreateWorkspace = async () => {
     try {
       setLoading(true);
-      await WorkspaceApi().post({ name, description });
       setDescription("");
       setName("");
       toast.success("Tạo workspace thành công");
@@ -44,7 +42,6 @@ const WorkspaceModal = ({ workspace = {}, openWorkspaceModal, setOpenWorkspaceMo
     }
     try {
       setLoading(true);
-      await WorkspaceApi().patch(workspace.id, { name, description });
       setDescription("");
       setName("");
       toast.success("Chỉnh sửa workspace thành công");
