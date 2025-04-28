@@ -193,30 +193,6 @@ export const DashboardApi = (path = "/api/dashboard") => {
   };
   return { get };
 };
-export const WorkspaceApi = () => {
-  const path = "/workspaces";
-  const post = async ({ name, description }) => {
-    const response = await apiClient.post(path, { description, name });
-    return response.data;
-  };
-  const get = async () => {
-    const res = await apiClient.get(path);
-    return res.data;
-  };
-  const detail = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
-    return res.data;
-  };
-  const patch = async (id, body) => {
-    const res = await apiClient.patch(`${path}/${id}`, body);
-    return res.data;
-  };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
-    return res.data;
-  };
-  return { post, get, detail, patch, delete: _delete };
-};
 
 export const updateCollection = async (collectionId, collectionData) => {
   try {
