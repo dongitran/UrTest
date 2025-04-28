@@ -138,7 +138,12 @@ export default function NewTestCasePage() {
 
           <div className="flex justify-between items-center pt-4">
             <div>
-              <Button variant="outline" onClick={() => router.push("/test-management")} size="sm" className="mr-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/test-management?id=${projectId}`)}
+                size="sm"
+                className="mr-2"
+              >
                 {isLoading && <LoaderCircle className="animate-spin" />}
                 Cancel
               </Button>

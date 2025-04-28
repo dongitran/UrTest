@@ -84,25 +84,24 @@ export default function TestCaseList({ project = {}, listTestSuite = [] }) {
                 <div className="col-span-2">
                   {test.tags &&
                     test.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className={`px-2 py-0.5 ${getTypeBadgeClass(test.type)}`}>
+                      <Badge key={tag} variant="outline" className={`${getTypeBadgeClass(test.type)}`}>
                         {tag}
                       </Badge>
                     ))}
                 </div>
                 <div className="col-span-1">
-                  <Badge variant="outline" className={`px-2 py-0.5 ${getStatusBadgeClass(test.status)}`}>
+                  <Badge variant="outline" className={`${getStatusBadgeClass(test.status)}`}>
                     {test.status}
                   </Badge>
                 </div>
                 <div className="col-span-1 text-sm text-muted-foreground">{test.lastRun}</div>
                 <div className="col-span-1 text-sm text-muted-foreground">{test.duration}</div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
+                <div className="col-span-2 flex items-center justify-end">
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Play className="h-4 w-4" />
                   </Button>
                   <Button
                     onClick={() => {
-                      console.log("project :>> ", project, `?`);
                       router.push(
                         `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
                           project.id
@@ -114,12 +113,6 @@ export default function TestCaseList({ project = {}, listTestSuite = [] }) {
                     className="h-8 w-8"
                   >
                     <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <FileText className="h-4 w-4" />
                   </Button>
                   <Button
                     onClick={async () => {
