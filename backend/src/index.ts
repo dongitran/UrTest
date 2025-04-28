@@ -7,6 +7,7 @@ import MongoConfig from "./config/mongodb";
 import ProjectRoute from "@route/project.route";
 import VerifyToken from "@middlewars/VerifyToken";
 import DashboardRoute from "@route/dashboard.route";
+import TestSuiteRoute from "@route/testsuite.route";
 
 const app = new Hono();
 
@@ -18,6 +19,7 @@ app.use("/api/*", VerifyToken());
 
 app.route("/api/dashboard", DashboardRoute);
 app.route("/api/project", ProjectRoute);
+app.route("/api/testsuite", TestSuiteRoute);
 
 app.onError(ErrorLog);
 
