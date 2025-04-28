@@ -29,17 +29,16 @@ ProjectRoute.get("/:id", async (ctx) => {
   try {
     const id = ctx.req.param("id");
 
-    const project = await db
-      .select()
-      .from(ProjectTable)
-      .where(and(eq(ProjectTable.id, id), isNull(ProjectTable.deletedAt)))
-      .execute();
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+      with: { listTestSuite: true },
+    });
 
-    if (!project || project.length === 0) {
+    if (!project) {
       return ctx.json({ message: "Project not found" }, 404);
     }
 
-    return ctx.json({ project: project[0] });
+    return ctx.json({ project });
   } catch (error) {
     console.error("Error fetching project by ID:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -94,7 +93,6 @@ ProjectRoute.patch(
     if (!project) {
       return ctx.json({ message: "Không tìm thấy thông tin Project theo mã ID", code: "NOT_FOUND" }, 404);
     }
-    console.log("21312 :>> ", 21312);
     await db
       .update(ProjectTable)
       .set({
