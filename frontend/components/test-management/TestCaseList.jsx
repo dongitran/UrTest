@@ -8,7 +8,7 @@ import { TestSuiteApi } from "@/lib/api";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export default function TestCaseList({ project = {}, listTestSuite = [] }) {
+export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const totalTests = 32;
@@ -118,7 +118,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [] }) {
                     onClick={async () => {
                       try {
                         await TestSuiteApi().delete(test.id);
-
+                        setReRender({});
                         toast.success(`Đã xóa kịch bản ${test.name} thành công`);
                       } catch (error) {
                         toast.error(`Có lỗi khi xóa kịch bản test thất bại`);

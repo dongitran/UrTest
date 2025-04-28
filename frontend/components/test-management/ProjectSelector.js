@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function ProjectSelector({ setProject, projectId }) {
+export default function ProjectSelector({ reRender, setProject, projectId }) {
   const router = useRouter();
   const [listProject, setListProject] = useState([]);
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
@@ -43,7 +43,7 @@ export default function ProjectSelector({ setProject, projectId }) {
     if (selectedProjectId) {
       handleGetProjectDetail(selectedProjectId);
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, reRender]);
 
   const handleProjectChange = (value) => {
     setSelectedProject(value);
