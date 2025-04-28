@@ -57,10 +57,7 @@ export default function NewTestCasePage() {
         <div className="grid gap-4 p-6 border rounded-lg bg-card">
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2 flex-1">
-              <label
-                htmlFor="test-name"
-                className="text-sm font-medium whitespace-nowrap"
-              >
+              <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
                 Test Name
               </label>
               <Input
@@ -73,55 +70,30 @@ export default function NewTestCasePage() {
             </div>
 
             <div className="flex items-center gap-2 w-1/3">
-              <label
-                htmlFor="tags"
-                className="text-sm font-medium whitespace-nowrap"
-              >
+              <label htmlFor="tags" className="text-sm font-medium whitespace-nowrap">
                 Tags
               </label>
-              <TagInput
-                value={tags}
-                onChange={setTags}
-                placeholder="Press Enter to add tags"
-              />
+              <TagInput value={tags} onChange={setTags} placeholder="Press Enter to add tags" />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <div
-              className="border rounded-sm bg-card overflow-hidden"
-              style={{ height: editorHeight }}
-            >
-              <MonacoEditor
-                language="javascript"
-                value={scriptContent}
-                onChange={setScriptContent}
-              />
+            <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>
+              <MonacoEditor language="javascript" value={scriptContent} onChange={setScriptContent} />
             </div>
           </div>
 
           <div className="flex justify-between items-center pt-4">
             <div>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/test-management")}
-                className="mr-2"
-              >
+              <Button variant="outline" onClick={() => router.push("/test-management")} size="sm" className="mr-2">
                 Cancel
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
                 Save
               </Button>
             </div>
-            <Button
-              onClick={handleRunTest}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Play className="h-4 w-4 mr-2" />
+            <Button onClick={handleRunTest} className="bg-green-700 text-white hover:bg-green-800" size="sm">
+              <Play className="h-4 w-4" />
               Run Test
             </Button>
           </div>
