@@ -2,12 +2,9 @@
 
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
+import { Badge } from "./ui/badge";
 
-export default function TagInput({
-  value = [],
-  onChange,
-  placeholder = "Add tags...",
-}) {
+export default function TagInput({ value = [], onChange, placeholder = "Add tags..." }) {
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef(null);
   const containerRef = useRef(null);
@@ -37,23 +34,20 @@ export default function TagInput({
   return (
     <div
       ref={containerRef}
-      className="flex flex-wrap items-center gap-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm cursor-text"
+      className="flex flex-wrap items-center gap-1 w-full rounded-md border border-input bg-transparent p-2 text-sm cursor-text"
       onClick={focusInput}
     >
       {value.map((tag, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-1 rounded-md bg-blue-100 text-blue-900 dark:bg-blue-700/40 dark:text-blue-50 px-2 py-0.5 text-xs my-1 h-6"
-        >
+        <Badge key={index} className="rounded-sm flex items-center gap-1">
           <span>{tag}</span>
           <X
+            className="size-4 ml-auto cursor-pointer hover:text-red-500"
             onClick={(e) => {
               e.stopPropagation();
               removeTag(tag);
             }}
-            className="h-3 w-3 cursor-pointer hover:text-destructive"
           />
-        </div>
+        </Badge>
       ))}
       <input
         ref={inputRef}
