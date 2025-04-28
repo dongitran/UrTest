@@ -45,7 +45,7 @@ export default function NewTestCasePage() {
     if (testSuiteDetail) {
       setValue("name", testSuiteDetail.name);
       setValue("description", testSuiteDetail.description);
-      setTags(testSuiteDetail.tags);
+      setTags(testSuiteDetail.tags || []);
       setScriptContent(testSuiteDetail.content);
     }
   }, [testSuiteDetail]);
