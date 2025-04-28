@@ -58,7 +58,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [] }) {
             </div>
           </div>
 
-          <Button className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
+          <Button size="sm" className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
             <Play className="!size-4" />
             Run All Tests
           </Button>

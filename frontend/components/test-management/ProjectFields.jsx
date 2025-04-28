@@ -36,7 +36,7 @@ const ProjectFields = memo(({ project }) => {
             <div className="flex gap-3 items-center">
               <span>Thông tin chung</span>
               <div className="ml-auto"></div>
-              <Button className="rounded-sm cursor-pointer" onClick={handleUpdateProject}>
+              <Button className="rounded-sm cursor-pointer" onClick={handleUpdateProject} size="sm">
                 Cập nhập dữ liệu
               </Button>
             </div>
