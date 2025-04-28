@@ -34,6 +34,7 @@ ProjectRoute.get("/:id", async (ctx) => {
       with: {
         listTestSuite: {
           where: (clm, { isNull }) => isNull(clm.deletedAt),
+          orderBy: (clm, { desc }) => desc(clm.id),
         },
       },
     });

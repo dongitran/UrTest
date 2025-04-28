@@ -51,6 +51,7 @@ TestSuiteRoute.post(
       createdBy: user.email,
       description: body.description,
       status: "Not Run",
+      tags: body.tags,
     });
     return ctx.json({ message: "ok" });
   }
