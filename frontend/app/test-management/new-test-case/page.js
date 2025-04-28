@@ -140,7 +140,7 @@ export default function NewTestCasePage() {
             <div>
               <Button
                 variant="outline"
-                onClick={() => router.push(`/test-management?id=${projectId}`)}
+                onClick={() => router.push(`/test-management?projectId=${projectId}`)}
                 size="sm"
                 className="mr-2"
               >
