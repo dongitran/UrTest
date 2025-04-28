@@ -93,7 +93,7 @@ export default function NewTestCasePage() {
         projectId,
       });
       toast.success("Test case saved successfully");
-      router.push(`/test-management?id=${projectId}`);
+      router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
       toast.error("Failed to save test case");
