@@ -36,5 +36,6 @@ export const TestSuiteTable = pgTable("tbl_test_suites", {
   status: enumTestSuiteStatus(),
   progress: integer(),
   tags: text().array(),
+  fileName: varchar("file_name", { length: 255 }),
   ...commonTable,
 });
