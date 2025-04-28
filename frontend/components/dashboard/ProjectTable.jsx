@@ -113,8 +113,12 @@ export default function ProjectTable({
         header: () => <div className="text-center">Progress</div>,
         cell: ({ row }) => (
           <div className="flex gap-3 items-center">
-            <Progress value={33} className="" indicatorColor="bg-green-700" />
-            <span className="text-xs">33%</span>
+            <Progress
+              value={33}
+              className="w-full"
+              indicatorColor="bg-green-700"
+            />
+            <span className="text-xs whitespace-nowrap">33%</span>
           </div>
         ),
       },
@@ -130,33 +134,35 @@ export default function ProjectTable({
       },
       {
         accessorKey: "actions",
-        header: () => <div className="text-center"></div>,
+        header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <EllipsisVertical className="!size-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <Link href={`/test-management?id=${row.original["id"]}`}>
-                <DropdownMenuItem>
-                  Edit
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <EllipsisVertical className="!size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <Link href={`/test-management?id=${row.original["id"]}`}>
+                  <DropdownMenuItem>
+                    Edit
+                    <DropdownMenuShortcut>
+                      <SquarePen className="size-4" />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuItem
+                  onClick={handleDeleteProject(row.original["id"])}
+                >
+                  Delete
                   <DropdownMenuShortcut>
-                    <SquarePen className="size-4" />
+                    <Trash2 className="size-4" />
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem
-                onClick={handleDeleteProject(row.original["id"])}
-              >
-                Delete
-                <DropdownMenuShortcut>
-                  <Trash2 className="size-4" />
-                </DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ),
       },
     ];
@@ -243,7 +249,13 @@ export default function ProjectTable({
                     return (
                       <TableHead
                         key={header.id}
-                        className={header.id.includes("title") ? "w-1/2" : ""}
+                        className={
+                          header.id.includes("title")
+                            ? "w-1/2"
+                            : header.id.includes("progress")
+                            ? "w-1/6"
+                            : ""
+                        }
                       >
                         {header.isPlaceholder
                           ? null
