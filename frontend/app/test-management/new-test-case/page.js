@@ -1,22 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { LoaderCircle, Play } from "lucide-react";
+import { LoaderCircle, Play, Terminal } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
+import { TestSuiteApi } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewTestCasePage() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
   const router = useRouter();
-  const [testName, setTestName] = useState("");
   const [tags, setTags] = useState([]);
-  const [scriptContent, setScriptContent] = useState("");
+  const [scriptContent, setScriptContent] = useState(
+    `*** Settings ***\nResource    ../../resources/common_imports.robot\n`
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
-
+  const { register, getValues } = useForm();
   useEffect(() => {
     const updateEditorHeight = () => {
       setEditorHeight("calc(100vh - 260px)");
@@ -27,15 +34,25 @@ export default function NewTestCasePage() {
   }, []);
 
   const handleSave = async () => {
-    if (!testName.trim()) {
+    const data = getValues();
+    if (!data.name?.trim()) {
       toast.error("Test name is required");
       return;
     }
-    setIsLoading(true);
+    if (!projectId) {
+      toast.error("Không có giá trị ProjectId nên không thể tạo");
+      return;
+    }
     try {
-      await new Promise((r) => setTimeout(r, 500));
+      setIsLoading(true);
+      await TestSuiteApi().post({
+        ...data,
+        tags,
+        content: scriptContent,
+        projectId,
+      });
       toast.success("Test case saved successfully");
-      router.push("/test-management");
+      router.push(`/test-management?id=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
       toast.error("Failed to save test case");
@@ -55,27 +72,22 @@ export default function NewTestCasePage() {
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
         <div className="grid gap-4 p-6 border rounded-lg bg-card">
-          <div className="flex gap-4 items-center">
+          <div className="grid grid-cols-1 gap-3 ">
             <div className="flex items-center gap-2 flex-1">
-              <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
-                Test Name <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="test-name"
-                value={testName}
-                onChange={(e) => setTestName(e.target.value)}
-                placeholder="Enter test case name"
-                className="w-full"
-              />
+              <Input id="test-name" {...register("name")} placeholder="Enter test case name" className="w-full" />
             </div>
 
-            <div className="flex items-center gap-2 w-1/3">
-              <label htmlFor="tags" className="text-sm font-medium whitespace-nowrap">
-                Tags
-              </label>
+            <div className="flex items-center gap-2">
               <TagInput value={tags} onChange={setTags} placeholder="Press Enter to add tags" />
             </div>
+            <Textarea placeholder="Mô tả nội dung của kịch bản test..." {...register("description")} />
           </div>
+
+          <Alert className="">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Lưu ý</AlertTitle>
+            <AlertDescription>Khi viết 1 kịch bản test, thì có thể có 1 hoặc nhiều testcase.</AlertDescription>
+          </Alert>
 
           <div className="grid gap-2">
             <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>

@@ -13,8 +13,8 @@ export default function ProjectSelector({ setProject, projectId }) {
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const handleNavigateToNewTestCase = (projectName) => {
-    router.push(`/test-management/new-test-case?project=${encodeURIComponent(projectName)}`);
+  const handleNavigateToNewTestCase = (projectName, projectId) => {
+    router.push(`/test-management/new-test-case?project=${encodeURIComponent(projectName)}&projectId=${projectId}`);
   };
   useEffect(() => {
     const getProjects = async () => {
@@ -90,7 +90,7 @@ export default function ProjectSelector({ setProject, projectId }) {
           onClick={() => {
             const project = projects.find((p) => p.id === selectedProjectId);
             if (project) {
-              handleNavigateToNewTestCase(project.title);
+              handleNavigateToNewTestCase(project.title, project.id);
             }
           }}
         >
