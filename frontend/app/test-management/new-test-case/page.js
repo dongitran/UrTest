@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Play } from "lucide-react";
+import { LoaderCircle, Play } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 
@@ -58,7 +58,7 @@ export default function NewTestCasePage() {
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2 flex-1">
               <label htmlFor="test-name" className="text-sm font-medium whitespace-nowrap">
-                Test Name
+                Test Name <span className="text-red-500">*</span>
               </label>
               <Input
                 id="test-name"
@@ -86,14 +86,21 @@ export default function NewTestCasePage() {
           <div className="flex justify-between items-center pt-4">
             <div>
               <Button variant="outline" onClick={() => router.push("/test-management")} size="sm" className="mr-2">
+                {isLoading && <LoaderCircle className="animate-spin" />}
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
+                {isLoading && <LoaderCircle className="animate-spin" />}
                 Save
               </Button>
             </div>
-            <Button onClick={handleRunTest} className="bg-green-700 text-white hover:bg-green-800" size="sm">
-              <Play className="h-4 w-4" />
+            <Button
+              onClick={handleRunTest}
+              disabled={isLoading}
+              className="bg-green-700 text-white hover:bg-green-800"
+              size="sm"
+            >
+              {isLoading ? <LoaderCircle className="animate-spin" /> : <Play className="h-4 w-4" />}
               Run Test
             </Button>
           </div>
