@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
       const userInfo = getUserInfo();
       setUser(userInfo);
 
-      router.push("/workspace");
+      router.push("/dashboard");
 
       return { success: true };
     } catch (error) {
@@ -217,7 +217,7 @@ export const AuthProvider = ({ children }) => {
         const userInfo = getUserInfo();
         setUser(userInfo);
         console.log("Login successful:", userInfo);
-        router.push("/workspace");
+        router.push("/dashboard");
       }
     } catch (error) {
       console.error("Login error:", error);

@@ -26,12 +26,10 @@ export function SiteHeader() {
         ],
       };
     }
-    if (pathname.startsWith("/test-management"))
-      return { title: "Test Management" };
-    if (pathname.startsWith("/test-execution"))
-      return { title: "Test Execution" };
+    if (pathname.startsWith("/test-management")) return { title: "Test Management" };
+    if (pathname.startsWith("/test-execution")) return { title: "Test Execution" };
     if (pathname.startsWith("/reports")) return { title: "Reports" };
-    if (pathname.startsWith("/workspace")) return { title: "Dashboard" };
+    if (pathname.startsWith("/dashboard")) return { title: "Dashboard" };
     return { title: "" };
   }, [pathname, searchParams]);
 
@@ -39,10 +37,7 @@ export function SiteHeader() {
     <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
-        />
+        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
 
         <div className="flex justify-between items-center w-full">
           {pageInfo.isBreadcrumb ? (
@@ -66,10 +61,7 @@ export function SiteHeader() {
                     </svg>
                   )}
                   {idx < pageInfo.breadcrumbs.length - 1 ? (
-                    <Link
-                      href={crumb.path}
-                      className="text-blue-500 hover:underline"
-                    >
+                    <Link href={crumb.path} className="text-blue-500 hover:underline">
                       {crumb.title}
                     </Link>
                   ) : (
@@ -85,8 +77,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-4">
             {pageInfo.title && (
               <div className="hidden md:block text-sm text-muted-foreground">
-                Today: {dayjs().format("DD/MM/YYYY")} | Last updated:{" "}
-                {dayjs().format("HH:mm A")}
+                Today: {dayjs().format("DD/MM/YYYY")} | Last updated: {dayjs().format("HH:mm A")}
               </div>
             )}
             <ThemeToggle />

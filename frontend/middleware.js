@@ -5,9 +5,7 @@ const publicRoutes = ["/", "/silent-check-sso.html"];
 export default function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route)
-  );
+  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route));
 
   if (isPublicRoute) {
     return NextResponse.next();
@@ -24,5 +22,5 @@ export default function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/workspace/:path*"],
+  matcher: ["/dashboard/:path*"],
 };

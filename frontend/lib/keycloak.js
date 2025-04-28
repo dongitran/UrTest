@@ -16,8 +16,7 @@ export const initKeycloak = () => {
 
 function generateRandomString(length) {
   let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -54,7 +53,7 @@ export const login = async () => {
     const state = generateRandomString(32);
     localStorage.setItem("oauth_state", state);
 
-    const redirectUri = window.location.origin + "/workspace";
+    const redirectUri = window.location.origin + "/dashboard";
     const loginUrl =
       `${process.env.NEXT_PUBLIC_KEYCLOAK_URL}/realms/${process.env.NEXT_PUBLIC_KEYCLOAK_REALM}/protocol/openid-connect/auth` +
       `?client_id=${process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID}` +
@@ -76,7 +75,7 @@ export const login = async () => {
 
 export const exchangeCodeForToken = async (code) => {
   try {
-    const redirectUri = window.location.origin + "/workspace";
+    const redirectUri = window.location.origin + "/dashboard";
     const codeVerifier = localStorage.getItem("code_verifier");
 
     if (!codeVerifier) {
@@ -103,11 +102,7 @@ export const exchangeCodeForToken = async (code) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(
-        `Token exchange failed: ${
-          errorData.error_description || "Unknown error"
-        }`
-      );
+      throw new Error(`Token exchange failed: ${errorData.error_description || "Unknown error"}`);
     }
 
     const tokenResponse = await response.json();
@@ -195,9 +190,7 @@ export const logout = async () => {
     localStorage.removeItem("keycloak_token");
 
     document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
 
     window.location.href = window.location.origin;
@@ -278,10 +271,7 @@ export const updateToken = async (minValidity = 5) => {
       if (refreshToken) {
         const formData = new URLSearchParams();
         formData.append("grant_type", "refresh_token");
-        formData.append(
-          "client_id",
-          process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
-        );
+        formData.append("client_id", process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID);
         formData.append("refresh_token", refreshToken);
 
         const response = await fetch(
