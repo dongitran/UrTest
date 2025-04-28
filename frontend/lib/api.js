@@ -169,11 +169,19 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(path, data);
     return res;
   };
+  const detail = async (id) => {
+    const res = await apiClient.get(`${path}/${id}`);
+    return res.data;
+  };
+  const patch = async (id, data) => {
+    const res = await apiClient.patch(`${path}/${id}`, data);
+    return res;
+  };
   const _delete = async (id) => {
     const res = await apiClient.delete(`${path}/${id}`);
     return res;
   };
-  return { post, delete: _delete };
+  return { post, patch, detail, delete: _delete };
 };
 
 export const ProjectApi = (path = "/api/project") => {
