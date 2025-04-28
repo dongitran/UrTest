@@ -4,56 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, Play, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { TestSuiteApi } from "@/lib/api";
+import { toast } from "sonner";
 
-const testCases = [
-  {
-    id: 1,
-    name: "Verify login with valid credentials",
-    type: "Authentication",
-    status: "Passed",
-    lastRun: "2 hours ago",
-    duration: "2.3s",
-    fileName: "login_tests.robot",
-  },
-  {
-    id: 2,
-    name: "Verify login with invalid credentials",
-    type: "Authentication",
-    status: "Not Run",
-    lastRun: "—",
-    duration: "—",
-    fileName: "login_tests.robot",
-  },
-  {
-    id: 3,
-    name: "Check product search functionality",
-    type: "Search",
-    status: "Passed",
-    lastRun: "2 hours ago",
-    duration: "4.1s",
-    fileName: "search_tests.robot",
-  },
-  {
-    id: 4,
-    name: "Verify product filters work correctly",
-    type: "Search",
-    status: "Failed",
-    lastRun: "3 hours ago",
-    duration: "5.7s",
-    fileName: "search_tests.robot",
-  },
-  {
-    id: 5,
-    name: "Product detail page shows correct info",
-    type: "Product",
-    status: "Passed",
-    lastRun: "1 day ago",
-    duration: "3.2s",
-    fileName: "product_tests.robot",
-  },
-];
-
-export default function TestCaseList() {
+export default function TestCaseList({ project = {}, listTestSuite = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
   const totalTests = 32;
   const itemsPerPage = 7;
@@ -112,23 +66,26 @@ export default function TestCaseList() {
         <div className="rounded-md border">
           <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
             <div className="col-span-4">TEST CASE</div>
-            <div className="col-span-2">TYPE</div>
+            <div className="col-span-2">TAGS</div>
             <div className="col-span-1">STATUS</div>
             <div className="col-span-1">LAST RUN</div>
             <div className="col-span-1">DURATION</div>
             <div className="col-span-2 text-right pr-2">ACTIONS</div>
           </div>
           <div className="divide-y">
-            {testCases.map((test) => (
+            {listTestSuite.map((test) => (
               <div key={test.id} className="grid grid-cols-12 items-center p-3">
                 <div className="col-span-4">
-                  <div className="font-medium">{test.name}</div>
-                  <div className="text-xs text-muted-foreground">{test.fileName}</div>
+                  <div className="font-medium text-xl">{test.name}</div>
+                  <div className="text-xs text-muted-foreground">{test.description}</div>
                 </div>
                 <div className="col-span-2">
-                  <Badge variant="outline" className={`px-2 py-0.5 ${getTypeBadgeClass(test.type)}`}>
-                    {test.type}
-                  </Badge>
+                  {test.tags &&
+                    test.tags.map((tag) => (
+                      <Badge key={tag} variant="outline" className={`px-2 py-0.5 ${getTypeBadgeClass(test.type)}`}>
+                        {tag}
+                      </Badge>
+                    ))}
                 </div>
                 <div className="col-span-1">
                   <Badge variant="outline" className={`px-2 py-0.5 ${getStatusBadgeClass(test.status)}`}>
@@ -141,10 +98,14 @@ export default function TestCaseList() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Play className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button
+                    onClick={() => {
+                      console.log("project :>> ", project);
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -153,7 +114,20 @@ export default function TestCaseList() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <FileText className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await TestSuiteApi().delete(test.id);
+
+                        toast.success(`Đã xóa kịch bản ${test.name} thành công`);
+                      } catch (error) {
+                        toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
+                      }
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -162,7 +136,7 @@ export default function TestCaseList() {
           </div>
         </div>
         <div className="flex items-center justify-between mt-3">
-          <div className="text-sm text-muted-foreground">Showing 1 to 7 of 32 test cases</div>
+          <div className="text-sm text-muted-foreground">Total {listTestSuite.length} test suite</div>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"

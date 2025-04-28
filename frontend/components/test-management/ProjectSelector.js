@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export default function ProjectSelector({ setProject, projectId }) {
   const router = useRouter();
-  const [projects, setProjects] = useState([]);
+  const [listProject, setListProject] = useState([]);
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,7 +20,7 @@ export default function ProjectSelector({ setProject, projectId }) {
     const getProjects = async () => {
       try {
         const data = await ProjectApi().get();
-        setProjects(data.projects);
+        setListProject(data.projects);
         setLoading(false);
       } catch (err) {
         toast.error("Không thể tải danh sách Project");
@@ -74,7 +74,7 @@ export default function ProjectSelector({ setProject, projectId }) {
               <SelectValue placeholder={`Chọn Project để xem thông tin`} />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
-              {projects.map((project) => (
+              {listProject.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.title}
                 </SelectItem>
@@ -88,7 +88,7 @@ export default function ProjectSelector({ setProject, projectId }) {
           className="gap-1 items-center rounded-sm"
           disabled={!selectedProjectId}
           onClick={() => {
-            const project = projects.find((p) => p.id === selectedProjectId);
+            const project = listProject.find((p) => p.id === selectedProjectId);
             if (project) {
               handleNavigateToNewTestCase(project.title, project.id);
             }

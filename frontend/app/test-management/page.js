@@ -24,7 +24,7 @@ export default function TestManagement() {
       {project && (
         <Fragment>
           <ProjectFields project={project} />
-          <TestCaseList />
+          <TestCaseList project={project} listTestSuite={project.listTestSuite} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <RecentTestRuns />
