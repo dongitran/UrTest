@@ -16,12 +16,13 @@ export function SiteHeader() {
   const pageInfo = useMemo(() => {
     if (pathname.startsWith("/test-management/new-test-case")) {
       const projectName = searchParams.get("project");
+      const projectId = searchParams.get("projectId");
       return {
         title: "Test Management",
         isBreadcrumb: true,
         breadcrumbs: [
           { title: "Test Management", path: "/test-management" },
-          { title: projectName, path: "/test-management" },
+          { title: projectName, path: `/test-management?projectId=${projectId}` },
           { title: "New Test Case", path: pathname },
         ],
       };

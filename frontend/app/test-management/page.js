@@ -16,7 +16,7 @@ dayjs.extend(advancedFormat);
 export default function TestManagement() {
   const [project, setProject] = useState();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get("id");
+  const projectId = searchParams.get("projectId");
 
   return (
     <div className="flex flex-col gap-6">
