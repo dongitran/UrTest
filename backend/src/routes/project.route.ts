@@ -31,7 +31,11 @@ ProjectRoute.get("/:id", async (ctx) => {
 
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
-      with: { listTestSuite: true },
+      with: {
+        listTestSuite: {
+          where: (clm, { isNull }) => isNull(clm.deletedAt),
+        },
+      },
     });
 
     if (!project) {

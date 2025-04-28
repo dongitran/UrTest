@@ -35,5 +35,6 @@ export const TestSuiteTable = pgTable("tbl_test_suites", {
   lastRunDate: timestamp("last_run_date", { withTimezone: true, mode: "string" }),
   status: enumTestSuiteStatus(),
   progress: integer(),
+  tags: text().array(),
   ...commonTable,
 });
