@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import dayjs from "dayjs";
 import db from "db/db";
-import { TestSuiteTable } from "db/schema";
+import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
 import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import { Hono } from "hono";
@@ -90,6 +90,67 @@ TestSuiteRoute.post(
         }
       );
     }
+    return ctx.json({ message: "ok" });
+  }
+).post(
+  "/:id/execute",
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  zValidator(
+    "json",
+    z.object({
+      status: z.enum(["pending", "processing", "success", "failed"]),
+      testSuiteStatus: z.enum(["Not Run", "Running", "Completed", "Failed", "Aborted"]),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+    const user = ctx.get("user");
+    const body = ctx.req.valid("json");
+    const testSuite = await db.query.TestSuiteTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+      with: { project: true },
+    });
+    if (!testSuite) {
+      return ctx.json({ message: "Không tìm thấy kịch bản test" }, 404);
+    } else if (testSuite.status === "Running") {
+      return ctx.json({ message: "Kịch bản test đang được thực thi. Vui lòng đợi kết thúc rồi thực hiện lại" }, 400);
+    } else if (!testSuite.project) {
+      return ctx.json({ message: "Không tìm thấy Project" }, 404);
+    } else if (testSuite.project.deletedAt) {
+      return ctx.json({ message: "Project đã bị xóa nên không thể thực hiện kịch bản test" }, 400);
+    }
+
+    const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+      where: (clm, { eq, and }) => and(eq(clm.testSuiteId, testSuite.id), eq(clm.status, "processing")),
+    });
+    if (listTestSuiteExecute.length >= 1) {
+      return ctx.json(
+        { message: "Kịch bản test đang được thực thi ở tiến trình. Vui lòng đợi kết thúc rồi thực hiện lại" },
+        400
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(TestSuiteExecuteTable).values({
+        createdAt: dayjs().toISOString(),
+        createdBy: user.email,
+        id: ulid(),
+        testSuiteId: id,
+        status: body.status,
+      });
+      await tx
+        .update(TestSuiteTable)
+        .set({
+          status: body.testSuiteStatus,
+        })
+        .where(eq(TestSuiteTable.id, testSuite.id));
+    });
+
     return ctx.json({ message: "ok" });
   }
 );
