@@ -18,6 +18,17 @@ export const ProjectTable = pgTable("tbl_projects", {
   slug: varchar(),
   ...commonTable,
 });
+export const enumTestSuiteExecuteStatus = pgEnum("enum_testsuite_execute_status", [
+  "pending",
+  "processing",
+  "success",
+  "failed",
+]);
+export const TestSuiteExecuteTable = pgTable("tbl_testsuite_execute", {
+  testSuiteId: varchar("testsuite_id", { length: 255 }).notNull(),
+  status: enumTestSuiteExecuteStatus(),
+  ...commonTable,
+});
 export const enumTestSuiteStatus = pgEnum("test_suite_status", [
   "Not Run",
   "Running",
