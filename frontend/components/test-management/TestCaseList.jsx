@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
+import { get } from "lodash";
 import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Pause, Play, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
@@ -60,7 +61,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         setReRender({});
         toast.success("Bắt đầu thực thi kịch bản test");
       } catch (error) {
-        toast.error("Có lỗi khi bắt đầu thực thi kịch bản test");
+        const message = get(error, "response.data.message") || "Có lỗi khi bắt đầu thực thi kịch bản test";
+        toast.error(message);
       }
     };
   };
