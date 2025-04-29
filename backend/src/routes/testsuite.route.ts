@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
-import CreateOrUpdateTestSuiteFile from "handler/create-new-testsuite-file";
+import CreateOrUpdateTestSuiteFile from "lib/create-new-testsuite-file";
 import { Hono } from "hono";
 import { get } from "lodash";
 import { ulid } from "ulid";
