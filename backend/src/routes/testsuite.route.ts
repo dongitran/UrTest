@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { get } from "lodash";
 import { ulid } from "ulid";
 import { z } from "zod";
+import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
 
 const TestSuiteRoute = new Hono();
 TestSuiteRoute.get(
@@ -148,7 +149,14 @@ TestSuiteRoute.patch(
       .where(eq(TestSuiteTable.id, testSuite.id))
       .returning()
       .then((res) => res[0]);
+
     if (project.slug && testSuite.content && testSuiteUpdated.content) {
+      if (testSuite.name !== testSuiteUpdated.name) {
+        DeleteFileFromGithub({
+          fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
+          projectSlug: project.slug,
+        });
+      }
       CreateOrUpdateTestSuiteFile(
         {
           projectSlug: project.slug,
