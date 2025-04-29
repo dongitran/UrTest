@@ -192,6 +192,21 @@ TestSuiteRoute.delete(
     const { id } = ctx.req.valid("param");
 
     const user = ctx.get("user");
+    const testSuite = await db.query.TestSuiteTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+      with: {
+        project: true,
+      },
+    });
+    if (!testSuite) {
+      return ctx.json({ message: "Không tìm thấy kịch bản test để xóa" }, 404);
+    }
+    if (testSuite.project && testSuite.project.slug) {
+      await DeleteFileFromGithub({
+        fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
+        projectSlug: testSuite.project.slug,
+      });
+    }
     await db
       .update(TestSuiteTable)
       .set({

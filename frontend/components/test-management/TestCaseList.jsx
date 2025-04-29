@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, Play, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, LoaderCircle, Play, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TestSuiteApi } from "@/lib/api";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
   const totalTests = 32;
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalTests / itemsPerPage);
-
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -44,7 +44,18 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         return "bg-gray-100 text-gray-800";
     }
   };
-
+  const handleDeleteTestSuite = async (test) => {
+    try {
+      setIsButtonLoading(true);
+      await TestSuiteApi().delete(test.id);
+      setReRender({});
+      toast.success(`Đã xóa kịch bản ${test.name} thành công`);
+    } catch (error) {
+      toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
+    } finally {
+      setIsButtonLoading(false);
+    }
+  };
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -97,8 +108,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                 <div className="col-span-1 text-sm text-muted-foreground">{test.lastRun}</div>
                 <div className="col-span-1 text-sm text-muted-foreground">{test.duration}</div>
                 <div className="col-span-2 flex items-center justify-end">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Play className="h-4 w-4" />
+                  <Button disabled={isButtonLoading} variant="ghost" size="icon" className="h-8 w-8">
+                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Play className="h-4 w-4" />}
                   </Button>
                   <Button
                     onClick={() => {
@@ -111,24 +122,18 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
+                    disabled={isButtonLoading}
                   >
-                    <Edit className="h-4 w-4" />
+                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
                   </Button>
                   <Button
-                    onClick={async () => {
-                      try {
-                        await TestSuiteApi().delete(test.id);
-                        setReRender({});
-                        toast.success(`Đã xóa kịch bản ${test.name} thành công`);
-                      } catch (error) {
-                        toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
-                      }
-                    }}
+                    onClick={() => handleDeleteTestSuite(test)}
+                    disabled={isButtonLoading}
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-500 hover:text-red-600"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
