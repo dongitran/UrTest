@@ -19,14 +19,14 @@ export default async function CreateOrUpdateTestSuiteFile(
   const response = await fetch(`${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${testSuiteName}`, {
     method: "PUT",
     headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
       Accept: "application/vnd.github.v3+json",
     },
     body: JSON.stringify({
       message: "Create new testsuite file",
       content: Buffer.from(testSuiteContent).toString("base64"),
       branch: "main",
-      sha, // Nếu không có SHA thì là tạo mới, có thì là update
+      sha, //? Nếu không có SHA thì là tạo mới, có thì là update
     }),
   });
 
