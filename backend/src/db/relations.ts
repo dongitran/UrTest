@@ -6,7 +6,7 @@ export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
 }));
 
 export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one }) => ({
-  post: one(ProjectTable, {
+  project: one(ProjectTable, {
     fields: [TestSuiteTable.projectId],
     references: [ProjectTable.id],
   }),
