@@ -191,6 +191,8 @@ TestSuiteRoute.patch(
     });
     if (!testSuite) {
       return ctx.json({ message: "Không tìm thấy thông tin kịch bản test" }, 404);
+    } else if (testSuite.status === "Running") {
+      return ctx.json({ message: "Không thể chỉnh sửa kịch bản test khi đang được thực thi" }, 404);
     }
     const sha = get(testSuite, "params.githubData.content.sha");
     if (!sha) {
