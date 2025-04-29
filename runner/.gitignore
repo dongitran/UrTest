@@ -1,0 +1,11 @@
+node_modules
+.env
+tests
+*.log
+npm-debug.log*
+report.html
+log.html
+output.xml
+.DS_Store
+Thumbs.db
+note
