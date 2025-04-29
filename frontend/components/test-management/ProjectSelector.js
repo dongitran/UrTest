@@ -1,8 +1,6 @@
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectApi } from "@/lib/api";
-import { Play, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -13,9 +11,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const handleNavigateToNewTestCase = (projectName, projectId) => {
-    router.push(`/test-management/new-test-case?project=${encodeURIComponent(projectName)}&projectId=${projectId}`);
-  };
+
   useEffect(() => {
     const getProjects = async () => {
       try {
@@ -82,21 +78,6 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
             </SelectContent>
           </Select>
         </div>
-      </div>
-      <div className="flex gap-2">
-        <Button
-          className="gap-1 items-center rounded-sm"
-          disabled={!selectedProjectId}
-          onClick={() => {
-            const project = listProject.find((p) => p.id === selectedProjectId);
-            if (project) {
-              handleNavigateToNewTestCase(project.title, project.id);
-            }
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          New Test Case
-        </Button>
       </div>
     </div>
   );

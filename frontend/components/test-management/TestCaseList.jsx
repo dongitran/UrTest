@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Copy, Edit, Eye, FileText, LoaderCircle, Play, Search, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { TestSuiteApi } from "@/lib/api";
-import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Play, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
@@ -72,6 +72,16 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
           <Button size="sm" className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
             <Play className="!size-4" />
             Run All Tests
+          </Button>
+          <Button
+            onClick={() => {
+              router.push(
+                `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${project.id}`
+              );
+            }}
+          >
+            <FilePlus2 className="size-4" />
+            Create Test Suite
           </Button>
         </div>
       </CardHeader>
