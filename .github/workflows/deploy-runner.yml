@@ -1,4 +1,4 @@
-name: Deploy Runner Service for M1 Mac
+name: Deploy Runner Service
 
 on:
   push:
