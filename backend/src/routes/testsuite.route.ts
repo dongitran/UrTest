@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
+import CreateNewTestSuiteFile from "handler/create-new-testsuite-file";
 import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
@@ -42,17 +43,51 @@ TestSuiteRoute.post(
   async (ctx) => {
     const user = ctx.get("user");
     const body = ctx.req.valid("json");
-    await db.insert(TestSuiteTable).values({
-      createdAt: dayjs().toISOString(),
-      id: ulid(),
-      name: body.name,
-      projectId: body.projectId,
-      content: body.content,
-      createdBy: user.email,
-      description: body.description,
-      status: "Not Run",
-      tags: body.tags,
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, body.projectId),
     });
+    if (!project) {
+      return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
+    } else if (project.deletedAt) {
+      return ctx.json({ message: "Project đã bị xóa nên không thể tạo kịch bản test" }, 400);
+    }
+    const testSuite = await db
+      .insert(TestSuiteTable)
+      .values({
+        createdAt: dayjs().toISOString(),
+        id: ulid(),
+        name: body.name,
+        projectId: body.projectId,
+        content: body.content,
+        createdBy: user.email,
+        description: body.description,
+        status: "Not Run",
+        tags: body.tags,
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    //* Gọi tới Github API để tạo file bên UrTest Workflow
+    if (project.slug && testSuite.content) {
+      CreateNewTestSuiteFile(
+        {
+          projectSlug: project.slug,
+          testSuiteContent: testSuite.content,
+          testSuiteName: `${testSuite.id}-${testSuite.fileName}.robot`,
+        },
+        async (data: Record<string, any>) => {
+          await db
+            .update(TestSuiteTable)
+            .set({
+              params: {
+                ...(testSuite.params || {}),
+                githubData: data,
+              },
+            })
+            .where(eq(TestSuiteTable.id, testSuite.id));
+        }
+      );
+    }
     return ctx.json({ message: "ok" });
   }
 );
