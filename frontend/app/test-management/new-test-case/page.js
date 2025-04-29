@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { LoaderCircle, Play, Terminal } from "lucide-react";
+import { Copy, LoaderCircle, Play, Terminal } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
@@ -47,6 +47,7 @@ export default function NewTestCasePage() {
       setValue("description", testSuiteDetail.description);
       setTags(testSuiteDetail.tags || []);
       setScriptContent(testSuiteDetail.content);
+      setValue("fileName", testSuiteDetail.fileName ? `${testSuiteDetail.fileName}.robot` : null);
     }
   }, [testSuiteDetail]);
   const handleEdit = async () => {
@@ -122,6 +123,25 @@ export default function NewTestCasePage() {
               <TagInput value={tags} onChange={setTags} placeholder="Press Enter to add tags" />
             </div>
             <Textarea placeholder="Mô tả nội dung của kịch bản test..." {...register("description")} />
+            <div className="flex gap-3">
+              <Input
+                className="w-full"
+                placeholder="Tên file sẽ được tự động tạo ra khi bạn tạo thành công kịch bản test"
+                disabled
+                {...register("fileName")}
+              />
+              <Button
+                size="icon"
+                disabled={testSuiteDetail && testSuiteDetail.fileName ? false : true}
+                onClick={async () => {
+                  const fileName = `${testSuiteDetail.fileName}.robot`;
+                  await navigator.clipboard.writeText(fileName);
+                  toast(`Đã copy tên file: ${fileName}.robot`);
+                }}
+              >
+                <Copy />
+              </Button>
+            </div>
           </div>
 
           <Alert className="">
