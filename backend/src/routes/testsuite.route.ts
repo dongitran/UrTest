@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
-import CreateOrUpdateTestSuiteFile from "lib/Github/CreateOrUpdateFile";
+import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import { Hono } from "hono";
 import { get } from "lodash";
 import { ulid } from "ulid";
@@ -71,11 +71,11 @@ TestSuiteRoute.post(
 
     //* Gọi tới Github API để tạo file bên UrTest Workflow
     if (project.slug && testSuite.content) {
-      CreateOrUpdateTestSuiteFile(
+      CreateOrUpdateFile(
         {
           projectSlug: project.slug,
-          testSuiteContent: testSuite.content,
-          testSuiteName: `${testSuite.id}-${testSuite.fileName}.robot`,
+          fileContent: testSuite.content,
+          fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
         },
         async (data: Record<string, any>) => {
           await db
@@ -157,11 +157,11 @@ TestSuiteRoute.patch(
           projectSlug: project.slug,
         });
       }
-      CreateOrUpdateTestSuiteFile(
+      CreateOrUpdateFile(
         {
           projectSlug: project.slug,
-          testSuiteContent: testSuiteUpdated.content,
-          testSuiteName: `${testSuiteUpdated.id}-${testSuiteUpdated.fileName}.robot`,
+          fileContent: testSuiteUpdated.content,
+          fileName: `${testSuiteUpdated.id}-${testSuiteUpdated.fileName}.robot`,
           sha,
         },
         async (data: Record<string, any>) => {
