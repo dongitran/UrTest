@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
-import CreateNewTestSuiteFile from "handler/create-new-testsuite-file";
+import CreateOrUpdateTestSuiteFile from "handler/create-new-testsuite-file";
 import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
@@ -69,7 +69,7 @@ TestSuiteRoute.post(
 
     //* Gọi tới Github API để tạo file bên UrTest Workflow
     if (project.slug && testSuite.content) {
-      CreateNewTestSuiteFile(
+      CreateOrUpdateTestSuiteFile(
         {
           projectSlug: project.slug,
           testSuiteContent: testSuite.content,

@@ -2,7 +2,7 @@
  * Hàm dùng để tạo testsuite file cho UrTet Workflow (repository)
  * @param testSuiteName : testSuiteId + fileName. Ví dụ: 01JSVGHZ1XJNAVCBPZPB4QW57T-test1.robot
  */
-export default async function CreateNewTestSuiteFile(
+export default async function CreateOrUpdateTestSuiteFile(
   {
     projectSlug,
     testSuiteContent,
