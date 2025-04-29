@@ -22,6 +22,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         return "bg-green-100 text-green-800 border-green-200";
       case "Failed":
         return "bg-red-100 text-red-800 border-red-200";
+      case "Aborted":
+        return "bg-orange-600 text-orange-100 border-orange-600";
       case "Completed":
         return "bg-green-700 text-white border-green-700";
       case "Not Run":
