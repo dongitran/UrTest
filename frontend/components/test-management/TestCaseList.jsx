@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
-import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Play, Search, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Pause, Play, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
@@ -21,6 +21,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         return "bg-green-100 text-green-800 border-green-200";
       case "Failed":
         return "bg-red-100 text-red-800 border-red-200";
+      case "Completed":
+        return "bg-green-700 text-white border-green-700";
       case "Not Run":
         return "bg-gray-100 text-gray-800 border-gray-200";
       default:
@@ -43,6 +45,24 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+  const handleExecuteTestSuite = (testSuite) => {
+    return async () => {
+      if (!testSuite) return;
+      if (testSuite.status === "Running") {
+        return;
+      }
+      try {
+        await TestSuiteApi().execute(testSuite.id, {
+          status: "pending",
+          testSuiteStatus: "Running",
+        });
+        setReRender({});
+        toast.success("Bắt đầu thực thi kịch bản test");
+      } catch (error) {
+        toast.error("Có lỗi khi bắt đầu thực thi kịch bản test");
+      }
+    };
   };
   const handleDeleteTestSuite = async (test) => {
     try {
@@ -112,14 +132,27 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                 </div>
                 <div className="col-span-1">
                   <Badge variant="outline" className={`${getStatusBadgeClass(test.status)}`}>
+                    {test.status === "Running" && <LoaderCircle className="animate-spin size-3 mr-1" />}
                     {test.status}
                   </Badge>
                 </div>
                 <div className="col-span-1 text-sm text-muted-foreground">{test.lastRun}</div>
                 <div className="col-span-1 text-sm text-muted-foreground">{test.duration}</div>
                 <div className="col-span-2 flex items-center justify-end">
-                  <Button disabled={isButtonLoading} variant="ghost" size="icon" className="h-8 w-8">
-                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Play className="h-4 w-4" />}
+                  <Button
+                    disabled={isButtonLoading || test.status === "Running"}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleExecuteTestSuite(test)}
+                  >
+                    {isButtonLoading ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : (
+                      <Fragment>
+                        {test.status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}
+                      </Fragment>
+                    )}
                   </Button>
                   <Button
                     onClick={() => {
@@ -132,13 +165,13 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    disabled={isButtonLoading}
+                    disabled={isButtonLoading || test.status === "Running"}
                   >
                     {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
                   </Button>
                   <Button
                     onClick={() => handleDeleteTestSuite(test)}
-                    disabled={isButtonLoading}
+                    disabled={isButtonLoading || test.status === "Running"}
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-500 hover:text-red-600"
