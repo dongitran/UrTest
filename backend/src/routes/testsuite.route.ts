@@ -9,6 +9,7 @@ import { get } from "lodash";
 import { ulid } from "ulid";
 import { z } from "zod";
 import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
+import RunTest from "lib/Runner/RunTest";
 
 const TestSuiteRoute = new Hono();
 TestSuiteRoute.get(
@@ -119,10 +120,18 @@ TestSuiteRoute.post(
       return ctx.json({ message: "Không tìm thấy kịch bản test" }, 404);
     } else if (testSuite.status === "Running") {
       return ctx.json({ message: "Kịch bản test đang được thực thi. Vui lòng đợi kết thúc rồi thực hiện lại" }, 400);
-    } else if (!testSuite.project) {
+    } else if (!testSuite.content) {
+      return ctx.json({ message: "Kịch bản test không có nội dung về test case nên không thể thực hiện" }, 400);
+    } else if (!testSuite.fileName) {
+      return ctx.json({ message: "Kịch bản test không tồn tại fileName nên không thể thực hiện" }, 400);
+    }
+
+    if (!testSuite.project) {
       return ctx.json({ message: "Không tìm thấy Project" }, 404);
     } else if (testSuite.project.deletedAt) {
       return ctx.json({ message: "Project đã bị xóa nên không thể thực hiện kịch bản test" }, 400);
+    } else if (!testSuite.project.slug) {
+      return ctx.json({ message: "Hiện Project chưa có tên slug nên không thể thực thi kịch bản test" }, 400);
     }
 
     const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
@@ -134,15 +143,20 @@ TestSuiteRoute.post(
         400
       );
     }
-
+    let testSuiteExecute: typeof TestSuiteExecuteTable.$inferInsert;
     await db.transaction(async (tx) => {
-      await tx.insert(TestSuiteExecuteTable).values({
-        createdAt: dayjs().toISOString(),
-        createdBy: user.email,
-        id: ulid(),
-        testSuiteId: id,
-        status: body.status,
-      });
+      testSuiteExecute = await tx
+        .insert(TestSuiteExecuteTable)
+        .values({
+          createdAt: dayjs().toISOString(),
+          createdBy: user.email,
+          id: ulid(),
+          testSuiteId: id,
+          status: body.status,
+        })
+        .returning()
+        .then((res) => res[0]);
+
       await tx
         .update(TestSuiteTable)
         .set({
@@ -150,7 +164,54 @@ TestSuiteRoute.post(
         })
         .where(eq(TestSuiteTable.id, testSuite.id));
     });
-
+    RunTest({
+      projectName: testSuite.project.slug,
+      content: testSuite.content,
+      fileName: testSuite.fileName,
+    })
+      .then(async (res) => {
+        await db
+          .update(TestSuiteExecuteTable)
+          .set({
+            status: "success",
+            updatedAt: dayjs().toISOString(),
+            updatedBy: "SYSTEM-RUNER",
+          })
+          .where(eq(TestSuiteExecuteTable.id, testSuiteExecute.id));
+        await db
+          .update(TestSuiteTable)
+          .set({
+            params: {
+              ...(testSuite.params || {}),
+              resultRuner: res,
+            },
+            status: "Completed",
+            updatedAt: dayjs().toISOString(),
+            updatedBy: "SYSTEM-RUNER",
+          })
+          .where(eq(TestSuiteTable.id, testSuite.id));
+      })
+      .catch(async () => {
+        await db
+          .update(TestSuiteExecuteTable)
+          .set({
+            status: "failed",
+            updatedAt: dayjs().toISOString(),
+            updatedBy: "SYSTEM-RUNER",
+          })
+          .where(eq(TestSuiteExecuteTable.id, testSuiteExecute.id));
+        await db
+          .update(TestSuiteTable)
+          .set({
+            params: {
+              ...(testSuite.params || {}),
+            },
+            status: "Failed",
+            updatedAt: dayjs().toISOString(),
+            updatedBy: "SYSTEM-RUNER",
+          })
+          .where(eq(TestSuiteTable.id, testSuite.id));
+      });
     return ctx.json({ message: "ok" });
   }
 );
