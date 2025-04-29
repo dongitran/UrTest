@@ -181,7 +181,11 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.delete(`${path}/${id}`);
     return res;
   };
-  return { post, patch, detail, delete: _delete };
+  const execute = async (id, data) => {
+    const res = await apiClient.post(`${path}/${id}/execute`, data);
+    return res;
+  };
+  return { post, patch, detail, execute, delete: _delete };
 };
 
 export const ProjectApi = (path = "/api/project") => {
