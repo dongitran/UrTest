@@ -9,13 +9,20 @@ const execPromise = util.promisify(exec);
 
 exports.runTest = async (requestId, project, content) => {
   try {
+    let decodedContent;
+    try {
+      decodedContent = Buffer.from(content, 'base64').toString('utf-8');
+    } catch (error) {
+      throw new Error('Invalid base64 content');
+    }
+
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, 'tests', project);
     const testFilePath = path.join(projectPath, 'run-test-tmp.robot');
 
     await fs.ensureDir(projectPath);
 
-    const formattedContent = content.replace(/\n/g, '\n');
+    const formattedContent = decodedContent.replace(/\n/g, '\n');
     await fs.writeFile(testFilePath, formattedContent);
 
     const robotCommand = `robot tests/tests/${project}/run-test-tmp.robot`;
