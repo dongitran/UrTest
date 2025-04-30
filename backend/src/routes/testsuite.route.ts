@@ -174,6 +174,10 @@ TestSuiteRoute.post(
         await db
           .update(TestSuiteExecuteTable)
           .set({
+            params: {
+              ...(testSuiteExecute.params || {}),
+              resultRuner: res,
+            },
             status: "success",
             updatedAt: dayjs().toISOString(),
             updatedBy: "SYSTEM-RUNER",
@@ -210,6 +214,7 @@ TestSuiteRoute.post(
             params: {
               ...(testSuite.params || {}),
               duration: endRun.diff(startRun, "second"),
+              resultRuner: null,
             },
             status: "Failed",
             lastRunDate: dayjs().toISOString(),
