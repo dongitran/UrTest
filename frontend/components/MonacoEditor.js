@@ -21,16 +21,28 @@ export default function MonacoEditor({
   const { theme } = useTheme();
   const [editorTheme, setEditorTheme] = useState("vs-dark");
   const [monaco, setMonaco] = useState(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
     setEditorTheme(theme === "dark" ? "vs-dark" : "vs");
   }, [theme]);
 
   useEffect(() => {
-    if (monaco && language === "robotframework") {
-      registerRobotFrameworkLanguage(monaco);
+    async function setupRobotFramework() {
+      if (monaco && language === "robotframework" && !isRegistering) {
+        try {
+          setIsRegistering(true);
+          await registerRobotFrameworkLanguage(monaco);
+        } catch (error) {
+          console.error("Failed to register Robot Framework language:", error);
+        } finally {
+          setIsRegistering(false);
+        }
+      }
     }
-  }, [monaco, language]);
+
+    setupRobotFramework();
+  }, [monaco, language, isRegistering]);
 
   const options = useMemo(
     () => ({

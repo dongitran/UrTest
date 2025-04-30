@@ -1,11 +1,44 @@
-import robotFrameworkKeywords from "./robotFrameworkKeywords.json";
+let cachedKeywords = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 60000; // 60s
 
-export function registerRobotFrameworkLanguage(monaco) {
+export async function fetchRobotFrameworkKeywords() {
+  const currentTime = Date.now();
+
+  if (cachedKeywords && currentTime - lastFetchTime < CACHE_TTL) {
+    return cachedKeywords;
+  }
+
+  try {
+    const response = await fetch("http://s0.dtur.xyz/urtest/robotFrameworkKeywords.json");
+    if (!response.ok) {
+      throw new Error(`Failed to fetch keywords: ${response.status}`);
+    }
+
+    const keywords = await response.json();
+    cachedKeywords = keywords;
+    lastFetchTime = currentTime;
+    return keywords;
+  } catch (error) {
+    console.error("Error fetching Robot Framework keywords:", error);
+
+    if (cachedKeywords) {
+      console.warn("Using cached keywords due to fetch error");
+      return cachedKeywords;
+    }
+
+    throw error;
+  }
+}
+
+export async function registerRobotFrameworkLanguage(monaco) {
   if (
     monaco.languages.getLanguages().some((lang) => lang.id === "robotframework")
   ) {
     return;
   }
+
+  const keywords = await fetchRobotFrameworkKeywords();
 
   monaco.languages.register({ id: "robotframework" });
 
@@ -43,7 +76,7 @@ export function registerRobotFrameworkLanguage(monaco) {
       }
 
       return {
-        suggestions: robotFrameworkKeywords.map((item) => ({
+        suggestions: keywords.map((item) => ({
           label: item.label,
           kind: monaco.languages.CompletionItemKind[item.kind],
           insertText: item.insertText,
