@@ -167,7 +167,6 @@ TestSuiteRoute.post(
     RunTest({
       projectName: testSuite.project.slug,
       content: testSuite.content,
-      fileName: testSuite.fileName,
     })
       .then(async (res) => {
         await db
