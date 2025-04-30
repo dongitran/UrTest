@@ -15,7 +15,7 @@ const commonTable = {
 export const ProjectTable = pgTable("tbl_projects", {
   title: varchar({ length: 255 }).notNull(),
   description: text().notNull(),
-  slug: varchar(),
+  slug: varchar().notNull(),
   ...commonTable,
 });
 export const enumTestSuiteExecuteStatus = pgEnum("enum_testsuite_execute_status", [
