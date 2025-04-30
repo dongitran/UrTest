@@ -18,7 +18,7 @@ export default async function RunTest({
     body: JSON.stringify({
       requestId: ulid(),
       project: projectName,
-      content,
+      content: Buffer.from(content).toString("base64"),
       fileName,
     }),
   });
