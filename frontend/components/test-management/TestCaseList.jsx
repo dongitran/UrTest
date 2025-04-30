@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
 import { handleEventData } from "@/lib/websocket";
+import dayjs from "dayjs";
 import { get } from "lodash";
 import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Pause, Play, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -153,7 +154,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
             <div className="col-span-2">TAGS</div>
             <div className="col-span-1">STATUS</div>
             <div className="col-span-1">LAST RUN</div>
-            <div className="col-span-1">DURATION</div>
+            <div className="col-span-1 text-end">DURATION</div>
             <div className="col-span-2 text-right pr-2">ACTIONS</div>
           </div>
           <div className="divide-y">
@@ -177,8 +178,12 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                     {test.status}
                   </Badge>
                 </div>
-                <div className="col-span-1 text-sm text-muted-foreground">{test.lastRun}</div>
-                <div className="col-span-1 text-sm text-muted-foreground">{test.duration}</div>
+                <div className="col-span-1 text-sm text-muted-foreground">
+                  {test.lastRunDate && dayjs(test.lastRunDate).format("HH:mm DD/MM/YYYY")}
+                </div>
+                <div className="col-span-1 text-sm text-muted-foreground text-end">
+                  {get(test, "params.duration") ? `${get(test, "params.duration")}s` : ""}
+                </div>
                 <div className="col-span-2 flex items-center justify-end">
                   <Button
                     disabled={isButtonLoading || test.status === "Running"}
