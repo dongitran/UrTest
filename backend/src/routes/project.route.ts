@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import fp from "lodash/fp";
 import dayjs from "dayjs";
 import db from "db/db";
 import { ProjectTable } from "db/schema";
@@ -42,8 +43,28 @@ ProjectRoute.get("/:id", async (ctx) => {
     if (!project) {
       return ctx.json({ message: "Project not found" }, 404);
     }
+    const listTestSuiteId = project.listTestSuite.map((i) => i.id);
+    const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+      where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
+      orderBy: (clm, { desc }) => desc(clm.id),
+      limit: 5,
+    });
 
-    return ctx.json({ project });
+    return ctx.json({
+      project: {
+        ...project,
+        recentTestRun: listTestSuiteExecute.map((item) => {
+          const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
+          return {
+            id: item.id,
+            testSuiteName: testSuite?.name,
+            status: item.status,
+            createdAt: item.createdAt,
+            createdBy: item.createdBy,
+          };
+        }),
+      },
+    });
   } catch (error) {
     console.error("Error fetching project by ID:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
