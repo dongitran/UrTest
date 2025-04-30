@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
+import { handleEventData } from "@/lib/websocket";
 import { get } from "lodash";
 import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Pause, Play, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
@@ -16,6 +17,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
   const itemsPerPage = 7;
   const totalPages = Math.ceil(totalTests / itemsPerPage);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
+  const socketRef = useRef(null);
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -57,11 +60,14 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       }
       try {
         await TestSuiteApi().execute(testSuite.id, {
-          status: "pending",
+          status: "processing",
           testSuiteStatus: "Running",
         });
         setReRender({});
         toast.success("Bắt đầu thực thi kịch bản test");
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuite", testSuiteId: testSuite.id }));
+        }
       } catch (error) {
         const message = get(error, "response.data.message") || "Có lỗi khi bắt đầu thực thi kịch bản test";
         toast.error(message);
@@ -80,6 +86,37 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       setIsButtonLoading(false);
     }
   };
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:3020/ws");
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+    };
+
+    socket.onmessage = (event) => {
+      handleEventData(event.data, ({ key, testSuiteName }) => {
+        if (key === "reRenderTestSuiteList") {
+          setReRender({});
+          toast(`Kịch bản test ${testSuiteName} đã được thực thi xong`);
+        }
+      });
+    };
+
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.close();
+    };
+  }, []);
   return (
     <Card>
       <CardHeader className="pb-2">

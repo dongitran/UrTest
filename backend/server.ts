@@ -1,3 +1,4 @@
+import websocket from "./src/lib/Websocket";
 import app from "./src";
 
 const serve = Bun.serve({
@@ -5,6 +6,14 @@ const serve = Bun.serve({
     "/health": () => new Response("OK"),
   },
   port: Bun.env.PORT,
-  fetch: app.fetch,
+  fetch: (req) => {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/ws" && serve.upgrade) {
+      serve.upgrade(req);
+    }
+    return app.fetch(req);
+  },
+  websocket,
 });
 console.log(`Server running on port http://localhost:${serve.port}`);
