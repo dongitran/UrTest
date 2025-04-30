@@ -165,6 +165,10 @@ export const createCollection = async (collectionData) => {
   }
 };
 export const TestSuiteApi = (path = "/api/testsuite") => {
+  const draftExecute = async (data) => {
+    const res = await apiClient.post(`${path}/draft-execute`, data);
+    return res.data;
+  };
   const post = async (data) => {
     const res = await apiClient.post(path, data);
     return res;
@@ -185,7 +189,7 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(`${path}/${id}/execute`, data);
     return res;
   };
-  return { post, patch, detail, execute, delete: _delete };
+  return { draftExecute, post, patch, detail, execute, delete: _delete };
 };
 
 export const ProjectApi = (path = "/api/project") => {
