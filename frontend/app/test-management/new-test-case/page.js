@@ -20,6 +20,7 @@ export default function NewTestCasePage() {
   const testSuiteId = searchParams.get("testSuiteId");
   const router = useRouter();
   const [tags, setTags] = useState([]);
+  const [showProgress, setShowProgress] = useState(false);
   const [scriptContent, setScriptContent] = useState(
     `*** Settings ***\nResource    ../../resources/common_imports.robot\n`
   );
@@ -32,7 +33,7 @@ export default function NewTestCasePage() {
     },
     enabled: testSuiteId ? true : false,
   });
-  const { register, getValues, setValue } = useForm();
+  const { register, getValues, setValue, watch } = useForm();
   useEffect(() => {
     const updateEditorHeight = () => {
       setEditorHeight("calc(100vh - 260px)");
@@ -103,10 +104,21 @@ export default function NewTestCasePage() {
     }
   };
 
-  const handleRunTest = () => {
-    if (!testName.trim()) {
-      toast.error("Test name is required");
-      return;
+  const handleRunTest = async () => {
+    try {
+      toast.success("Đã yêu cầu thực hiện kịch bản test. Vui lòng đợi kết quả");
+      setShowProgress(true);
+      setIsLoading(true);
+      const { resultRuner, duration } = await TestSuiteApi().draftExecute({
+        content: scriptContent,
+        projectId,
+      });
+      setValue("resultRuner", resultRuner);
+      setValue("duration", duration);
+    } catch (error) {
+    } finally {
+      setShowProgress(false);
+      setIsLoading(false);
     }
   };
 
@@ -155,38 +167,50 @@ export default function NewTestCasePage() {
               <MonacoEditor language="javascript" value={scriptContent} onChange={setScriptContent} />
             </div>
           </div>
-
-          <div className="flex justify-between items-center pt-4">
-            <div>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/test-management?projectId=${projectId}`)}
-                size="sm"
-                className="mr-2"
-              >
-                {isLoading && <LoaderCircle className="animate-spin" />}
-                Cancel
-              </Button>
-              {projectId && (
-                <Fragment>
-                  {testSuiteId ? (
-                    <Fragment>
-                      <Button onClick={handleEdit} disabled={isLoading} className="" size="sm">
-                        {isLoading && <LoaderCircle className="animate-spin" />}
-                        Edit
-                      </Button>
-                    </Fragment>
-                  ) : (
-                    <Fragment>
-                      <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
-                        {isLoading && <LoaderCircle className="animate-spin" />}
-                        Create
-                      </Button>
-                    </Fragment>
-                  )}
-                </Fragment>
-              )}
+          {showProgress && (
+            <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden">
+              <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
             </div>
+          )}
+          {!showProgress && watch("resultRuner")?.reportUrl && (
+            <div className="w-full min-h-[650px] overflow-auto">
+              <iframe
+                src={`${watch("resultRuner").reportUrl}/report.html`}
+                className="w-full h-full border-none"
+                allowFullScreen
+              ></iframe>
+            </div>
+          )}
+          <div className="flex items-center pt-4">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/test-management?projectId=${projectId}`)}
+              size="sm"
+              className="mr-2"
+            >
+              {isLoading && <LoaderCircle className="animate-spin" />}
+              Cancel
+            </Button>
+            {projectId && (
+              <Fragment>
+                {testSuiteId ? (
+                  <Fragment>
+                    <Button onClick={handleEdit} disabled={isLoading} className="" size="sm">
+                      {isLoading && <LoaderCircle className="animate-spin" />}
+                      Edit
+                    </Button>
+                  </Fragment>
+                ) : (
+                  <Fragment>
+                    <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
+                      {isLoading && <LoaderCircle className="animate-spin" />}
+                      Create
+                    </Button>
+                  </Fragment>
+                )}
+              </Fragment>
+            )}
+            <div className="ml-auto"></div>
             <Button
               onClick={handleRunTest}
               disabled={isLoading}
