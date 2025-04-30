@@ -5,119 +5,84 @@ import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
 import { eq } from "drizzle-orm";
 import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import { Hono } from "hono";
-import { get } from "lodash";
+import { get, set } from "lodash";
 import { ulid } from "ulid";
 import { z } from "zod";
 import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
 import RunTest from "lib/Runner/RunTest";
+import * as TestSuiteSchema from "lib/Zod/TestSuiteSchema";
 
 const TestSuiteRoute = new Hono();
-TestSuiteRoute.get(
-  "/:id",
-  zValidator(
-    "param",
-    z.object({
-      id: z.string().ulid(),
-    })
-  ),
-  async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const testSuite = await db.query.TestSuiteTable.findFirst({
-      where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
-    });
-    if (!testSuite) {
-      return ctx.json({ message: "Không tìm thấy thông tin kịch bản test" }, 404);
-    }
-    return ctx.json({ ...testSuite });
+TestSuiteRoute.get("/:id", zValidator("param", TestSuiteSchema.schemaForIdParamOnly), async (ctx) => {
+  const { id } = ctx.req.valid("param");
+  const testSuite = await db.query.TestSuiteTable.findFirst({
+    where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
+  });
+  if (!testSuite) {
+    return ctx.json({ message: "Không tìm thấy thông tin kịch bản test" }, 404);
   }
-);
-TestSuiteRoute.post(
-  "/",
-  zValidator(
-    "json",
-    z.object({
-      projectId: z.string().ulid(),
-      name: z.string(),
-      description: z.string(),
-      content: z.string(),
-      tags: z.array(z.string()).optional(),
-      resultRuner: z
-        .object({
-          reportUrl: z.string(),
-          project: z.string(),
-          requestId: z.string().ulid(),
-          success: z.boolean(),
-        })
-        .optional(),
-      duration: z.number().optional(),
+  return ctx.json({ ...testSuite });
+});
+TestSuiteRoute.post("/", zValidator("json", TestSuiteSchema.shemaForCreateAndPatch), async (ctx) => {
+  const user = ctx.get("user");
+  const body = ctx.req.valid("json");
+  const project = await db.query.ProjectTable.findFirst({
+    where: (clm, { eq }) => eq(clm.id, body.projectId),
+  });
+  if (!project) {
+    return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
+  } else if (project.deletedAt) {
+    return ctx.json({ message: "Project đã bị xóa nên không thể tạo kịch bản test" }, 400);
+  }
+  const status = body.resultRuner ? "Completed" : "Not Run";
+  const lastRunDate = body.resultRuner ? dayjs().toISOString() : undefined;
+  const testSuite = await db
+    .insert(TestSuiteTable)
+    .values({
+      createdAt: dayjs().toISOString(),
+      id: ulid(),
+      name: body.name,
+      projectId: body.projectId,
+      content: body.content,
+      createdBy: user.email,
+      description: body.description,
+      status,
+      tags: body.tags,
+      lastRunDate,
+      params: {
+        resultRuner: body.resultRuner,
+        duration: body.duration,
+      },
     })
-  ),
-  async (ctx) => {
-    const user = ctx.get("user");
-    const body = ctx.req.valid("json");
-    const project = await db.query.ProjectTable.findFirst({
-      where: (clm, { eq }) => eq(clm.id, body.projectId),
-    });
-    if (!project) {
-      return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
-    } else if (project.deletedAt) {
-      return ctx.json({ message: "Project đã bị xóa nên không thể tạo kịch bản test" }, 400);
-    }
-    const status = body.resultRuner ? "Completed" : "Not Run";
-    const lastRunDate = body.resultRuner ? dayjs().toISOString() : undefined;
-    const testSuite = await db
-      .insert(TestSuiteTable)
-      .values({
-        createdAt: dayjs().toISOString(),
-        id: ulid(),
-        name: body.name,
-        projectId: body.projectId,
-        content: body.content,
-        createdBy: user.email,
-        description: body.description,
-        status,
-        tags: body.tags,
-        lastRunDate,
-        params: {
-          resultRuner: body.resultRuner,
-          duration: body.duration,
-        },
-      })
-      .returning()
-      .then((res) => res[0]);
+    .returning()
+    .then((res) => res[0]);
 
-    //* Gọi tới Github API để tạo file bên UrTest Workflow
-    if (project.slug && testSuite.content) {
-      CreateOrUpdateFile(
-        {
-          projectSlug: project.slug,
-          fileContent: testSuite.content,
-          fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
-        },
-        async (data: Record<string, any>) => {
-          await db
-            .update(TestSuiteTable)
-            .set({
-              params: {
-                ...(testSuite.params || {}),
-                githubData: data,
-              },
-            })
-            .where(eq(TestSuiteTable.id, testSuite.id));
-        }
-      );
-    }
-    return ctx.json({ message: "ok" });
+  //* Gọi tới Github API để tạo file bên UrTest Workflow
+  if (project.slug && testSuite.content) {
+    CreateOrUpdateFile(
+      {
+        projectSlug: project.slug,
+        fileContent: testSuite.content,
+        fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
+      },
+      async (data: Record<string, any>) => {
+        await db
+          .update(TestSuiteTable)
+          .set({
+            params: {
+              ...(testSuite.params || {}),
+              githubData: data,
+            },
+          })
+          .where(eq(TestSuiteTable.id, testSuite.id));
+      }
+    );
   }
-)
+  return ctx.json({ message: "ok" });
+})
   .post(
     "/:id/execute",
-    zValidator(
-      "param",
-      z.object({
-        id: z.string().ulid(),
-      })
-    ),
+    zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
     zValidator(
       "json",
       z.object({
@@ -274,22 +239,8 @@ TestSuiteRoute.post(
   );
 TestSuiteRoute.patch(
   "/:id",
-  zValidator(
-    "param",
-    z.object({
-      id: z.string().ulid(),
-    })
-  ),
-  zValidator(
-    "json",
-    z.object({
-      projectId: z.string().ulid(),
-      name: z.string(),
-      description: z.string(),
-      content: z.string(),
-      tags: z.array(z.string()).optional(),
-    })
-  ),
+  zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
+  zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
     const { id } = ctx.req.valid("param");
     const user = ctx.get("user");
@@ -316,7 +267,9 @@ TestSuiteRoute.patch(
     if (!sha) {
       return ctx.json({ message: "Không tìm thấy SHA để có thể động bộ sang UrTest Workflow Github" }, 400);
     }
-
+    if (body.resultRuner) {
+      set(testSuite, "params.resultRuner", body.resultRuner);
+    }
     const testSuiteUpdated = await db
       .update(TestSuiteTable)
       .set({
@@ -326,6 +279,9 @@ TestSuiteRoute.patch(
         description: body.description,
         name: body.name,
         tags: body.tags,
+        params: {
+          ...(testSuite.params || {}),
+        },
       })
       .where(eq(TestSuiteTable.id, testSuite.id))
       .returning()
@@ -361,42 +317,33 @@ TestSuiteRoute.patch(
     return ctx.json({ message: "ok" });
   }
 );
-TestSuiteRoute.delete(
-  "/:id",
-  zValidator(
-    "param",
-    z.object({
-      id: z.string().ulid(),
-    })
-  ),
-  async (ctx) => {
-    const { id } = ctx.req.valid("param");
+TestSuiteRoute.delete("/:id", zValidator("param", TestSuiteSchema.schemaForIdParamOnly), async (ctx) => {
+  const { id } = ctx.req.valid("param");
 
-    const user = ctx.get("user");
-    const testSuite = await db.query.TestSuiteTable.findFirst({
-      where: (clm, { eq }) => eq(clm.id, id),
-      with: {
-        project: true,
-      },
-    });
-    if (!testSuite) {
-      return ctx.json({ message: "Không tìm thấy kịch bản test để xóa" }, 404);
-    }
-    if (testSuite.project && testSuite.project.slug) {
-      await DeleteFileFromGithub({
-        fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
-        projectSlug: testSuite.project.slug,
-      });
-    }
-    await db
-      .update(TestSuiteTable)
-      .set({
-        deletedAt: dayjs().toISOString(),
-        deletedBy: user.email,
-      })
-      .where(eq(TestSuiteTable.id, id));
-
-    return ctx.json({ message: "ok" });
+  const user = ctx.get("user");
+  const testSuite = await db.query.TestSuiteTable.findFirst({
+    where: (clm, { eq }) => eq(clm.id, id),
+    with: {
+      project: true,
+    },
+  });
+  if (!testSuite) {
+    return ctx.json({ message: "Không tìm thấy kịch bản test để xóa" }, 404);
   }
-);
+  if (testSuite.project && testSuite.project.slug) {
+    await DeleteFileFromGithub({
+      fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
+      projectSlug: testSuite.project.slug,
+    });
+  }
+  await db
+    .update(TestSuiteTable)
+    .set({
+      deletedAt: dayjs().toISOString(),
+      deletedBy: user.email,
+    })
+    .where(eq(TestSuiteTable.id, id));
+
+  return ctx.json({ message: "ok" });
+});
 export default TestSuiteRoute;
