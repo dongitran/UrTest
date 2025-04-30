@@ -22,27 +22,14 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectApi } from "@/lib/api";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function ProjectTable({
-  initDataTable,
-  setDataTable,
-  refetch,
-  dataTable = [],
-  setProjectModalOpen,
-}) {
+export default function ProjectTable({ initDataTable, setDataTable, refetch, dataTable = [], setProjectModalOpen }) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -73,12 +60,8 @@ export default function ProjectTable({
                 </svg>
               </div>
               <div className="min-w-[200px] flex-1 pr-4">
-                <div className="font-semibold text-base">
-                  {row.getValue("title")}
-                </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {row.original["description"]}
-                </div>
+                <div className="font-semibold text-base">{row.getValue("title")}</div>
+                <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
               </div>
             </div>
           );
@@ -113,11 +96,7 @@ export default function ProjectTable({
         header: () => <div className="text-center">Progress</div>,
         cell: ({ row }) => (
           <div className="flex gap-3 items-center">
-            <Progress
-              value={33}
-              className="w-full"
-              indicatorColor="bg-green-700"
-            />
+            <Progress value={33} className="w-full" indicatorColor="bg-green-700" />
             <span className="text-xs whitespace-nowrap">33%</span>
           </div>
         ),
@@ -127,8 +106,7 @@ export default function ProjectTable({
         header: () => <div className="text-center">Last Run</div>,
         cell: ({ row }) => (
           <div className="lowercase">
-            {row.getValue("updatedAt") &&
-              dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
+            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
           </div>
         ),
       },
@@ -144,7 +122,7 @@ export default function ProjectTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <Link href={`/test-management?id=${row.original["id"]}`}>
+                <Link href={`/test-management?projectId=${row.original["id"]}`}>
                   <DropdownMenuItem>
                     Edit
                     <DropdownMenuShortcut>
@@ -152,9 +130,7 @@ export default function ProjectTable({
                     </DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem
-                  onClick={handleDeleteProject(row.original["id"])}
-                >
+                <DropdownMenuItem onClick={handleDeleteProject(row.original["id"])}>
                   Delete
                   <DropdownMenuShortcut>
                     <Trash2 className="size-4" />
@@ -198,11 +174,7 @@ export default function ProjectTable({
   };
   const handleFilterDataTable = (searchTerm = projectNameFilter) => {
     if (searchTerm && searchTerm.trim() !== "") {
-      setDataTable(
-        initDataTable.filter((item) =>
-          new RegExp(searchTerm, "i").test(item.title)
-        )
-      );
+      setDataTable(initDataTable.filter((item) => new RegExp(searchTerm, "i").test(item.title)));
     } else {
       setDataTable(initDataTable);
     }
@@ -250,19 +222,10 @@ export default function ProjectTable({
                       <TableHead
                         key={header.id}
                         className={
-                          header.id.includes("title")
-                            ? "w-1/2"
-                            : header.id.includes("progress")
-                            ? "w-1/6"
-                            : ""
+                          header.id.includes("title") ? "w-1/2" : header.id.includes("progress") ? "w-1/6" : ""
                         }
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     );
                   })}
@@ -272,26 +235,15 @@ export default function ProjectTable({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
@@ -309,12 +261,7 @@ export default function ProjectTable({
             >
               Previous
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
               Next
             </Button>
           </div>
