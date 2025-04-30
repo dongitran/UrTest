@@ -164,11 +164,13 @@ TestSuiteRoute.post(
         })
         .where(eq(TestSuiteTable.id, testSuite.id));
     });
+    const startRun = dayjs();
     RunTest({
       projectName: testSuite.project.slug,
       content: testSuite.content,
     })
       .then(async (res) => {
+        const endRun = dayjs();
         await db
           .update(TestSuiteExecuteTable)
           .set({
@@ -183,14 +185,17 @@ TestSuiteRoute.post(
             params: {
               ...(testSuite.params || {}),
               resultRuner: res,
+              duration: endRun.diff(startRun, "second"),
             },
             status: "Completed",
+            lastRunDate: dayjs().toISOString(),
             updatedAt: dayjs().toISOString(),
             updatedBy: "SYSTEM-RUNER",
           })
           .where(eq(TestSuiteTable.id, testSuite.id));
       })
       .catch(async () => {
+        const endRun = dayjs();
         await db
           .update(TestSuiteExecuteTable)
           .set({
@@ -204,8 +209,10 @@ TestSuiteRoute.post(
           .set({
             params: {
               ...(testSuite.params || {}),
+              duration: endRun.diff(startRun, "second"),
             },
             status: "Failed",
+            lastRunDate: dayjs().toISOString(),
             updatedAt: dayjs().toISOString(),
             updatedBy: "SYSTEM-RUNER",
           })
