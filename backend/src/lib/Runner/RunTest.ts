@@ -14,6 +14,5 @@ export default async function RunTest({ projectName, content }: { projectName: s
     }),
   });
   const data = await response.json();
-  console.log("data :>> ", JSON.stringify(data));
   return data;
 }
