@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import fp from "lodash/fp";
 import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
@@ -236,7 +237,79 @@ TestSuiteRoute.post("/", zValidator("json", TestSuiteSchema.shemaForCreateAndPat
       }
       return ctx.json({ resultRuner, duration: endRun.diff(startRun, "second") });
     }
-  );
+  )
+  .post("/execute/all", zValidator("json", z.object({ projectId: z.string().ulid() })), async (ctx) => {
+    const { projectId } = ctx.req.valid("json");
+    const user = ctx.get("user");
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, projectId),
+    });
+    if (!project) {
+      return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
+    } else if (project.deletedAt) {
+      return ctx.json({ message: "Project đã bị xóa nên không thể tạo kịch bản test" }, 400);
+    }
+    const listTestSuite = await db.query.TestSuiteTable.findMany({
+      where: (clm, { ne, eq, isNull, and }) =>
+        and(eq(clm.projectId, projectId), isNull(clm.deletedAt), ne(clm.status, "Running")),
+    });
+    const testSuiteIds = listTestSuite.map((i) => i.id);
+    const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+      where: (clm, { inArray, and, eq }) => and(inArray(clm.testSuiteId, testSuiteIds), eq(clm.status, "processing")),
+    });
+    if (listTestSuiteExecute.length > 0) {
+      return ctx.json(
+        { message: "Đang có 1 tiến trình thực hiện kịch bản test nên không thể thực thi toàn bộ kịch bản test" },
+        400
+      );
+    }
+    const insertTextSuiteExecute: (typeof TestSuiteExecuteTable.$inferInsert)[] = listTestSuite.map((item) => ({
+      createdAt: dayjs().toISOString(),
+      createdBy: user.email,
+      id: ulid(),
+      testSuiteId: item.id,
+      status: "processing",
+    }));
+    const listTextSuiteJustCreated = await db.insert(TestSuiteExecuteTable).values(insertTextSuiteExecute).returning();
+    for (const testSuite of listTestSuite) {
+      const startRun = dayjs();
+      const testExecute = listTextSuiteJustCreated.find(fp.isMatch({ testSuiteId: testSuite.id }));
+      const resultRuner = await RunTest({
+        content: testSuite.content,
+        projectName: project.slug,
+      });
+      const endRun = dayjs();
+      await db
+        .update(TestSuiteTable)
+        .set({
+          updatedAt: dayjs().toISOString(),
+          updatedBy: user.email,
+          lastRunDate: dayjs().toISOString(),
+          status: "Completed",
+          params: {
+            ...(testSuite.params || {}),
+            resultRuner,
+            duration: endRun.diff(startRun, "second"),
+          },
+        })
+        .where(eq(TestSuiteTable.id, testSuite.id));
+      if (testExecute) {
+        await db
+          .update(TestSuiteExecuteTable)
+          .set({
+            status: "success",
+            params: {
+              ...(testExecute.params || {}),
+              resultRuner,
+            },
+            updatedAt: dayjs().toISOString(),
+            updatedBy: user.email,
+          })
+          .where(eq(TestSuiteExecuteTable.id, testExecute.id));
+      }
+    }
+    return ctx.json({ message: "ok" });
+  });
 TestSuiteRoute.patch(
   "/:id",
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
