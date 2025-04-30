@@ -189,7 +189,11 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(`${path}/${id}/execute`, data);
     return res;
   };
-  return { draftExecute, post, patch, detail, execute, delete: _delete };
+  const executeAll = async (data) => {
+    const res = await apiClient.post(`${path}/execute/all`, data);
+    return res;
+  };
+  return { executeAll, draftExecute, post, patch, detail, execute, delete: _delete };
 };
 
 export const ProjectApi = (path = "/api/project") => {

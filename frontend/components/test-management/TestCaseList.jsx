@@ -94,6 +94,17 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       }
     };
   };
+  const handleExecuteAllTestSuite = async () => {
+    try {
+      await TestSuiteApi().executeAll({
+        projectId: project.id,
+      });
+      toast("Đã gửi yêu cầu thực hiện tất cả kịch bản test");
+    } catch (error) {
+      const message = get(error, "response.data.message") || "Có lỗi xảy ra";
+      toast.error(message);
+    }
+  };
   const handleDeleteTestSuite = async (test) => {
     try {
       setIsButtonLoading(true);
@@ -150,7 +161,11 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
             </div>
           </div>
 
-          <Button size="sm" className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white">
+          <Button
+            size="sm"
+            className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white"
+            onClick={handleExecuteAllTestSuite}
+          >
             <Play className="!size-4" />
             Run All Tests
           </Button>
