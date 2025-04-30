@@ -238,7 +238,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                       </DialogHeader>
                       <div className="w-full min-h-[650px] overflow-auto">
                         <iframe
-                          src="https://s0.dtur.xyz/urtest-reports/manual-running/01JT305E1DWA585X4V2S5SFNSY/report.html"
+                          src={`${test.params?.resultRuner?.reportUrl}/report.html`}
                           className="w-full h-full border-none"
                           allowFullScreen
                         ></iframe>

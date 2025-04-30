@@ -34,23 +34,7 @@ export default function NewTestCasePage() {
     enabled: testSuiteId ? true : false,
   });
   const { register, getValues, setValue, watch } = useForm();
-  useEffect(() => {
-    const updateEditorHeight = () => {
-      setEditorHeight("calc(100vh - 260px)");
-    };
-    updateEditorHeight();
-    window.addEventListener("resize", updateEditorHeight);
-    return () => window.removeEventListener("resize", updateEditorHeight);
-  }, []);
-  useEffect(() => {
-    if (testSuiteDetail) {
-      setValue("name", testSuiteDetail.name);
-      setValue("description", testSuiteDetail.description);
-      setTags(testSuiteDetail.tags || []);
-      setScriptContent(testSuiteDetail.content);
-      setValue("fileName", testSuiteDetail.fileName ? `${testSuiteDetail.fileName}.robot` : null);
-    }
-  }, [testSuiteDetail]);
+
   const handleEdit = async () => {
     const data = getValues();
     if (!data.name?.trim()) {
@@ -121,7 +105,27 @@ export default function NewTestCasePage() {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    const updateEditorHeight = () => {
+      setEditorHeight("calc(100vh - 260px)");
+    };
+    updateEditorHeight();
+    window.addEventListener("resize", updateEditorHeight);
+    return () => window.removeEventListener("resize", updateEditorHeight);
+  }, []);
 
+  useEffect(() => {
+    if (testSuiteDetail) {
+      setValue("name", testSuiteDetail.name);
+      setValue("description", testSuiteDetail.description);
+      setTags(testSuiteDetail.tags || []);
+      setScriptContent(testSuiteDetail.content);
+      setValue("fileName", testSuiteDetail.fileName ? `${testSuiteDetail.fileName}.robot` : null);
+      if (testSuiteDetail?.params?.resultRuner) {
+        setValue("resultRuner", testSuiteDetail.params.resultRuner);
+      }
+    }
+  }, [testSuiteDetail]);
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
