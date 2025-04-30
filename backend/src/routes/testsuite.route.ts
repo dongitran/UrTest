@@ -3,7 +3,7 @@ import fp from "lodash/fp";
 import dayjs from "dayjs";
 import db from "db/db";
 import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import { Hono } from "hono";
 import { get, set } from "lodash";
@@ -263,6 +263,7 @@ TestSuiteRoute.post("/", zValidator("json", TestSuiteSchema.shemaForCreateAndPat
         400
       );
     }
+    await db.update(TestSuiteTable).set({ status: "Running" }).where(inArray(TestSuiteTable.id, testSuiteIds));
     const insertTextSuiteExecute: (typeof TestSuiteExecuteTable.$inferInsert)[] = listTestSuite.map((item) => ({
       createdAt: dayjs().toISOString(),
       createdBy: user.email,
@@ -271,43 +272,46 @@ TestSuiteRoute.post("/", zValidator("json", TestSuiteSchema.shemaForCreateAndPat
       status: "processing",
     }));
     const listTextSuiteJustCreated = await db.insert(TestSuiteExecuteTable).values(insertTextSuiteExecute).returning();
-    for (const testSuite of listTestSuite) {
-      const startRun = dayjs();
-      const testExecute = listTextSuiteJustCreated.find(fp.isMatch({ testSuiteId: testSuite.id }));
-      const resultRuner = await RunTest({
-        content: testSuite.content,
-        projectName: project.slug,
-      });
-      const endRun = dayjs();
-      await db
-        .update(TestSuiteTable)
-        .set({
-          updatedAt: dayjs().toISOString(),
-          updatedBy: user.email,
-          lastRunDate: dayjs().toISOString(),
-          status: "Completed",
-          params: {
-            ...(testSuite.params || {}),
-            resultRuner,
-            duration: endRun.diff(startRun, "second"),
-          },
-        })
-        .where(eq(TestSuiteTable.id, testSuite.id));
-      if (testExecute) {
+    const RunAllTest = async (listTestSuite: (typeof TestSuiteTable.$inferSelect)[]) => {
+      for (const testSuite of listTestSuite) {
+        const startRun = dayjs();
+        const testExecute = listTextSuiteJustCreated.find(fp.isMatch({ testSuiteId: testSuite.id }));
+        const resultRuner = await RunTest({
+          content: testSuite.content,
+          projectName: project.slug,
+        });
+        const endRun = dayjs();
         await db
-          .update(TestSuiteExecuteTable)
+          .update(TestSuiteTable)
           .set({
-            status: "success",
-            params: {
-              ...(testExecute.params || {}),
-              resultRuner,
-            },
             updatedAt: dayjs().toISOString(),
             updatedBy: user.email,
+            lastRunDate: dayjs().toISOString(),
+            status: "Completed",
+            params: {
+              ...(testSuite.params || {}),
+              resultRuner,
+              duration: endRun.diff(startRun, "second"),
+            },
           })
-          .where(eq(TestSuiteExecuteTable.id, testExecute.id));
+          .where(eq(TestSuiteTable.id, testSuite.id));
+        if (testExecute) {
+          await db
+            .update(TestSuiteExecuteTable)
+            .set({
+              status: "success",
+              params: {
+                ...(testExecute.params || {}),
+                resultRuner,
+              },
+              updatedAt: dayjs().toISOString(),
+              updatedBy: user.email,
+            })
+            .where(eq(TestSuiteExecuteTable.id, testExecute.id));
+        }
       }
-    }
+    };
+    RunAllTest(listTestSuite);
     return ctx.json({ message: "ok" });
   });
 TestSuiteRoute.patch(
