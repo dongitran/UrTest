@@ -99,6 +99,9 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       await TestSuiteApi().executeAll({ projectId: project.id });
       setReRender({});
       toast("Đã gửi yêu cầu thực hiện tất cả kịch bản test");
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuiteAll", projectId: project.id }));
+      }
     } catch (error) {
       const message = get(error, "response.data.message") || "Có lỗi xảy ra";
       toast.error(message);
@@ -129,6 +132,9 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         if (key === "reRenderTestSuiteList") {
           setReRender({});
           toast(`Kịch bản test ${testSuiteName} đã được thực thi xong`);
+        } else if (key === "reRenderTestSuiteListAll") {
+          setReRender({});
+          toast(`Tất cả kịch bản test đã hoàn tất thực thi`);
         }
       });
     };
