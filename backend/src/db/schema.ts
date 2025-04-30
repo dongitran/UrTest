@@ -40,7 +40,7 @@ export const TestSuiteTable = pgTable("tbl_test_suites", {
   projectId: varchar("project_id", { length: 255 }).notNull(),
   name: varchar().notNull(),
   description: text(),
-  content: text(),
+  content: text().notNull(),
   totalTests: integer("total_tests"),
   passedTests: integer("passed_tests"),
   failedTests: integer("failed_tests"),
