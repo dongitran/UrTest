@@ -168,7 +168,7 @@ export default function NewTestCasePage() {
 
           <div className="grid gap-2">
             <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>
-              <MonacoEditor language="javascript" value={scriptContent} onChange={setScriptContent} />
+              <MonacoEditor language="robotframework" value={scriptContent} onChange={setScriptContent} />
             </div>
           </div>
           {showProgress && (
