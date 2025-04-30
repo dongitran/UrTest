@@ -6,10 +6,29 @@ import { TestSuiteApi } from "@/lib/api";
 import { handleEventData } from "@/lib/websocket";
 import dayjs from "dayjs";
 import { get } from "lodash";
-import { ChevronLeft, ChevronRight, Edit, FilePlus2, LoaderCircle, Pause, Play, Search, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  FilePlus2,
+  FileText,
+  LoaderCircle,
+  Pause,
+  Play,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
@@ -200,6 +219,32 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                       </Fragment>
                     )}
                   </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        onClick={() => {}}
+                        disabled={!(test.status === "Completed" && get(test, "params.resultRuner.reportUrl"))}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                      >
+                        {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="min-w-[1000px]">
+                      <DialogHeader>
+                        <DialogTitle>Xem kết quả của kịch bản test {test.name}</DialogTitle>
+                        <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
+                      </DialogHeader>
+                      <div className="w-full min-h-[650px] overflow-auto">
+                        <iframe
+                          src="https://s0.dtur.xyz/urtest-reports/manual-running/01JT305E1DWA585X4V2S5SFNSY/report.html"
+                          className="w-full h-full border-none"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     onClick={() => {
                       router.push(
