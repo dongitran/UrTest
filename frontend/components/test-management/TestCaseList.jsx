@@ -121,7 +121,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
     <Card>
       <CardHeader className="pb-2">
         <div className="flex gap-3 items-center">
-          <CardTitle>Danh sách testcases</CardTitle>
+          <CardTitle>Danh sách Testsuite</CardTitle>
           <div className="ml-auto"></div>
           <div className="flex gap-2">
             <div className="relative w-64">
@@ -149,7 +149,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       <CardContent>
         <div className="rounded-md border">
           <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
-            <div className="col-span-4">TEST CASE</div>
+            <div className="col-span-4">TEST SUITE</div>
             <div className="col-span-2">TAGS</div>
             <div className="col-span-1">STATUS</div>
             <div className="col-span-1">LAST RUN</div>

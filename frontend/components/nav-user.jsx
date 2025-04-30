@@ -20,6 +20,7 @@ export function NavUser({ user }) {
   const { isMobile } = useSidebar();
   const handleLogout = () => {
     logout();
+    window.location.href = "/login";
   };
   return (
     <SidebarMenu>
