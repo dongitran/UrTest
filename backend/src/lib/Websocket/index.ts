@@ -1,4 +1,4 @@
-import checkStatusTestSuite from "./checkStatusTestSuite";
+import { checkStatusTestSuite, checkStatusTestSuiteAll } from "./TestSuiteWS";
 
 export default {
   open() {
@@ -13,6 +13,8 @@ export default {
       } catch (error) {}
       if (data.key === "checkStatusTestSuite") {
         checkStatusTestSuite(ws, data);
+      } else if (data.key === "checkStatusTestSuiteAll") {
+        checkStatusTestSuiteAll(ws, data);
       }
     }
   },
