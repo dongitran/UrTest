@@ -1,12 +1,14 @@
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectApi } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function ProjectSelector({ reRender, setProject, projectId }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [listProject, setListProject] = useState([]);
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,10 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
   }, [selectedProjectId, reRender]);
 
   const handleProjectChange = (value) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("projectId", value);
+    router.push(`?${params.toString()}`);
+
     setSelectedProject(value);
   };
 
