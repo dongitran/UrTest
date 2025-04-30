@@ -27,7 +27,7 @@ export default function TestManagement() {
           <TestCaseList setReRender={setReRender} project={project} listTestSuite={project.listTestSuite} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <RecentTestRuns />
+            <RecentTestRuns recentTestRun={project.recentTestRun} />
             <TestSuccessRate />
           </div>
         </Fragment>
