@@ -96,9 +96,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
   };
   const handleExecuteAllTestSuite = async () => {
     try {
-      await TestSuiteApi().executeAll({
-        projectId: project.id,
-      });
+      await TestSuiteApi().executeAll({ projectId: project.id });
+      setReRender({});
       toast("Đã gửi yêu cầu thực hiện tất cả kịch bản test");
     } catch (error) {
       const message = get(error, "response.data.message") || "Có lỗi xảy ra";
