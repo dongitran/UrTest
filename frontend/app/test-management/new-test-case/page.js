@@ -22,7 +22,7 @@ export default function NewTestCasePage() {
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
   const [scriptContent, setScriptContent] = useState(
-    `*** Settings ***\nResource    ../../resources/common_imports.robot\n`
+    `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
   );
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
