@@ -53,6 +53,6 @@ jobs:
 
           kubectl exec -n vault -i vault-0 -- vault write auth/kubernetes/role/urtest-keyword-extractor-dev \
             bound_service_account_names=urtest-keyword-extractor-dev-auth \
-            bound_service_account_namespaces=urdraw \
+            bound_service_account_namespaces=urtest \
             policies=urtest-keyword-extractor-svc-policy \
             ttl=72h
