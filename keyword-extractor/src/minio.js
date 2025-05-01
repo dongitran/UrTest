@@ -13,38 +13,60 @@ function createMinioClient() {
   });
 }
 
-async function downloadKeywordsFile(outputPath) {
+async function downloadKeywordsFile(outputPath, projectName = null) {
   try {
-    const response = await axios.get(process.env.KEYWORDS_URL);
+    const url = projectName
+      ? `${process.env.KEYWORDS_URL_BASE}/${projectName}/robotFrameworkKeywords.json`
+      : process.env.KEYWORDS_URL;
 
-    await fs.writeJson(outputPath, response.data, { spaces: 2 });
-    return response.data;
+    try {
+      const response = await axios.get(url);
+      await fs.writeJson(outputPath, response.data, { spaces: 2 });
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.log(
+          `No existing keywords file found at ${url}, starting with empty array`
+        );
+        return [];
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("Error downloading keywords file:", error.message);
-    throw error;
+    return [];
   }
 }
 
-async function uploadKeywordsFile(filePath, fileName) {
+async function uploadKeywordsFile(filePath, fileName, projectName = null) {
   try {
     const minioClient = createMinioClient();
 
-    await minioClient.fPutObject(process.env.MINIO_BUCKET, fileName, filePath, {
-      "Content-Type": "application/json",
-    });
+    const objectName = projectName ? `${projectName}/${fileName}` : fileName;
 
-    return `https://${process.env.MINIO_ENDPOINT}/${process.env.MINIO_BUCKET}/${fileName}`;
+    await minioClient.fPutObject(
+      process.env.MINIO_BUCKET,
+      objectName,
+      filePath,
+      {
+        "Content-Type": "application/json",
+      }
+    );
+
+    return `https://${process.env.MINIO_ENDPOINT}/${process.env.MINIO_BUCKET}/${objectName}`;
   } catch (error) {
     console.error("Error uploading file to Minio:", error.message);
     throw error;
   }
 }
 
-async function uploadHistoryFile(filePath) {
+async function uploadHistoryFile(filePath, projectName = null) {
   try {
     const minioClient = createMinioClient();
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const historyFileName = `history/robotFrameworkKeywords_${timestamp}.json`;
+    const historyFileName = projectName
+      ? `history/${projectName}/robotFrameworkKeywords_${timestamp}.json`
+      : `history/robotFrameworkKeywords_${timestamp}.json`;
 
     await minioClient.fPutObject(
       process.env.MINIO_BUCKET,
@@ -63,9 +85,15 @@ async function uploadHistoryFile(filePath) {
 async function mergeKeywords(existingKeywords, newKeywords) {
   try {
     const existingKeywordsMap = new Map();
-    existingKeywords.forEach((keyword) => {
-      existingKeywordsMap.set(keyword.label, keyword);
-    });
+
+    if (existingKeywords && Array.isArray(existingKeywords)) {
+      existingKeywords.forEach((keyword) => {
+        existingKeywordsMap.set(keyword.label, keyword);
+      });
+    } else {
+      console.log("No existing keywords found, starting with empty array");
+      existingKeywords = [];
+    }
 
     let addedCount = 0;
     for (const newKeyword of newKeywords) {
@@ -75,6 +103,8 @@ async function mergeKeywords(existingKeywords, newKeywords) {
         addedCount++;
       }
     }
+
+    console.log(`Added ${addedCount} new keywords`);
     return existingKeywords;
   } catch (error) {
     console.error("Error merging keywords:", error.message);

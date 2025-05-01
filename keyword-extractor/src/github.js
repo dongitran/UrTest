@@ -10,6 +10,7 @@ async function fetchRobotFrameworkFiles(tempDir) {
     const token = process.env.GITHUB_TOKEN;
 
     const repoDir = path.join(tempDir, "repo");
+    await fs.remove(repoDir);
     await fs.ensureDir(repoDir);
 
     let cloneUrl = repo;

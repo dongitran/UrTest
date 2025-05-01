@@ -1,6 +1,30 @@
 const fs = require("fs-extra");
 const path = require("path");
 
+async function findProjects(baseDir) {
+  try {
+    const testsDir = path.join(baseDir, "tests");
+
+    if (!(await fs.pathExists(testsDir))) {
+      return [];
+    }
+
+    const items = await fs.readdir(testsDir, { withFileTypes: true });
+    const projects = [];
+
+    for (const item of items) {
+      if (item.isDirectory()) {
+        projects.push(item.name);
+      }
+    }
+
+    return projects;
+  } catch (error) {
+    console.log("Error finding projects:", error.message);
+    return [];
+  }
+}
+
 async function findRobotFiles(baseDir, directories) {
   try {
     const robotFiles = [];
@@ -53,6 +77,62 @@ async function scanDirectory(dir, files, baseDir) {
   }
 }
 
+async function findRobotFilesForProject(baseDir, directories, projectName) {
+  try {
+    const systemFiles = [];
+    const projectResourceFiles = [];
+
+    for (const dir of directories) {
+      const dirPath = path.join(baseDir, dir);
+
+      if (!(await fs.pathExists(dirPath))) {
+        continue;
+      }
+
+      if (dir === "tests" && projectName) {
+        // For project-specific files, only scan the project's resources directory
+        const projectPath = path.join(dirPath, projectName, "resources");
+        if (await fs.pathExists(projectPath)) {
+          await scanDirectoryForProject(
+            projectPath,
+            projectResourceFiles,
+            baseDir
+          );
+        }
+      } else if (dir !== "tests") {
+        // For system files, scan everything except the tests directory
+        await scanDirectoryForProject(dirPath, systemFiles, baseDir);
+      }
+    }
+
+    return { systemFiles, projectResourceFiles };
+  } catch (error) {
+    console.log(
+      `Error finding Robot Framework files for project ${projectName}:`,
+      error.message
+    );
+    throw error;
+  }
+}
+
+async function scanDirectoryForProject(dir, files, baseDir) {
+  try {
+    const items = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const item of items) {
+      const itemPath = path.join(dir, item.name);
+
+      if (item.isDirectory()) {
+        await scanDirectoryForProject(itemPath, files, baseDir);
+      } else if (item.name.endsWith(".robot")) {
+        files.push(itemPath);
+      }
+    }
+  } catch (error) {
+    console.log(`Error scanning directory ${dir}:`, error.message);
+  }
+}
+
 async function extractKeywords(baseDir, directories) {
   try {
     const robotFiles = await findRobotFiles(baseDir, directories);
@@ -75,6 +155,37 @@ async function extractKeywords(baseDir, directories) {
     return keywords;
   } catch (error) {
     console.error("Error extracting keywords:", error.message);
+    throw error;
+  }
+}
+
+async function extractKeywordsForProject(baseDir, directories, projectName) {
+  try {
+    const { systemFiles, projectResourceFiles } =
+      await findRobotFilesForProject(baseDir, directories, projectName);
+    const allFiles = [...systemFiles, ...projectResourceFiles];
+    const keywords = [];
+    let fileCount = 0;
+
+    for (const file of allFiles) {
+      fileCount++;
+      console.log(
+        `[${fileCount}/${allFiles.length}] Processing file for project ${projectName}: ${file}`
+      );
+      try {
+        const fileKeywords = await extractKeywordsFromFile(file, baseDir);
+        keywords.push(...fileKeywords);
+      } catch (error) {
+        console.log(`Error extracting keywords from ${file}:`, error.message);
+      }
+    }
+
+    return keywords;
+  } catch (error) {
+    console.error(
+      `Error extracting keywords for project ${projectName}:`,
+      error.message
+    );
     throw error;
   }
 }
@@ -192,4 +303,7 @@ async function extractKeywordsFromFile(filePath, baseDir) {
 
 module.exports = {
   extractKeywords,
+  extractKeywordsForProject,
+  findProjects,
+  findRobotFilesForProject,
 };
