@@ -28,7 +28,7 @@ export default function TestManagement() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <RecentTestRuns recentTestRun={project.recentTestRun} />
-            <TestSuccessRate />
+            <TestSuccessRate project={project} />
           </div>
         </Fragment>
       )}

@@ -1,0 +1,103 @@
+import MonacoEditor from "@/components/MonacoEditor";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { TestResourceApi } from "@/lib/api";
+import { Copy, LoaderCircle } from "lucide-react";
+import { Fragment, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+
+const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setOpenModal, dialogChild }) => {
+  const [scriptContent, setScriptContent] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { register, getValues, setValue } = useForm();
+
+  const handleSaveTestSuite = async () => {
+    try {
+      setIsLoading(true);
+      if (!projectId) {
+        toast.warning("Vui lòng truyền thêm giá trị ProjectId");
+        return;
+      }
+      if (!scriptContent || !scriptContent.trim()) {
+        toast.warning("Vui lòng nhập nội dung thì mới có thể tạo Test Resource");
+        return;
+      }
+      const data = getValues();
+      if (testResourceId) {
+      } else {
+        await TestResourceApi().create({
+          ...data,
+          content: scriptContent,
+          projectId,
+        });
+        toast.success("Đã tạo Test Resource thành công");
+      }
+      if (refetch) refetch();
+    } catch (error) {
+      const message = "Có lỗi khi tạo Test Resource";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (openModal === false) {
+      setValue("title", "");
+      setValue("description", "");
+      setScriptContent("");
+    }
+  }, [openModal]);
+  return (
+    <Fragment>
+      <Dialog open={openModal} onOpenChange={setOpenModal}>
+        <DialogTrigger asChild>{dialogChild}</DialogTrigger>
+        <DialogContent className="min-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Tạo Test Resource</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3">
+            <Input {...register("title")} placeholder="Nhập tên cho Test Resource" className="rounded-sm" />
+            <Textarea
+              {...register("description")}
+              className="rounded-sm"
+              placeholder="Mô tả nội dung của Test Resource"
+            />
+            <div className="flex gap-3 items-center">
+              <Input placeholder="Tên file của Test Resource sẽ được tự động tạo" disabled className="rounded-sm" />
+              <Button size="sm">
+                <Copy />
+              </Button>
+            </div>
+            <div
+              className="rounded-sm"
+              style={{
+                height: `calc(85vh - 320px)`,
+              }}
+            >
+              <MonacoEditor language="robotframework" value={scriptContent} onChange={setScriptContent} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={isLoading}>
+              {isLoading && <LoaderCircle className="animate-spin" />}
+              Thiết lập lại
+            </Button>
+            <Button
+              disabled={isLoading}
+              onClick={handleSaveTestSuite}
+              className="bg-blue-700 hover:bg-blue-800 text-white"
+            >
+              {isLoading && <LoaderCircle className="animate-spin" />}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Fragment>
+  );
+};
+export default TestResourceModal;
