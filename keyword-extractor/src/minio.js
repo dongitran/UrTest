@@ -15,9 +15,7 @@ function createMinioClient() {
 
 async function downloadKeywordsFile(outputPath, projectName = null) {
   try {
-    const url = projectName
-      ? `${process.env.KEYWORDS_URL_BASE}/keywords/${projectName}/robotFrameworkKeywords.json`
-      : `${process.env.KEYWORDS_URL_BASE}/keywords/robotFrameworkKeywords.json`;
+    const url = `${process.env.KEYWORDS_URL_BASE}/keywords/init.json`;
 
     try {
       const response = await axios.get(url);
