@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
 import { eq, isNull, and, desc } from "drizzle-orm";
+import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile"; // Add this import
 
 const ProjectRoute = new Hono();
 
@@ -85,16 +86,39 @@ ProjectRoute.post(
     const body = ctx.req.valid("json");
     const user = ctx.get("user");
 
-    await db.insert(ProjectTable).values({
-      createdAt: dayjs().toISOString(),
-      description: body.description,
-      id: ulid(),
-      title: body.title,
-      createdBy: user.email,
-    });
+    const project = await db
+      .insert(ProjectTable)
+      .values({
+        createdAt: dayjs().toISOString(),
+        description: body.description,
+        id: ulid(),
+        title: body.title,
+        createdBy: user.email,
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    if (project.slug) {
+      const fileContent = "*** Settings ***";
+      const fileName = "resources/init.robot";
+      
+      try {
+        CreateOrUpdateFile(
+          {
+            projectSlug: project.slug,
+            fileContent: fileContent,
+            fileName: fileName,
+          }
+        );
+      } catch (error) {
+        console.log(error, "Create project error");
+      }
+    }
+
     return ctx.json({ message: "ok" });
   }
 );
+
 ProjectRoute.patch(
   "/:id",
   zValidator(
@@ -129,6 +153,7 @@ ProjectRoute.patch(
     return ctx.json({ message: "ok" });
   }
 );
+
 ProjectRoute.delete(
   "/:id",
   zValidator(
@@ -153,4 +178,5 @@ ProjectRoute.delete(
     return ctx.json({ message: "ok" });
   }
 );
+
 export default ProjectRoute;
