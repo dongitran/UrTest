@@ -16,7 +16,7 @@ function createMinioClient() {
 async function downloadKeywordsFile(outputPath, projectName = null) {
   try {
     const url = projectName
-      ? `${process.env.KEYWORDS_URL_BASE}/${projectName}/robotFrameworkKeywords.json`
+      ? `${process.env.KEYWORDS_URL_BASE}/keywords/${projectName}/robotFrameworkKeywords.json`
       : process.env.KEYWORDS_URL;
 
     try {
@@ -42,7 +42,9 @@ async function uploadKeywordsFile(filePath, fileName, projectName = null) {
   try {
     const minioClient = createMinioClient();
 
-    const objectName = projectName ? `${projectName}/${fileName}` : fileName;
+    const objectName = projectName
+      ? `keywords/${projectName}/${fileName}`
+      : fileName;
 
     await minioClient.fPutObject(
       process.env.MINIO_BUCKET,
@@ -65,7 +67,7 @@ async function uploadHistoryFile(filePath, projectName = null) {
     const minioClient = createMinioClient();
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const historyFileName = projectName
-      ? `history/${projectName}/robotFrameworkKeywords_${timestamp}.json`
+      ? `history/keywords/${projectName}/robotFrameworkKeywords_${timestamp}.json`
       : `history/robotFrameworkKeywords_${timestamp}.json`;
 
     await minioClient.fPutObject(
