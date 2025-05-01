@@ -2,7 +2,7 @@ let cachedKeywords = null;
 let lastFetchTime = 0;
 const CACHE_TTL = 60000; // 60s
 
-export async function fetchRobotFrameworkKeywords() {
+export async function fetchRobotFrameworkKeywords(slug = null) {
   const currentTime = Date.now();
 
   if (cachedKeywords && currentTime - lastFetchTime < CACHE_TTL) {
@@ -10,7 +10,12 @@ export async function fetchRobotFrameworkKeywords() {
   }
 
   try {
-    const response = await fetch("http://s0.dtur.xyz/urtest/robotFrameworkKeywords.json");
+    let url = "http://s0.dtur.xyz/urtest/robotFrameworkKeywords.json"; // TODO: remove
+    if (slug) {
+      url = `http://s0.dtur.xyz/urtest/keywords/${slug}/robotFrameworkKeywords.json`;
+    }
+
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch keywords: ${response.status}`);
     }
@@ -31,14 +36,14 @@ export async function fetchRobotFrameworkKeywords() {
   }
 }
 
-export async function registerRobotFrameworkLanguage(monaco) {
+export async function registerRobotFrameworkLanguage(monaco, slug = null) {
   if (
     monaco.languages.getLanguages().some((lang) => lang.id === "robotframework")
   ) {
     return;
   }
 
-  const keywords = await fetchRobotFrameworkKeywords();
+  const keywords = await fetchRobotFrameworkKeywords(slug);
 
   monaco.languages.register({ id: "robotframework" });
 

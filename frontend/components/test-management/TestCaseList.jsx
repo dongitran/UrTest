@@ -270,7 +270,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                       router.push(
                         `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
                           project.id
-                        }&testSuiteId=${test.id}`
+                        }&testSuiteId=${test.id}&slug=${project?.slug}`
                       );
                     }}
                     variant="ghost"
