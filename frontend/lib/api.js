@@ -164,6 +164,17 @@ export const createCollection = async (collectionData) => {
     throw error;
   }
 };
+export const TestResourceApi = (path = "/api/test-resource") => {
+  const list = async (params = {}) => {
+    const res = await apiClient.get(path, { params });
+    return res.data;
+  };
+  const create = async (data) => {
+    const res = await apiClient.post(path, data);
+    return res;
+  };
+  return { create, list };
+};
 export const TestSuiteApi = (path = "/api/testsuite") => {
   const draftExecute = async (data) => {
     const res = await apiClient.post(`${path}/draft-execute`, data);
