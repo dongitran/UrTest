@@ -45,8 +45,6 @@ function createApiServer() {
 
           const repoDir = await fetchRobotFrameworkFiles(tempDir);
 
-          await processKeywords(repoDir, outputDir, null);
-
           const projects = await findProjects(repoDir);
           console.log(
             `Found ${projects.length} projects: ${projects.join(", ")}`
