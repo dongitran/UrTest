@@ -6,8 +6,8 @@ const execPromise = util.promisify(exec);
 
 async function fetchRobotFrameworkFiles(tempDir) {
   try {
-    const repo = process.env.GITHUB_REPO;
-    const token = process.env.GITHUB_TOKEN;
+    const repo = process.env.GH_REPO;
+    const token = process.env.GH_TOKEN;
 
     const repoDir = path.join(tempDir, "repo");
     await fs.remove(repoDir);
