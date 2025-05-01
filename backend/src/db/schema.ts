@@ -12,6 +12,14 @@ const commonTable = {
   deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
   deletedBy: varchar("deleted_by", { length: 255 }),
 };
+export const TestResourceTable = pgTable("tbl_test_resource", {
+  title: varchar({ length: 255 }).notNull(),
+  description: text().notNull(),
+  projectId: varchar("project_id", { length: 255 }).notNull(),
+  content: text().notNull(),
+  fileName: varchar("file_name", { length: 255 }),
+  ...commonTable,
+});
 export const ProjectTable = pgTable("tbl_projects", {
   title: varchar({ length: 255 }).notNull(),
   description: text().notNull(),
