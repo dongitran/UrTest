@@ -25,4 +25,4 @@ USER appuser
 
 EXPOSE 3022
 
-CMD ["node", "src/index.js"]
+CMD ["/bin/sh", "-c", ". /vault/secrets/env-config && node src/index.js"]
