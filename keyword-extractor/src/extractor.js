@@ -12,7 +12,7 @@ async function findRobotFiles(baseDir, directories) {
         continue;
       }
 
-      await scanDirectory(dirPath, robotFiles);
+      await scanDirectory(dirPath, robotFiles, baseDir);
     }
 
     return robotFiles;
@@ -22,7 +22,7 @@ async function findRobotFiles(baseDir, directories) {
   }
 }
 
-async function scanDirectory(dir, files) {
+async function scanDirectory(dir, files, baseDir) {
   try {
     const items = await fs.readdir(dir, { withFileTypes: true });
 
@@ -30,9 +30,22 @@ async function scanDirectory(dir, files) {
       const itemPath = path.join(dir, item.name);
 
       if (item.isDirectory()) {
-        await scanDirectory(itemPath, files);
+        await scanDirectory(itemPath, files, baseDir);
       } else if (item.name.endsWith(".robot")) {
-        files.push(itemPath);
+        const relativePath = path.relative(baseDir, itemPath);
+        const pathParts = relativePath.split(path.sep);
+
+        // Include if:
+        // 1. Not under tests/ directory, OR
+        // 2. Under tests/(project)/resources/ directory
+        const isUnderTests = pathParts[0] === "tests";
+        const isUnderResources = pathParts.includes("resources");
+
+        if (!isUnderTests || isUnderResources) {
+          files.push(itemPath);
+        } else {
+          console.log(`Skipping test suite file: ${relativePath}`);
+        }
       }
     }
   } catch (error) {
@@ -48,7 +61,9 @@ async function extractKeywords(baseDir, directories) {
 
     for (const file of robotFiles) {
       fileCount++;
-      console.log(`[${fileCount}/${robotFiles.length}] Processing file: ${file}`);
+      console.log(
+        `[${fileCount}/${robotFiles.length}] Processing file: ${file}`
+      );
       try {
         const fileKeywords = await extractKeywordsFromFile(file, baseDir);
         keywords.push(...fileKeywords);
