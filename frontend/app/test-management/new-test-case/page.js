@@ -18,6 +18,7 @@ export default function NewTestCasePage() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const testSuiteId = searchParams.get("testSuiteId");
+  const slug = searchParams.get("slug");
   const router = useRouter();
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
@@ -167,9 +168,14 @@ export default function NewTestCasePage() {
           </Alert>
 
           <div className="grid gap-2">
-            <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>
-              <MonacoEditor language="robotframework" value={scriptContent} onChange={setScriptContent} />
-            </div>
+          <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>
+            <MonacoEditor 
+              language="robotframework" 
+              value={scriptContent} 
+              onChange={setScriptContent} 
+              slug={slug} 
+            />
+          </div>
           </div>
           {showProgress && (
             <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden">
