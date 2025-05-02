@@ -66,7 +66,11 @@ export const TestResourceApi = (path = "/api/test-resource") => {
     const res = await apiClient.delete(`${path}/${id}`);
     return res;
   };
-  return { create, list, delete: _delete };
+  const patch = async (id, data) => {
+    const res = await apiClient.patch(`${path}/${id}`, data);
+    return res;
+  };
+  return { patch, create, list, delete: _delete };
 };
 
 export const TestSuiteApi = (path = "/api/testsuite") => {
