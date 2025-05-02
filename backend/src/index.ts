@@ -6,6 +6,7 @@ import { logger } from "hono/logger";
 import MongoConfig from "./config/mongodb";
 import ProjectRoute from "@route/project.route";
 import VerifyToken from "@middlewars/VerifyToken";
+import CheckPermission from "@middlewars/CheckPermission";
 import DashboardRoute from "@route/dashboard.route";
 import TestSuiteRoute from "@route/testsuite.route";
 import TestResourceRoute from "@route/testresource.route";
