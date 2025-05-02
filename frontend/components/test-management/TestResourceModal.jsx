@@ -71,7 +71,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
         <DialogTrigger asChild>{dialogChild}</DialogTrigger>
         <DialogContent className="min-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Tạo Test Resource</DialogTitle>
+            <DialogTitle>Test Resource</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3">
             <Input {...register("title")} placeholder="Nhập tên cho Test Resource" className="rounded-sm" />
@@ -81,7 +81,12 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
               placeholder="Mô tả nội dung của Test Resource"
             />
             <div className="flex gap-3 items-center">
-              <Input placeholder="Tên file của Test Resource sẽ được tự động tạo" disabled className="rounded-sm" />
+              <Input
+                value={`${testResource?.fileName}.robot`}
+                placeholder="Tên file của Test Resource sẽ được tự động tạo"
+                disabled
+                className="rounded-sm"
+              />
               <Button size="sm">
                 <Copy />
               </Button>

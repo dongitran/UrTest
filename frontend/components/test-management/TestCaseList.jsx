@@ -90,7 +90,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         accessorKey: "duration",
         header: "DURATION",
         cell: ({ row }) => {
-          if (get(row.original, "params.duration")) {
+          if (get(row.original, "params.duration") >= 0) {
             return `${get(row.original, "params.duration")}s`;
           }
         },
