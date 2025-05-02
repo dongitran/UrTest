@@ -13,6 +13,7 @@ import { DeleteFileFromGithub } from 'lib/Github/DeleteFile';
 import RunTest from 'lib/Runner/RunTest';
 import * as TestSuiteSchema from 'lib/Zod/TestSuiteSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
+import CheckFileFromGithub from 'lib/Github/CheckFile';
 
 const TestSuiteRoute = new Hono();
 
@@ -94,6 +95,49 @@ TestSuiteRoute.post(
     return ctx.json({ message: 'ok' });
   }
 )
+  .post(
+    '/:id/retry-sync',
+    zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
+    async (ctx) => {
+      const { id } = ctx.req.valid('param');
+      const user = ctx.get('user');
+      const testSuite = await db.query.TestSuiteTable.findFirst({
+        where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
+        with: { project: true },
+      });
+      if (!testSuite) {
+        return ctx.json({ message: 'Không tìm thấy kịch bản test' }, 404);
+      }
+      const fileFromGithub = await CheckFileFromGithub({
+        path: `${testSuite.id}-${testSuite.fileName}.robot`,
+        projectSlug: testSuite.project.slug,
+      });
+      const newParams = testSuite.params || {};
+      if (fileFromGithub) {
+        set(newParams, 'githubData.content', fileFromGithub);
+      } else {
+        await CreateOrUpdateFile(
+          {
+            fileContent: testSuite.content,
+            fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
+            projectSlug: testSuite.project.slug,
+          },
+          (data) => {
+            set(newParams, 'githubData', data);
+          }
+        );
+      }
+      await db
+        .update(TestSuiteTable)
+        .set({
+          params: newParams,
+          updatedAt: dayjs().toISOString(),
+          updatedBy: user.email,
+        })
+        .where(eq(TestSuiteTable.id, testSuite.id));
+      return ctx.json({ message: 'ok' });
+    }
+  )
   .post(
     '/:id/execute',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
