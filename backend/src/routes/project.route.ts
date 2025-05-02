@@ -1,85 +1,73 @@
-import { zValidator } from "@hono/zod-validator";
-import fp from "lodash/fp";
-import dayjs from "dayjs";
-import db from "db/db";
-import { ProjectTable, ProjectAssignmentTable } from "db/schema";
-import { Hono } from "hono";
-import { ulid } from "ulid";
-import { z } from "zod";
-import { eq, isNull, and, desc, inArray } from "drizzle-orm";
-import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
-import { DeleteProjectDirectory } from "../lib/Github/DeleteProjectDirectory";
-import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
-import CheckProjectAccess from "@middlewars/CheckProjectAccess";
+import { zValidator } from '@hono/zod-validator';
+import fp from 'lodash/fp';
+import dayjs from 'dayjs';
+import db from 'db/db';
+import { ProjectTable, ProjectAssignmentTable } from 'db/schema';
+import { Hono } from 'hono';
+import { ulid } from 'ulid';
+import { z } from 'zod';
+import { eq, isNull, and, desc, inArray } from 'drizzle-orm';
+import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
+import { DeleteProjectDirectory } from '../lib/Github/DeleteProjectDirectory';
+import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
+import CheckProjectAccess from '@middlewars/CheckProjectAccess';
+import { fetchStaffUsersFromKeycloak } from '../lib/Keycloak/admin-api';
 
 const ProjectRoute = new Hono();
 
-ProjectRoute.get(
-  "/",
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
-  async (ctx) => {
-    try {
-      const user = ctx.get("user");
+ProjectRoute.get('/', CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]), async (ctx) => {
+  try {
+    const user = ctx.get('user');
 
-      const isStaffOnly =
-        user.roles.includes(ROLES.STAFF) &&
-        !user.roles.includes(ROLES.ADMIN) &&
-        !user.roles.includes(ROLES.MANAGER);
+    const isStaffOnly =
+      user.roles.includes(ROLES.STAFF) &&
+      !user.roles.includes(ROLES.ADMIN) &&
+      !user.roles.includes(ROLES.MANAGER);
 
-      let projects;
+    let projects;
 
-      if (isStaffOnly) {
-        const assignments = await db.query.ProjectAssignmentTable.findMany({
-          where: (clm, { eq, and, isNull }) =>
-            and(eq(clm.userEmail, user.email), isNull(clm.deletedAt)),
-        });
+    if (isStaffOnly) {
+      const assignments = await db.query.ProjectAssignmentTable.findMany({
+        where: (clm, { eq, and, isNull }) =>
+          and(eq(clm.userEmail, user.email), isNull(clm.deletedAt)),
+      });
 
-        const projectIds = assignments.map((a) => a.projectId);
+      const projectIds = assignments.map((a) => a.projectId);
 
-        if (projectIds.length === 0) {
-          return ctx.json({ projects: [] });
-        }
-
-        projects = await db
-          .select()
-          .from(ProjectTable)
-          .where(
-            and(
-              isNull(ProjectTable.deletedAt),
-              inArray(ProjectTable.id, projectIds)
-            )
-          )
-          .orderBy(desc(ProjectTable.id))
-          .execute();
-      } else {
-        projects = await db
-          .select()
-          .from(ProjectTable)
-          .where(isNull(ProjectTable.deletedAt))
-          .orderBy(desc(ProjectTable.id))
-          .execute();
+      if (projectIds.length === 0) {
+        return ctx.json({ projects: [] });
       }
 
-      return ctx.json({ projects });
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      return ctx.json(
-        { message: "Failed to fetch projects", error: errorMessage },
-        500
-      );
+      projects = await db
+        .select()
+        .from(ProjectTable)
+        .where(and(isNull(ProjectTable.deletedAt), inArray(ProjectTable.id, projectIds)))
+        .orderBy(desc(ProjectTable.id))
+        .execute();
+    } else {
+      projects = await db
+        .select()
+        .from(ProjectTable)
+        .where(isNull(ProjectTable.deletedAt))
+        .orderBy(desc(ProjectTable.id))
+        .execute();
     }
+
+    return ctx.json({ projects });
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return ctx.json({ message: 'Failed to fetch projects', error: errorMessage }, 500);
   }
-);
+});
 
 ProjectRoute.get(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   async (ctx) => {
     try {
-      const id = ctx.req.param("id");
+      const id = ctx.req.param('id');
 
       const project = await db.query.ProjectTable.findFirst({
         where: (clm, { eq }) => eq(clm.id, id),
@@ -92,24 +80,20 @@ ProjectRoute.get(
       });
 
       if (!project) {
-        return ctx.json({ message: "Project not found" }, 404);
+        return ctx.json({ message: 'Project not found' }, 404);
       }
       const listTestSuiteId = project.listTestSuite.map((i) => i.id);
-      const listTestSuiteExecute =
-        await db.query.TestSuiteExecuteTable.findMany({
-          where: (clm, { inArray }) =>
-            inArray(clm.testSuiteId, listTestSuiteId),
-          orderBy: (clm, { desc }) => desc(clm.id),
-          limit: 5,
-        });
+      const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+        where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
+        orderBy: (clm, { desc }) => desc(clm.id),
+        limit: 5,
+      });
 
       return ctx.json({
         project: {
           ...project,
           recentTestRun: listTestSuiteExecute.map((item) => {
-            const testSuite = project.listTestSuite.find(
-              fp.isMatch({ id: item.testSuiteId })
-            );
+            const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
             return {
               id: item.id,
               testSuiteName: testSuite?.name,
@@ -121,30 +105,26 @@ ProjectRoute.get(
         },
       });
     } catch (error) {
-      console.error("Error fetching project by ID:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      return ctx.json(
-        { message: "Failed to fetch project", error: errorMessage },
-        500
-      );
+      console.error('Error fetching project by ID:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return ctx.json({ message: 'Failed to fetch project', error: errorMessage }, 500);
     }
   }
 );
 
 ProjectRoute.post(
-  "/",
+  '/',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   zValidator(
-    "json",
+    'json',
     z.object({
       title: z.string(),
       description: z.string(),
     })
   ),
   async (ctx) => {
-    const body = ctx.req.valid("json");
-    const user = ctx.get("user");
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
 
     const project = await db
       .insert(ProjectTable)
@@ -159,8 +139,8 @@ ProjectRoute.post(
       .then((res) => res[0]);
 
     if (project.slug) {
-      const fileContent = "*** Settings ***";
-      const fileName = "resources/init.robot";
+      const fileContent = '*** Settings ***';
+      const fileName = 'resources/init.robot';
 
       try {
         CreateOrUpdateFile({
@@ -169,42 +149,42 @@ ProjectRoute.post(
           fileName: fileName,
         });
       } catch (error) {
-        console.log(error, "Create project error");
+        console.log(error, 'Create project error');
       }
     }
 
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 ProjectRoute.patch(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   CheckProjectAccess(),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   zValidator(
-    "json",
+    'json',
     z.object({
       title: z.string(),
       description: z.string(),
     })
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const body = ctx.req.valid("json");
+    const { id } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
     });
     if (!project) {
       return ctx.json(
         {
-          message: "Không tìm thấy thông tin Project theo mã ID",
-          code: "NOT_FOUND",
+          message: 'Không tìm thấy thông tin Project theo mã ID',
+          code: 'NOT_FOUND',
         },
         404
       );
@@ -216,37 +196,37 @@ ProjectRoute.patch(
         description: body.description,
       })
       .where(eq(ProjectTable.id, project.id));
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 ProjectRoute.delete(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   CheckProjectAccess(),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   async (ctx) => {
-    const user = ctx.get("user");
-    const { id } = ctx.req.valid("param");
+    const user = ctx.get('user');
+    const { id } = ctx.req.valid('param');
 
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
     });
 
     if (!project) {
-      return ctx.json({ message: "Project not found" }, 404);
+      return ctx.json({ message: 'Project not found' }, 404);
     }
 
     if (project.slug) {
       try {
         await DeleteProjectDirectory(project.slug);
       } catch (error) {
-        console.error("Error deleting project GitHub resources:", error);
+        console.error('Error deleting project GitHub resources:', error);
       }
     }
 
@@ -259,53 +239,45 @@ ProjectRoute.delete(
       .where(eq(ProjectTable.id, id))
       .returning();
 
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 ProjectRoute.post(
-  "/:id/assignments",
+  '/:id/assignments',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   zValidator(
-    "json",
+    'json',
     z.object({
       userEmail: z.string().email(),
     })
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const { userEmail } = ctx.req.valid("json");
-    const user = ctx.get("user");
+    const { id } = ctx.req.valid('param');
+    const { userEmail } = ctx.req.valid('json');
+    const user = ctx.get('user');
 
     const project = await db.query.ProjectTable.findFirst({
-      where: (clm, { eq, isNull, and }) =>
-        and(eq(clm.id, id), isNull(clm.deletedAt)),
+      where: (clm, { eq, isNull, and }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
     });
 
     if (!project) {
-      return ctx.json({ message: "Project not found" }, 404);
+      return ctx.json({ message: 'Project not found' }, 404);
     }
 
     const existingAssignment = await db.query.ProjectAssignmentTable.findFirst({
       where: (clm, { eq, and, isNull }) =>
-        and(
-          eq(clm.projectId, id),
-          eq(clm.userEmail, userEmail),
-          isNull(clm.deletedAt)
-        ),
+        and(eq(clm.projectId, id), eq(clm.userEmail, userEmail), isNull(clm.deletedAt)),
     });
 
     if (existingAssignment) {
-      return ctx.json(
-        { message: "User is already assigned to this project" },
-        400
-      );
+      return ctx.json({ message: 'User is already assigned to this project' }, 400);
     }
 
     await db.insert(ProjectAssignmentTable).values({
@@ -316,35 +288,31 @@ ProjectRoute.post(
       createdBy: user.email,
     });
 
-    return ctx.json({ message: "User assigned to project successfully" });
+    return ctx.json({ message: 'User assigned to project successfully' });
   }
 );
 
 ProjectRoute.delete(
-  "/:id/assignments/:userEmail",
+  '/:id/assignments/:userEmail',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
       userEmail: z.string().email(),
     })
   ),
   async (ctx) => {
-    const { id, userEmail } = ctx.req.valid("param");
-    const user = ctx.get("user");
+    const { id, userEmail } = ctx.req.valid('param');
+    const user = ctx.get('user');
 
     const assignment = await db.query.ProjectAssignmentTable.findFirst({
       where: (clm, { eq, and, isNull }) =>
-        and(
-          eq(clm.projectId, id),
-          eq(clm.userEmail, userEmail),
-          isNull(clm.deletedAt)
-        ),
+        and(eq(clm.projectId, id), eq(clm.userEmail, userEmail), isNull(clm.deletedAt)),
     });
 
     if (!assignment) {
-      return ctx.json({ message: "Assignment not found" }, 404);
+      return ctx.json({ message: 'Assignment not found' }, 404);
     }
 
     await db
@@ -355,28 +323,67 @@ ProjectRoute.delete(
       })
       .where(eq(ProjectAssignmentTable.id, assignment.id));
 
-    return ctx.json({ message: "User assignment removed successfully" });
+    return ctx.json({ message: 'User assignment removed successfully' });
   }
 );
 
 ProjectRoute.get(
-  "/:id/assignments",
+  '/:id/assignments',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
+    const { id } = ctx.req.valid('param');
 
     const assignments = await db.query.ProjectAssignmentTable.findMany({
-      where: (clm, { eq, isNull, and }) =>
-        and(eq(clm.projectId, id), isNull(clm.deletedAt)),
+      where: (clm, { eq, isNull, and }) => and(eq(clm.projectId, id), isNull(clm.deletedAt)),
     });
 
     return ctx.json({ assignments });
+  }
+);
+
+ProjectRoute.get(
+  '/:id/available-staff',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  zValidator(
+    'param',
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  async (ctx) => {
+    try {
+      const { id } = ctx.req.valid('param');
+
+      const project = await db.query.ProjectTable.findFirst({
+        where: (clm, { eq, isNull, and }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
+      });
+
+      if (!project) {
+        return ctx.json({ message: 'Project not found' }, 404);
+      }
+
+      const allStaffUsers = await fetchStaffUsersFromKeycloak();
+
+      const assignments = await db.query.ProjectAssignmentTable.findMany({
+        where: (clm, { eq, isNull, and }) => and(eq(clm.projectId, id), isNull(clm.deletedAt)),
+      });
+
+      const assignedEmails = assignments.map((a) => a.userEmail);
+
+      const availableStaff = allStaffUsers.filter((user) => !assignedEmails.includes(user.email));
+
+      return ctx.json({ availableStaff });
+    } catch (error) {
+      console.error('Error fetching available staff:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return ctx.json({ message: 'Failed to fetch available staff', error: errorMessage }, 500);
+    }
   }
 );
 
