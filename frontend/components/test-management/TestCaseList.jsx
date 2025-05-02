@@ -20,7 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,9 +35,8 @@ import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } fro
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
   const socketRef = useRef(null);
-  const table = useReactTable({
-    data: listTestSuite,
-    columns: [
+  const columns = useMemo(() => {
+    return [
       {
         accessorKey: "name",
         header: "Test Suite",
@@ -104,7 +103,11 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
           );
         },
       },
-    ],
+    ];
+  }, []);
+  const table = useReactTable({
+    data: listTestSuite,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
