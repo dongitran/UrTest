@@ -34,10 +34,6 @@ import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } fro
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalTests = 32;
-  const itemsPerPage = 7;
-  const totalPages = Math.ceil(totalTests / itemsPerPage);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
   const socketRef = useRef(null);
   const table = useReactTable({
@@ -381,84 +377,6 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
               disabled={!table.getCanNextPage()}
             >
               <ChevronRight />
-            </Button>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
-            <div className="col-span-4">TEST SUITE</div>
-            <div className="col-span-2">TAGS</div>
-            <div className="col-span-1">STATUS</div>
-            <div className="col-span-1">LAST RUN</div>
-            <div className="col-span-1 text-end">DURATION</div>
-            <div className="col-span-2 text-right pr-2">ACTIONS</div>
-          </div>
-          <div className="divide-y">
-            {listTestSuite.map((test) => (
-              <div key={test.id} className="grid grid-cols-12 items-center p-3">
-                <div className="col-span-4">
-                  <div className="font-medium text-xl">{test.name}</div>
-                  <div className="text-xs text-muted-foreground">{test.description}</div>
-                </div>
-                <div className="col-span-2">
-                  {test.tags &&
-                    test.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className={`${getTypeBadgeClass(test.type)}`}>
-                        {tag}
-                      </Badge>
-                    ))}
-                </div>
-                <div className="col-span-1">
-                  <Badge variant="outline" className={`${getStatusBadgeClass(test.status)}`}>
-                    {test.status === "Running" && <LoaderCircle className="animate-spin size-3 mr-1" />}
-                    {test.status}
-                  </Badge>
-                </div>
-                <div className="col-span-1 text-sm text-muted-foreground">
-                  {test.lastRunDate && dayjs(test.lastRunDate).format("HH:mm DD/MM/YYYY")}
-                </div>
-                <div className="col-span-1 text-sm text-muted-foreground text-end">
-                  {get(test, "params.duration") ? `${get(test, "params.duration")}s` : ""}
-                </div>
-                <div className="col-span-2 flex items-center justify-end"></div>
-              </div>
-            ))}
-            {listTestSuite.length <= 0 && (
-              <div className="p-3 text-muted-foreground flex items-center justify-center h-36">No result.</div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center justify-between mt-3">
-          <div className="text-sm text-muted-foreground">Total {listTestSuite.length} test suite</div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {[1, 2, 3, 4, 5].map((page) => (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            >
-              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
