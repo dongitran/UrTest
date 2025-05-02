@@ -244,6 +244,12 @@ TestSuiteRoute.post(
       })
         .then(async (res) => {
           const endRun = dayjs();
+          let testSuiteExecuteStatus = 'success',
+            testSuiteStatus = 'Completed';
+          if (get(res, 'error') === true) {
+            testSuiteExecuteStatus = 'failed';
+            testSuiteStatus = 'Failed';
+          }
           await db
             .update(TestSuiteExecuteTable)
             .set({
@@ -251,7 +257,7 @@ TestSuiteRoute.post(
                 ...(testSuiteExecute.params || {}),
                 resultRuner: res,
               },
-              status: 'success',
+              status: testSuiteExecuteStatus as any,
               updatedAt: dayjs().toISOString(),
               updatedBy: 'SYSTEM-RUNER',
             })
@@ -264,7 +270,7 @@ TestSuiteRoute.post(
                 resultRuner: res,
                 duration: endRun.diff(startRun, 'second'),
               },
-              status: 'Completed',
+              status: testSuiteStatus as any,
               lastRunDate: dayjs().toISOString(),
               updatedAt: dayjs().toISOString(),
               updatedBy: 'SYSTEM-RUNER',
