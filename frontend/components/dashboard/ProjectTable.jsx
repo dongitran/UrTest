@@ -121,13 +121,9 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       },
       { accessorKey: "totalTestSuiteExecute", header: "Total Test Suite Execution" },
       {
-        accessorKey: "updatedAt",
-        header: () => <div className="text-center">Last Run</div>,
-        cell: ({ row }) => (
-          <div className="lowercase">
-            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
-          </div>
-        ),
+        accessorKey: "createdBy",
+        header: () => <div className="text-center">Người tạo</div>,
+        cell: ({ row }) => <div className="lowercase">{row.getValue("createdBy")}</div>,
       },
       {
         accessorKey: "actions",
