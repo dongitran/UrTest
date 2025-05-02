@@ -16,25 +16,56 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, Search, SquarePen, Trash2 } from "lucide-react";
+import {
+  EllipsisVertical,
+  Search,
+  SquarePen,
+  Trash2,
+  LoaderCircle,
+} from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ProjectApi } from "@/lib/api";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export default function ProjectTable({ initDataTable, setDataTable, refetch, dataTable = [], setProjectModalOpen }) {
+export default function ProjectTable({
+  initDataTable,
+  setDataTable,
+  refetch,
+  dataTable = [],
+  setProjectModalOpen,
+}) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [projectNameFilter, setProjectNameFilter] = React.useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [projectToDelete, setProjectToDelete] = React.useState(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   const columns = React.useMemo(() => {
     return [
       {
@@ -60,8 +91,12 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
                 </svg>
               </div>
               <div className="min-w-[200px] flex-1 pr-4">
-                <div className="font-semibold text-base">{row.getValue("title")}</div>
-                <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
+                <div className="font-semibold text-base">
+                  {row.getValue("title")}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {row.original["description"]}
+                </div>
               </div>
             </div>
           );
@@ -96,7 +131,11 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
         header: () => <div className="text-center">Progress</div>,
         cell: ({ row }) => (
           <div className="flex gap-3 items-center">
-            <Progress value={33} className="w-full" indicatorColor="bg-green-700" />
+            <Progress
+              value={33}
+              className="w-full"
+              indicatorColor="bg-green-700"
+            />
             <span className="text-xs whitespace-nowrap">33%</span>
           </div>
         ),
@@ -106,7 +145,8 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
         header: () => <div className="text-center">Last Run</div>,
         cell: ({ row }) => (
           <div className="lowercase">
-            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
+            {row.getValue("updatedAt") &&
+              dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
           </div>
         ),
       },
@@ -130,7 +170,9 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
                     </DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem onClick={handleDeleteProject(row.original["id"])}>
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClick(row.original)}
+                >
                   Delete
                   <DropdownMenuShortcut>
                     <Trash2 className="size-4" />
@@ -143,6 +185,7 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       },
     ];
   }, []);
+
   const table = useReactTable({
     data: dataTable,
     columns,
@@ -161,24 +204,41 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
       rowSelection,
     },
   });
-  const handleDeleteProject = (id) => {
-    return async () => {
-      try {
-        await ProjectApi().delete(id);
-        if (refetch) refetch();
-        toast.success("Project deleted successfully");
-      } catch (error) {
-        toast.error("Error deleting project");
-      }
-    };
+
+  const handleDeleteClick = (project) => {
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
   };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await ProjectApi().delete(projectToDelete.id);
+      if (refetch) refetch();
+      toast.success("Project deleted successfully");
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      toast.error("Error deleting project");
+    } finally {
+      setIsDeleting(false);
+      setProjectToDelete(null);
+    }
+  };
+
   const handleFilterDataTable = (searchTerm = projectNameFilter) => {
     if (searchTerm && searchTerm.trim() !== "") {
-      setDataTable(initDataTable.filter((item) => new RegExp(searchTerm, "i").test(item.title)));
+      setDataTable(
+        initDataTable.filter((item) =>
+          new RegExp(searchTerm, "i").test(item.title)
+        )
+      );
     } else {
       setDataTable(initDataTable);
     }
   };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -222,10 +282,19 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
                       <TableHead
                         key={header.id}
                         className={
-                          header.id.includes("title") ? "w-1/2" : header.id.includes("progress") ? "w-1/6" : ""
+                          header.id.includes("title")
+                            ? "w-1/2"
+                            : header.id.includes("progress")
+                            ? "w-1/6"
+                            : ""
                         }
                       >
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                       </TableHead>
                     );
                   })}
@@ -235,15 +304,26 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     No results.
                   </TableCell>
                 </TableRow>
@@ -261,11 +341,63 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
             >
               Previous
             </Button>
-            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
               Next
             </Button>
           </div>
         </div>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Delete Project</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this project? This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {projectToDelete && (
+              <div className="pt-4">
+                <div className="border p-3 rounded-md">
+                  <p className="font-medium">{projectToDelete.title}</p>
+                  {projectToDelete.description && (
+                    <p className="text-sm text-muted-foreground">
+                      {projectToDelete.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteProject}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
