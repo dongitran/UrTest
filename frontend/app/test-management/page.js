@@ -4,7 +4,7 @@ import ProjectFields from "@/components/test-management/ProjectFields";
 import ProjectSelector from "@/components/test-management/ProjectSelector";
 import RecentTestRuns from "@/components/test-management/RecentTestRuns";
 import TestCaseList from "@/components/test-management/TestCaseList";
-import TestSuccessRate from "@/components/test-management/TestSuccessRate";
+import TestRoute from "@/components/test-management/TestResource";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import { useSearchParams } from "next/navigation";
@@ -28,7 +28,7 @@ export default function TestManagement() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <RecentTestRuns recentTestRun={project.recentTestRun} />
-            <TestSuccessRate project={project} />
+            <TestRoute project={project} />
           </div>
         </Fragment>
       )}
