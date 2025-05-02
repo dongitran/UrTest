@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import TestResourceModal from "@/components/test-management/TestResourceModal";
 import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -42,13 +42,15 @@ export default function TestRoute({ project = {} }) {
             />
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-h-[200px]">
           <div className="grid grid-cols-1 gap-3">
             {data?.listTestResource.map((item) => {
               return <TestResourceItem refetch={refetch} item={item} project={project} key={item.id} />;
             })}
           </div>
-          <div className="flex items-center gap-1 mt-3 justify-end">
+        </CardContent>
+        <CardFooter className="justify-end">
+          <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" className="h-7 w-7">
               <ChevronLeft className="size-4" />
             </Button>
@@ -61,7 +63,7 @@ export default function TestRoute({ project = {} }) {
               <ChevronRight className="size-4" />
             </Button>
           </div>
-        </CardContent>
+        </CardFooter>
       </Card>
     </>
   );
