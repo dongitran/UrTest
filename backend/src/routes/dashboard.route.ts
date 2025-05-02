@@ -58,44 +58,44 @@ DashboardRoute.get(
       });
     }
 
-    let totalTestsuite = 0;
-    const dataTable = [];
-    for (const item of projects) {
-      if (item.listTestSuite.length > 0) {
-        totalTestsuite += item.listTestSuite.length;
-      }
-      let totalTestSuiteExecute = 0;
-      const listTestSuiteId = item.listTestSuite.map((i) => i.id);
-      if (listTestSuiteId.length) {
-        totalTestSuiteExecute = await db
-          .select({ count: count() })
-          .from(TestSuiteExecuteTable)
-          .where(
-            and(
-              inArray(TestSuiteExecuteTable.testSuiteId, listTestSuiteId),
-              isNull(TestSuiteExecuteTable.deletedAt)
-            )
-          )
-          .then((res) => res[0].count);
-      }
-      dataTable.push({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        status: "Stable",
-        updatedAt: item.updatedAt,
-        totalTestSuite: item.listTestSuite.length,
-        totalTestSuiteExecute,
-      });
+  let totalTestsuite = 0;
+  const dataTable = [];
+  for (const item of projects) {
+    if (item.listTestSuite.length > 0) {
+      totalTestsuite += item.listTestSuite.length;
     }
-    return ctx.json({
-      totalProject: projects.length,
-      totalTestsuite,
-      totalAvgSuccessRate: 0,
-      totalActive: 0,
-      dataTable,
+    let totalTestSuiteExecute = 0;
+    const listTestSuiteId = item.listTestSuite.map((i) => i.id);
+    if (listTestSuiteId.length) {
+      totalTestSuiteExecute = await db
+        .select({ count: count() })
+        .from(TestSuiteExecuteTable)
+        .where(
+          and(
+            inArray(TestSuiteExecuteTable.testSuiteId, listTestSuiteId),
+            isNull(TestSuiteExecuteTable.deletedAt)
+          )
+        )
+        .then((res) => res[0].count);
+    }
+    dataTable.push({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      status: 'Stable',
+      updatedAt: item.updatedAt,
+      totalTestSuite: item.listTestSuite.length,
+      totalTestSuiteExecute,
+      createdBy: item.createdBy,
     });
   }
-);
+  return ctx.json({
+    totalProject: projects.length,
+    totalTestsuite,
+    totalAvgSuccessRate: 0,
+    totalActive: 0,
+    dataTable,
+  });
+});
 
 export default DashboardRoute;

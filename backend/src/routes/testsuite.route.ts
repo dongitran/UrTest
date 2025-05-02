@@ -18,46 +18,39 @@ import CheckProjectAccess from "@middlewars/CheckProjectAccess";
 const TestSuiteRoute = new Hono();
 
 TestSuiteRoute.get(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
+    const { id } = ctx.req.valid('param');
     const testSuite = await db.query.TestSuiteTable.findFirst({
-      where: (clm, { eq, and, isNull }) =>
-        and(eq(clm.id, id), isNull(clm.deletedAt)),
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
     });
     if (!testSuite) {
-      return ctx.json(
-        { message: "Không tìm thấy thông tin kịch bản test" },
-        404
-      );
+      return ctx.json({ message: 'Không tìm thấy thông tin kịch bản test' }, 404);
     }
     return ctx.json({ ...testSuite });
   }
 );
 
 TestSuiteRoute.post(
-  "/",
+  '/',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
-    const user = ctx.get("user");
-    const body = ctx.req.valid("json");
+    const user = ctx.get('user');
+    const body = ctx.req.valid('json');
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, body.projectId),
     });
     if (!project) {
-      return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
+      return ctx.json({ message: 'Thông tìm thấy thông tin của Project' }, 404);
     } else if (project.deletedAt) {
-      return ctx.json(
-        { message: "Project đã bị xóa nên không thể tạo kịch bản test" },
-        400
-      );
+      return ctx.json({ message: 'Project đã bị xóa nên không thể tạo kịch bản test' }, 400);
     }
-    const status = body.resultRuner ? "Completed" : "Not Run";
+    const status = body.resultRuner ? 'Completed' : 'Not Run';
     const lastRunDate = body.resultRuner ? dayjs().toISOString() : undefined;
     const testSuite = await db
       .insert(TestSuiteTable)
@@ -101,95 +94,81 @@ TestSuiteRoute.post(
         }
       );
     }
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 )
   .post(
-    "/:id/execute",
+    '/:id/execute',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
     CheckProjectAccess(),
     zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
     zValidator(
-      "json",
+      'json',
       z.object({
-        status: z.enum(["pending", "processing", "success", "failed"]),
-        testSuiteStatus: z.enum([
-          "Not Run",
-          "Running",
-          "Completed",
-          "Failed",
-          "Aborted",
-        ]),
+        status: z.enum(['pending', 'processing', 'success', 'failed']),
+        testSuiteStatus: z.enum(['Not Run', 'Running', 'Completed', 'Failed', 'Aborted']),
       })
     ),
     async (ctx) => {
-      const { id } = ctx.req.valid("param");
-      const user = ctx.get("user");
-      const body = ctx.req.valid("json");
+      const { id } = ctx.req.valid('param');
+      const user = ctx.get('user');
+      const body = ctx.req.valid('json');
       const testSuite = await db.query.TestSuiteTable.findFirst({
         where: (clm, { eq }) => eq(clm.id, id),
         with: { project: true },
       });
       if (!testSuite) {
-        return ctx.json({ message: "Không tìm thấy kịch bản test" }, 404);
-      } else if (testSuite.status === "Running") {
+        return ctx.json({ message: 'Không tìm thấy kịch bản test' }, 404);
+      } else if (testSuite.status === 'Running') {
         return ctx.json(
           {
-            message:
-              "Kịch bản test đang được thực thi. Vui lòng đợi kết thúc rồi thực hiện lại",
+            message: 'Kịch bản test đang được thực thi. Vui lòng đợi kết thúc rồi thực hiện lại',
           },
           400
         );
       } else if (!testSuite.content) {
         return ctx.json(
           {
-            message:
-              "Kịch bản test không có nội dung về test case nên không thể thực hiện",
+            message: 'Kịch bản test không có nội dung về test case nên không thể thực hiện',
           },
           400
         );
       } else if (!testSuite.fileName) {
         return ctx.json(
           {
-            message:
-              "Kịch bản test không tồn tại fileName nên không thể thực hiện",
+            message: 'Kịch bản test không tồn tại fileName nên không thể thực hiện',
           },
           400
         );
       }
 
       if (!testSuite.project) {
-        return ctx.json({ message: "Không tìm thấy Project" }, 404);
+        return ctx.json({ message: 'Không tìm thấy Project' }, 404);
       } else if (testSuite.project.deletedAt) {
         return ctx.json(
           {
-            message: "Project đã bị xóa nên không thể thực hiện kịch bản test",
+            message: 'Project đã bị xóa nên không thể thực hiện kịch bản test',
           },
           400
         );
       } else if (!testSuite.project.slug) {
         return ctx.json(
           {
-            message:
-              "Hiện Project chưa có tên slug nên không thể thực thi kịch bản test",
+            message: 'Hiện Project chưa có tên slug nên không thể thực thi kịch bản test',
           },
           400
         );
       }
 
-      const listTestSuiteExecute =
-        await db.query.TestSuiteExecuteTable.findMany({
-          where: (clm, { eq, and }) =>
-            and(
-              eq(clm.testSuiteId, testSuite.id),
-              eq(clm.status, "processing")
-            ),
-        });
+      const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+        where: (clm, { eq, and }) =>
+          and(eq(clm.testSuiteId, testSuite.id), eq(clm.status, 'processing')),
+      });
       if (listTestSuiteExecute.length >= 1) {
         return ctx.json(
           {
             message:
-              "Kịch bản test đang được thực thi ở tiến trình. Vui lòng đợi kết thúc rồi thực hiện lại",
+              'Kịch bản test đang được thực thi ở tiến trình. Vui lòng đợi kết thúc rồi thực hiện lại',
           },
           400
         );
@@ -229,9 +208,9 @@ TestSuiteRoute.post(
                 ...(testSuiteExecute.params || {}),
                 resultRuner: res,
               },
-              status: "success",
+              status: 'success',
               updatedAt: dayjs().toISOString(),
-              updatedBy: "SYSTEM-RUNER",
+              updatedBy: 'SYSTEM-RUNER',
             })
             .where(eq(TestSuiteExecuteTable.id, testSuiteExecute.id));
           await db
@@ -240,12 +219,12 @@ TestSuiteRoute.post(
               params: {
                 ...(testSuite.params || {}),
                 resultRuner: res,
-                duration: endRun.diff(startRun, "second"),
+                duration: endRun.diff(startRun, 'second'),
               },
-              status: "Completed",
+              status: 'Completed',
               lastRunDate: dayjs().toISOString(),
               updatedAt: dayjs().toISOString(),
-              updatedBy: "SYSTEM-RUNER",
+              updatedBy: 'SYSTEM-RUNER',
             })
             .where(eq(TestSuiteTable.id, testSuite.id));
         })
@@ -254,9 +233,9 @@ TestSuiteRoute.post(
           await db
             .update(TestSuiteExecuteTable)
             .set({
-              status: "failed",
+              status: 'failed',
               updatedAt: dayjs().toISOString(),
-              updatedBy: "SYSTEM-RUNER",
+              updatedBy: 'SYSTEM-RUNER',
             })
             .where(eq(TestSuiteExecuteTable.id, testSuiteExecute.id));
           await db
@@ -264,37 +243,37 @@ TestSuiteRoute.post(
             .set({
               params: {
                 ...(testSuite.params || {}),
-                duration: endRun.diff(startRun, "second"),
+                duration: endRun.diff(startRun, 'second'),
                 resultRuner: null,
               },
-              status: "Failed",
+              status: 'Failed',
               lastRunDate: dayjs().toISOString(),
               updatedAt: dayjs().toISOString(),
-              updatedBy: "SYSTEM-RUNER",
+              updatedBy: 'SYSTEM-RUNER',
             })
             .where(eq(TestSuiteTable.id, testSuite.id));
         });
-      return ctx.json({ message: "ok" });
+      return ctx.json({ message: 'ok' });
     }
   )
   .post(
-    "/draft-execute",
+    '/draft-execute',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
     CheckProjectAccess(),
     zValidator(
-      "json",
+      'json',
       z.object({
         projectId: z.string().ulid(),
         content: z.string(),
       })
     ),
     async (ctx) => {
-      const body = ctx.req.valid("json");
+      const body = ctx.req.valid('json');
       const project = await db.query.ProjectTable.findFirst({
         where: (clm, { eq }) => eq(clm.id, body.projectId),
       });
       if (!project) {
-        return ctx.json({ message: "Không tìm thấy thông tin Project" }, 404);
+        return ctx.json({ message: 'Không tìm thấy thông tin Project' }, 404);
       }
       const startRun = dayjs();
       const resultRuner = await RunTest({
@@ -302,72 +281,57 @@ TestSuiteRoute.post(
         projectName: project.slug,
       });
       const endRun = dayjs();
-      if (!get(resultRuner, "reportUrl")) {
+      if (!get(resultRuner, 'reportUrl')) {
         return ctx.json(
           {
-            message:
-              "Không có thông tin reportUrl từ phản hồi khi chạy kịch bản test",
+            message: 'Không có thông tin reportUrl từ phản hồi khi chạy kịch bản test',
           },
           400
         );
       }
       return ctx.json({
         resultRuner,
-        duration: endRun.diff(startRun, "second"),
+        duration: endRun.diff(startRun, 'second'),
       });
     }
   )
   .post(
-    "/execute/all",
+    '/execute/all',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
     CheckProjectAccess(),
     zValidator("json", z.object({ projectId: z.string().ulid() })),
     async (ctx) => {
-      const { projectId } = ctx.req.valid("json");
-      const user = ctx.get("user");
+      const { projectId } = ctx.req.valid('json');
+      const user = ctx.get('user');
       const project = await db.query.ProjectTable.findFirst({
         where: (clm, { eq }) => eq(clm.id, projectId),
       });
       if (!project) {
-        return ctx.json(
-          { message: "Thông tìm thấy thông tin của Project" },
-          404
-        );
+        return ctx.json({ message: 'Thông tìm thấy thông tin của Project' }, 404);
       } else if (project.deletedAt) {
-        return ctx.json(
-          { message: "Project đã bị xóa nên không thể tạo kịch bản test" },
-          400
-        );
+        return ctx.json({ message: 'Project đã bị xóa nên không thể tạo kịch bản test' }, 400);
       }
       const listTestSuite = await db.query.TestSuiteTable.findMany({
         where: (clm, { ne, eq, isNull, and }) =>
-          and(
-            eq(clm.projectId, projectId),
-            isNull(clm.deletedAt),
-            ne(clm.status, "Running")
-          ),
+          and(eq(clm.projectId, projectId), isNull(clm.deletedAt), ne(clm.status, 'Running')),
       });
       const testSuiteIds = listTestSuite.map((i) => i.id);
-      const listTestSuiteExecute =
-        await db.query.TestSuiteExecuteTable.findMany({
-          where: (clm, { inArray, and, eq }) =>
-            and(
-              inArray(clm.testSuiteId, testSuiteIds),
-              eq(clm.status, "processing")
-            ),
-        });
+      const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
+        where: (clm, { inArray, and, eq }) =>
+          and(inArray(clm.testSuiteId, testSuiteIds), eq(clm.status, 'processing')),
+      });
       if (listTestSuiteExecute.length > 0) {
         return ctx.json(
           {
             message:
-              "Đang có 1 tiến trình thực hiện kịch bản test nên không thể thực thi toàn bộ kịch bản test",
+              'Đang có 1 tiến trình thực hiện kịch bản test nên không thể thực thi toàn bộ kịch bản test',
           },
           400
         );
       }
       await db
         .update(TestSuiteTable)
-        .set({ status: "Running" })
+        .set({ status: 'Running' })
         .where(inArray(TestSuiteTable.id, testSuiteIds));
       const insertTextSuiteExecute: (typeof TestSuiteExecuteTable.$inferInsert)[] =
         listTestSuite.map((item) => ({
@@ -375,15 +339,13 @@ TestSuiteRoute.post(
           createdBy: user.email,
           id: ulid(),
           testSuiteId: item.id,
-          status: "processing",
+          status: 'processing',
         }));
       const listTextSuiteJustCreated = await db
         .insert(TestSuiteExecuteTable)
         .values(insertTextSuiteExecute)
         .returning();
-      const RunAllTest = async (
-        listTestSuite: (typeof TestSuiteTable.$inferSelect)[]
-      ) => {
+      const RunAllTest = async (listTestSuite: (typeof TestSuiteTable.$inferSelect)[]) => {
         for (const testSuite of listTestSuite) {
           const startRun = dayjs();
           const testExecute = listTextSuiteJustCreated.find(
@@ -400,11 +362,11 @@ TestSuiteRoute.post(
               updatedAt: dayjs().toISOString(),
               updatedBy: user.email,
               lastRunDate: dayjs().toISOString(),
-              status: "Completed",
+              status: 'Completed',
               params: {
                 ...(testSuite.params || {}),
                 resultRuner,
-                duration: endRun.diff(startRun, "second"),
+                duration: endRun.diff(startRun, 'second'),
               },
             })
             .where(eq(TestSuiteTable.id, testSuite.id));
@@ -412,7 +374,7 @@ TestSuiteRoute.post(
             await db
               .update(TestSuiteExecuteTable)
               .set({
-                status: "success",
+                status: 'success',
                 params: {
                   ...(testExecute.params || {}),
                   resultRuner,
@@ -425,47 +387,37 @@ TestSuiteRoute.post(
         }
       };
       RunAllTest(listTestSuite);
-      return ctx.json({ message: "ok" });
+      return ctx.json({ message: 'ok' });
     }
   );
 
 TestSuiteRoute.patch(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const user = ctx.get("user");
-    const body = ctx.req.valid("json");
+    const { id } = ctx.req.valid('param');
+    const user = ctx.get('user');
+    const body = ctx.req.valid('json');
 
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, body.projectId),
     });
     if (!project) {
-      return ctx.json({ message: "Thông tìm thấy thông tin của Project" }, 404);
+      return ctx.json({ message: 'Thông tìm thấy thông tin của Project' }, 404);
     } else if (project.deletedAt) {
-      return ctx.json(
-        { message: "Project đã bị xóa nên không thể tạo kịch bản test" },
-        400
-      );
+      return ctx.json({ message: 'Project đã bị xóa nên không thể tạo kịch bản test' }, 400);
     }
 
     const testSuite = await db.query.TestSuiteTable.findFirst({
-      where: (clm, { eq, and, isNull }) =>
-        and(eq(clm.id, id), isNull(clm.deletedAt)),
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
     });
     if (!testSuite) {
-      return ctx.json(
-        { message: "Không tìm thấy thông tin kịch bản test" },
-        404
-      );
-    } else if (testSuite.status === "Running") {
-      return ctx.json(
-        { message: "Không thể chỉnh sửa kịch bản test khi đang được thực thi" },
-        404
-      );
+      return ctx.json({ message: 'Không tìm thấy thông tin kịch bản test' }, 404);
+    } else if (testSuite.status === 'Running') {
+      return ctx.json({ message: 'Không thể chỉnh sửa kịch bản test khi đang được thực thi' }, 404);
     }
 
     const isStaff =
@@ -477,25 +429,23 @@ TestSuiteRoute.patch(
     if (isStaff && !isCreator) {
       return ctx.json(
         {
-          message:
-            "Forbidden: Staff members can only update test suites they created",
+          message: 'Forbidden: Staff members can only update test suites they created',
         },
         403
       );
     }
 
-    const sha = get(testSuite, "params.githubData.content.sha");
+    const sha = get(testSuite, 'params.githubData.content.sha');
     if (!sha) {
       return ctx.json(
         {
-          message:
-            "Không tìm thấy SHA để có thể động bộ sang UrTest Workflow Github",
+          message: 'Không tìm thấy SHA để có thể động bộ sang UrTest Workflow Github',
         },
         400
       );
     }
     if (body.resultRuner) {
-      set(testSuite, "params.resultRuner", body.resultRuner);
+      set(testSuite, 'params.resultRuner', body.resultRuner);
     }
     const testSuiteUpdated = await db
       .update(TestSuiteTable)
@@ -541,18 +491,18 @@ TestSuiteRoute.patch(
         }
       );
     }
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 TestSuiteRoute.delete(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const user = ctx.get("user");
+    const { id } = ctx.req.valid('param');
+    const user = ctx.get('user');
 
     const testSuite = await db.query.TestSuiteTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
@@ -562,7 +512,7 @@ TestSuiteRoute.delete(
     });
 
     if (!testSuite) {
-      return ctx.json({ message: "Không tìm thấy kịch bản test để xóa" }, 404);
+      return ctx.json({ message: 'Không tìm thấy kịch bản test để xóa' }, 404);
     }
 
     const isStaff =
@@ -574,8 +524,7 @@ TestSuiteRoute.delete(
     if (isStaff && !isCreator) {
       return ctx.json(
         {
-          message:
-            "Forbidden: Staff members can only delete test suites they created",
+          message: 'Forbidden: Staff members can only delete test suites they created',
         },
         403
       );
@@ -596,7 +545,7 @@ TestSuiteRoute.delete(
       })
       .where(eq(TestSuiteTable.id, id));
 
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 

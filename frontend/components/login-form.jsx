@@ -9,6 +9,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
+import { LoaderCircle } from "lucide-react";
+import { get } from "lodash";
 
 dayjs.extend(advancedFormat);
 
@@ -27,7 +29,8 @@ export function LoginForm({ className, ...props }) {
     try {
       const result = await directLogin(username, password);
       if (!result.success) {
-        setError(result.error || "Login failed");
+        toast.error(`Đăng nhập thất bại: ${get(result, "error")}`);
+        return;
       }
     } catch (err) {
       setError("Login error: " + (err.message || "Unknown"));
@@ -44,9 +47,7 @@ export function LoginForm({ className, ...props }) {
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
-                <p className="text-balance text-muted-foreground">
-                  Login to your UrTest account
-                </p>
+                <p className="text-balance text-muted-foreground">Login to your UrTest account</p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Username</Label>
@@ -62,10 +63,7 @@ export function LoginForm({ className, ...props }) {
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
-                  >
+                  <a href="#" className="ml-auto text-sm underline-offset-2 hover:underline">
                     Forgot your password?
                   </a>
                 </div>
@@ -77,7 +75,8 @@ export function LoginForm({ className, ...props }) {
                   value={password}
                 />
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <LoaderCircle className="animate-spin" />}
                 Login
               </Button>
             </div>
@@ -92,8 +91,7 @@ export function LoginForm({ className, ...props }) {
         </CardContent>
       </Card>
       <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
       </div>
     </div>
   );

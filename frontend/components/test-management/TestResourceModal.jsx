@@ -45,6 +45,10 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
         setOpenModal(false);
       }
       if (refetch) refetch();
+
+      setValue("title", "");
+      setValue("description", "");
+      setScriptContent("");
     } catch (error) {
       const message = "Có lỗi khi tạo Test Resource";
       toast.error(message);
@@ -55,9 +59,6 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
 
   useEffect(() => {
     if (openModal === false) {
-      setValue("title", "");
-      setValue("description", "");
-      setScriptContent("");
     } else if (!isEmpty(testResource) && openModal === true) {
       setValue("title", testResource.title);
       setValue("description", testResource.description);
@@ -67,8 +68,8 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
 
   return (
     <Fragment>
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogTrigger asChild>{dialogChild}</DialogTrigger>
+      <Dialog open={openModal}>
+        <DialogTrigger asChild>{dialogChild()}</DialogTrigger>
         <DialogContent className="min-w-[700px]">
           <DialogHeader>
             <DialogTitle>Test Resource</DialogTitle>
@@ -82,12 +83,12 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
             />
             <div className="flex gap-3 items-center">
               <Input
-                value={`${testResource?.fileName}.robot`}
+                value={testResource?.fileName ? `${testResource?.fileName}.robot` : null}
                 placeholder="Tên file của Test Resource sẽ được tự động tạo"
                 disabled
                 className="rounded-sm"
               />
-              <Button size="sm">
+              <Button size="sm" disabled={!testResource?.fileName}>
                 <Copy />
               </Button>
             </div>
@@ -101,18 +102,30 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
             </div>
           </div>
           <DialogFooter>
-            <Button disabled={isLoading}>
-              {isLoading && <LoaderCircle className="animate-spin" />}
-              Thiết lập lại
-            </Button>
-            <Button
-              disabled={isLoading}
-              onClick={handleSaveTestSuite}
-              className="bg-blue-700 hover:bg-blue-800 text-white"
-            >
-              {isLoading && <LoaderCircle className="animate-spin" />}
-              Lưu
-            </Button>
+            <div className="flex gap-2 items-center">
+              <Button
+                onClick={() => {
+                  if (setOpenModal) setOpenModal(false);
+                }}
+                disabled={isLoading}
+              >
+                {isLoading && <LoaderCircle className="animate-spin" />}
+                Cancel
+              </Button>
+              <div className="ml-auto"></div>
+              <Button disabled={isLoading}>
+                {isLoading && <LoaderCircle className="animate-spin" />}
+                Thiết lập lại
+              </Button>
+              <Button
+                disabled={isLoading}
+                onClick={handleSaveTestSuite}
+                className="bg-blue-700 hover:bg-blue-800 text-white"
+              >
+                {isLoading && <LoaderCircle className="animate-spin" />}
+                Lưu
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
