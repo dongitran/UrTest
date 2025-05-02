@@ -4,12 +4,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TestResourceApi } from "@/lib/api";
+import { isEmpty } from "lodash";
 import { Copy, LoaderCircle } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setOpenModal, dialogChild }) => {
+const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpenModal, dialogChild }) => {
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register, getValues, setValue } = useForm();
@@ -22,13 +23,18 @@ const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setO
         return;
       }
       if (!scriptContent || !scriptContent.trim()) {
-        toast.warning(
-          "Vui lòng nhập nội dung thì mới có thể tạo Test Resource"
-        );
+        toast.warning("Vui lòng nhập nội dung thì mới có thể tạo Test Resource");
         return;
       }
       const data = getValues();
-      if (testResourceId) {
+      if (testResource) {
+        await TestResourceApi().patch(testResource.id, {
+          ...data,
+          content: scriptContent,
+          projectId,
+        });
+        toast.success("Đã chỉnh sửa thông tin Test Resource thành công");
+        setOpenModal(false);
       } else {
         await TestResourceApi().create({
           ...data,
@@ -36,7 +42,6 @@ const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setO
           projectId,
         });
         toast.success("Đã tạo Test Resource thành công");
-
         setOpenModal(false);
       }
       if (refetch) refetch();
@@ -53,8 +58,13 @@ const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setO
       setValue("title", "");
       setValue("description", "");
       setScriptContent("");
+    } else if (!isEmpty(testResource) && openModal === true) {
+      setValue("title", testResource.title);
+      setValue("description", testResource.description);
+      setScriptContent(testResource.content);
     }
-  }, [openModal]);
+  }, [openModal, testResource]);
+
   return (
     <Fragment>
       <Dialog open={openModal} onOpenChange={setOpenModal}>

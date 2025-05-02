@@ -14,7 +14,6 @@ const ProjectFields = memo(({ project }) => {
   const handleUpdateProject = async () => {
     try {
       const data = getValues();
-      console.log("data :>> ", data);
       await ProjectApi().patch(project.id, data);
       toast.success("Cập nhập dữ liệu thành công");
     } catch (error) {
