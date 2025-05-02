@@ -1,11 +1,7 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import MyPagination from "@/components/MyPagination";
 import TestResourceModal from "@/components/test-management/TestResourceModal";
-import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TestResourceApi } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Edit, Trash2, LoaderCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,10 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TestResourceApi } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { Edit, LoaderCircle, Trash2 } from "lucide-react";
+import { Fragment, useEffect, useState } from "react";
+import { toast } from "sonner";
+
+const itemsPerPage = 4;
 
 export default function TestRoute({ project = {} }) {
   const [openModal, setOpenModal] = useState(false);
-
+  const [page, setPage] = useState(1);
+  const [listTestResource, setListTestResource] = useState([]);
   const { data, refetch } = useQuery({
     enabled: project.id ? true : false,
     queryKey: ["test-resource"],
@@ -25,7 +29,13 @@ export default function TestRoute({ project = {} }) {
       return TestResourceApi().list({ projectId: project.id });
     },
   });
-
+  useEffect(() => {
+    if (data && Array.isArray(data.listTestResource)) {
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      setListTestResource(data.listTestResource.slice(startIndex, endIndex));
+    }
+  }, [data, page]);
   return (
     <>
       <Card>
@@ -42,27 +52,15 @@ export default function TestRoute({ project = {} }) {
             />
           </CardTitle>
         </CardHeader>
-        <CardContent className="min-h-[200px]">
+        <CardContent className="min-h-[235px]">
           <div className="grid grid-cols-1 gap-3">
-            {data?.listTestResource.map((item) => {
+            {listTestResource.map((item) => {
               return <TestResourceItem refetch={refetch} item={item} project={project} key={item.id} />;
             })}
           </div>
         </CardContent>
         <CardFooter className="justify-end">
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7">
-              <ChevronLeft className="size-4" />
-            </Button>
-            {[1, 2, 3, 4, 5].map((page) => (
-              <Button key={page} variant={1 === page ? "default" : "outline"} size="icon" className="h-7 w-7">
-                {page}
-              </Button>
-            ))}
-            <Button variant="outline" size="icon" className="h-7 w-7">
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+          <MyPagination setPage={setPage} page={page} total={data ? data.listTestResource.length : 1} />
         </CardFooter>
       </Card>
     </>
@@ -74,7 +72,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const openDeleteDialog = (resource) => {
+  const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
   };
   const handleDeleteResource = async () => {
