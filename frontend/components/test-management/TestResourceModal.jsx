@@ -22,7 +22,9 @@ const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setO
         return;
       }
       if (!scriptContent || !scriptContent.trim()) {
-        toast.warning("Vui lòng nhập nội dung thì mới có thể tạo Test Resource");
+        toast.warning(
+          "Vui lòng nhập nội dung thì mới có thể tạo Test Resource"
+        );
         return;
       }
       const data = getValues();
@@ -34,6 +36,8 @@ const TestResourceModal = ({ refetch, projectId, testResourceId, openModal, setO
           projectId,
         });
         toast.success("Đã tạo Test Resource thành công");
+
+        setOpenModal(false);
       }
       if (refetch) refetch();
     } catch (error) {
