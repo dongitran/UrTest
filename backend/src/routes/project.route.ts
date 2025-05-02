@@ -7,7 +7,8 @@ import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
 import { eq, isNull, and, desc } from "drizzle-orm";
-import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile"; // Add this import
+import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
+import { DeleteProjectDirectory } from "../lib/Github/DeleteProjectDirectory";
 
 const ProjectRoute = new Hono();
 
@@ -22,8 +23,12 @@ ProjectRoute.get("/", async (ctx) => {
     return ctx.json({ projects });
   } catch (error) {
     console.error("Error fetching projects:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return ctx.json({ message: "Failed to fetch projects", error: errorMessage }, 500);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return ctx.json(
+      { message: "Failed to fetch projects", error: errorMessage },
+      500
+    );
   }
 });
 
@@ -55,7 +60,9 @@ ProjectRoute.get("/:id", async (ctx) => {
       project: {
         ...project,
         recentTestRun: listTestSuiteExecute.map((item) => {
-          const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
+          const testSuite = project.listTestSuite.find(
+            fp.isMatch({ id: item.testSuiteId })
+          );
           return {
             id: item.id,
             testSuiteName: testSuite?.name,
@@ -68,8 +75,12 @@ ProjectRoute.get("/:id", async (ctx) => {
     });
   } catch (error) {
     console.error("Error fetching project by ID:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return ctx.json({ message: "Failed to fetch project", error: errorMessage }, 500);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return ctx.json(
+      { message: "Failed to fetch project", error: errorMessage },
+      500
+    );
   }
 });
 
@@ -101,15 +112,13 @@ ProjectRoute.post(
     if (project.slug) {
       const fileContent = "*** Settings ***";
       const fileName = "resources/init.robot";
-      
+
       try {
-        CreateOrUpdateFile(
-          {
-            projectSlug: project.slug,
-            fileContent: fileContent,
-            fileName: fileName,
-          }
-        );
+        CreateOrUpdateFile({
+          projectSlug: project.slug,
+          fileContent: fileContent,
+          fileName: fileName,
+        });
       } catch (error) {
         console.log(error, "Create project error");
       }
@@ -141,7 +150,13 @@ ProjectRoute.patch(
       where: (clm, { eq }) => eq(clm.id, id),
     });
     if (!project) {
-      return ctx.json({ message: "Không tìm thấy thông tin Project theo mã ID", code: "NOT_FOUND" }, 404);
+      return ctx.json(
+        {
+          message: "Không tìm thấy thông tin Project theo mã ID",
+          code: "NOT_FOUND",
+        },
+        404
+      );
     }
     await db
       .update(ProjectTable)
@@ -165,6 +180,23 @@ ProjectRoute.delete(
   async (ctx) => {
     const user = ctx.get("user");
     const { id } = ctx.req.valid("param");
+
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+    });
+
+    if (!project) {
+      return ctx.json({ message: "Project not found" }, 404);
+    }
+
+    if (project.slug) {
+      try {
+        await DeleteProjectDirectory(project.slug);
+      } catch (error) {
+        console.error("Error deleting project GitHub resources:", error);
+      }
+    }
+
     const result = await db
       .update(ProjectTable)
       .set({
@@ -173,7 +205,6 @@ ProjectRoute.delete(
       })
       .where(eq(ProjectTable.id, id))
       .returning();
-    console.log("result :>> ", result);
 
     return ctx.json({ message: "ok" });
   }
