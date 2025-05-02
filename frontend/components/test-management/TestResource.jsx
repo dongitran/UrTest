@@ -44,7 +44,9 @@ export default function TestRoute({ project = {} }) {
             <span className="text-ml font-semibold">Test Resource</span>
             <div className="ml-auto"></div>
             <TestResourceModal
-              dialogChild={<Button className="">Create Test Resource</Button>}
+              dialogChild={() => {
+                return <Button onClick={() => setOpenModal(true)}>Create Test Resource</Button>;
+              }}
               openModal={openModal}
               setOpenModal={setOpenModal}
               projectId={project.id}
@@ -101,11 +103,13 @@ const TestResourceItem = ({ item, refetch, project }) => {
         <div className="ml-auto"></div>
         <div>
           <TestResourceModal
-            dialogChild={
-              <Button className="h-8 w-8" variant="ghost">
-                <Edit className="size-4" />
-              </Button>
-            }
+            dialogChild={() => {
+              return (
+                <Button onClick={() => setOpenModal(true)} className="h-8 w-8" variant="ghost">
+                  <Edit className="size-4" />
+                </Button>
+              );
+            }}
             openModal={openModal}
             setOpenModal={setOpenModal}
             projectId={project.id}
@@ -130,7 +134,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
               Are you sure you want to delete this test resource? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="pt-4">
+          <div className="pt-3">
             <div className="border p-3 rounded-md">
               <p className="font-medium">{item.title}</p>
               <p className="text-sm text-muted-foreground">{item.description}</p>
