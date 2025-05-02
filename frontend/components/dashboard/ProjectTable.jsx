@@ -16,7 +16,16 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { EllipsisVertical, Search, SquarePen, Trash2, LoaderCircle } from "lucide-react";
+import {
+  EllipsisVertical,
+  Search,
+  SquarePen,
+  Trash2,
+  LoaderCircle,
+  ChevronRight,
+  ChevronLast,
+  ChevronLeft,
+} from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -283,10 +292,10 @@ export default function ProjectTable({ initDataTable, setDataTable, refetch, dat
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              Previous
+              <ChevronLeft />
             </Button>
             <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              Next
+              <ChevronRight />
             </Button>
           </div>
         </div>
