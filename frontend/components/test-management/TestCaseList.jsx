@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
 import { handleEventData } from "@/lib/websocket";
 import dayjs from "dayjs";
-import { get } from "lodash";
+import { get, isEmpty } from "lodash";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ChevronLeft,
@@ -34,7 +34,6 @@ import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } fro
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
-  const [isButtonLoading, setIsButtonLoading] = useState(false);
   const socketRef = useRef(null);
   const table = useReactTable({
     data: listTestSuite,
@@ -100,75 +99,8 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         accessorKey: "actions",
         header: <div className="justify-end flex">Actions</div>,
         cell: ({ row }) => {
-          const status = row.getValue("status");
           return (
-            <div className="flex items-center justify-end">
-              <Button
-                disabled={isButtonLoading || status === "Running"}
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleExecuteTestSuite(row.original)}
-              >
-                {isButtonLoading ? (
-                  <LoaderCircle className="animate-spin" />
-                ) : (
-                  <Fragment>
-                    {status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}
-                  </Fragment>
-                )}
-              </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {}}
-                    disabled={!(status === "Completed" && get(row.original, "params.resultRuner.reportUrl"))}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                  >
-                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="min-w-[1000px]">
-                  <DialogHeader>
-                    <DialogTitle>Xem kết quả của kịch bản test {row.original.name}</DialogTitle>
-                    <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
-                  </DialogHeader>
-                  <div className="w-full min-h-[650px] overflow-auto">
-                    <iframe
-                      src={`${row.original.params?.resultRuner?.reportUrl}/report.html`}
-                      className="w-full h-full border-none"
-                      allowFullScreen
-                    ></iframe>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Button
-                onClick={() => {
-                  router.push(
-                    `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
-                      project.id
-                    }&testSuiteId=${row.original.id}&slug=${project?.slug}`
-                  );
-                }}
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                disabled={isButtonLoading || status === "Running"}
-              >
-                {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
-              </Button>
-              <Button
-                onClick={() => handleDeleteTestSuite(row.original)}
-                disabled={isButtonLoading || status === "Running"}
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-red-500 hover:text-red-600"
-              >
-                {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              </Button>
-            </div>
+            <RenderActions socketRef={socketRef} project={project} setReRender={setReRender} testSuite={row.original} />
           );
         },
       },
@@ -209,28 +141,6 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         return "bg-gray-100 text-gray-800";
     }
   };
-  const handleExecuteTestSuite = (testSuite) => {
-    return async () => {
-      if (!testSuite) return;
-      if (testSuite.status === "Running") {
-        return;
-      }
-      try {
-        await TestSuiteApi().execute(testSuite.id, {
-          status: "processing",
-          testSuiteStatus: "Running",
-        });
-        setReRender({});
-        toast.success("Bắt đầu thực thi kịch bản test");
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuite", testSuiteId: testSuite.id }));
-        }
-      } catch (error) {
-        const message = get(error, "response.data.message") || "Có lỗi khi bắt đầu thực thi kịch bản test";
-        toast.error(message);
-      }
-    };
-  };
   const handleExecuteAllTestSuite = async () => {
     try {
       await TestSuiteApi().executeAll({ projectId: project.id });
@@ -242,18 +152,6 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
     } catch (error) {
       const message = get(error, "response.data.message") || "Có lỗi xảy ra";
       toast.error(message);
-    }
-  };
-  const handleDeleteTestSuite = async (test) => {
-    try {
-      setIsButtonLoading(true);
-      await TestSuiteApi().delete(test.id);
-      setReRender({});
-      toast.success(`Đã xóa kịch bản ${test.name} thành công`);
-    } catch (error) {
-      toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
-    } finally {
-      setIsButtonLoading(false);
     }
   };
 
@@ -384,3 +282,117 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
     </Card>
   );
 }
+const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender }) => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const status = testSuite.status;
+
+  const handleExecuteTestSuite = () => {
+    return async () => {
+      if (!testSuite || isEmpty(testSuite)) return;
+      if (testSuite.status === "Running") {
+        return;
+      }
+      try {
+        await TestSuiteApi().execute(testSuite.id, {
+          status: "processing",
+          testSuiteStatus: "Running",
+        });
+        setReRender({});
+        toast.success("Bắt đầu thực thi kịch bản test");
+        const isSocketValid = socketRef && socketRef.current;
+        if (isSocketValid && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuite", testSuiteId: testSuite.id }));
+        }
+      } catch (error) {
+        console.log("error :>> ", error);
+        const message = get(error, "response.data.message") || "Có lỗi khi bắt đầu thực thi kịch bản test";
+        toast.error(message);
+      }
+    };
+  };
+
+  const handleDeleteTestSuite = async () => {
+    try {
+      setLoading(testSuite.id);
+      await TestSuiteApi().delete(testSuite.id);
+      if (setReRender) {
+        setReRender({});
+      }
+      toast.success(`Đã xóa kịch bản ${testSuite.name} thành công`);
+    } catch (error) {
+      toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
+    } finally {
+      setLoading(null);
+    }
+  };
+  return (
+    <Fragment>
+      <div className="flex items-center justify-end">
+        <Button
+          disabled={loading || status === "Running"}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleExecuteTestSuite()}
+        >
+          {loading ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Fragment>{status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}</Fragment>
+          )}
+        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              onClick={() => {}}
+              disabled={!(status === "Completed" && get(testSuite, "params.resultRuner.reportUrl"))}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+            >
+              {loading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="min-w-[1000px]">
+            <DialogHeader>
+              <DialogTitle>Xem kết quả của kịch bản test {testSuite.name}</DialogTitle>
+              <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
+            </DialogHeader>
+            <div className="w-full min-h-[650px] overflow-auto">
+              <iframe
+                src={`${testSuite.params?.resultRuner?.reportUrl}/report.html`}
+                className="w-full h-full border-none"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Button
+          onClick={() => {
+            router.push(
+              `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
+                project.id
+              }&testSuiteId=${testSuite.id}&slug=${project?.slug}`
+            );
+          }}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          disabled={loading || status === "Running"}
+        >
+          {loading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
+        </Button>
+        <Button
+          onClick={() => handleDeleteTestSuite()}
+          disabled={loading || status === "Running"}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-red-500 hover:text-red-600"
+        >
+          {loading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </Button>
+      </div>
+    </Fragment>
+  );
+};
