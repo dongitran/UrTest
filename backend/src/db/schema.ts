@@ -26,6 +26,13 @@ export const ProjectTable = pgTable("tbl_projects", {
   slug: varchar().notNull(),
   ...commonTable,
 });
+
+export const ProjectAssignmentTable = pgTable("tbl_project_assignments", {
+  projectId: varchar("project_id", { length: 255 }).notNull(),
+  userEmail: varchar("user_email", { length: 255 }).notNull(),
+  ...commonTable,
+});
+
 export const enumTestSuiteExecuteStatus = pgEnum("enum_testsuite_execute_status", [
   "pending",
   "processing",

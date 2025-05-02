@@ -2,14 +2,15 @@ import { zValidator } from "@hono/zod-validator";
 import fp from "lodash/fp";
 import dayjs from "dayjs";
 import db from "db/db";
-import { ProjectTable } from "db/schema";
+import { ProjectTable, ProjectAssignmentTable } from "db/schema";
 import { Hono } from "hono";
 import { ulid } from "ulid";
 import { z } from "zod";
-import { eq, isNull, and, desc } from "drizzle-orm";
+import { eq, isNull, and, desc, inArray } from "drizzle-orm";
 import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import { DeleteProjectDirectory } from "../lib/Github/DeleteProjectDirectory";
 import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
+import CheckProjectAccess from "@middlewars/CheckProjectAccess";
 
 const ProjectRoute = new Hono();
 
@@ -18,12 +19,47 @@ ProjectRoute.get(
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   async (ctx) => {
     try {
-      const projects = await db
-        .select()
-        .from(ProjectTable)
-        .where(isNull(ProjectTable.deletedAt))
-        .orderBy(desc(ProjectTable.id))
-        .execute();
+      const user = ctx.get("user");
+
+      const isStaffOnly =
+        user.roles.includes(ROLES.STAFF) &&
+        !user.roles.includes(ROLES.ADMIN) &&
+        !user.roles.includes(ROLES.MANAGER);
+
+      let projects;
+
+      if (isStaffOnly) {
+        const assignments = await db.query.ProjectAssignmentTable.findMany({
+          where: (clm, { eq, and, isNull }) =>
+            and(eq(clm.userEmail, user.email), isNull(clm.deletedAt)),
+        });
+
+        const projectIds = assignments.map((a) => a.projectId);
+
+        if (projectIds.length === 0) {
+          return ctx.json({ projects: [] });
+        }
+
+        projects = await db
+          .select()
+          .from(ProjectTable)
+          .where(
+            and(
+              isNull(ProjectTable.deletedAt),
+              inArray(ProjectTable.id, projectIds)
+            )
+          )
+          .orderBy(desc(ProjectTable.id))
+          .execute();
+      } else {
+        projects = await db
+          .select()
+          .from(ProjectTable)
+          .where(isNull(ProjectTable.deletedAt))
+          .orderBy(desc(ProjectTable.id))
+          .execute();
+      }
+
       return ctx.json({ projects });
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -40,6 +76,7 @@ ProjectRoute.get(
 ProjectRoute.get(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   async (ctx) => {
     try {
       const id = ctx.req.param("id");
@@ -143,6 +180,7 @@ ProjectRoute.post(
 ProjectRoute.patch(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckProjectAccess(),
   zValidator(
     "param",
     z.object({
@@ -185,6 +223,7 @@ ProjectRoute.patch(
 ProjectRoute.delete(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckProjectAccess(),
   zValidator(
     "param",
     z.object({
@@ -221,6 +260,123 @@ ProjectRoute.delete(
       .returning();
 
     return ctx.json({ message: "ok" });
+  }
+);
+
+ProjectRoute.post(
+  "/:id/assignments",
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  zValidator(
+    "json",
+    z.object({
+      userEmail: z.string().email(),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+    const { userEmail } = ctx.req.valid("json");
+    const user = ctx.get("user");
+
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq, isNull, and }) =>
+        and(eq(clm.id, id), isNull(clm.deletedAt)),
+    });
+
+    if (!project) {
+      return ctx.json({ message: "Project not found" }, 404);
+    }
+
+    const existingAssignment = await db.query.ProjectAssignmentTable.findFirst({
+      where: (clm, { eq, and, isNull }) =>
+        and(
+          eq(clm.projectId, id),
+          eq(clm.userEmail, userEmail),
+          isNull(clm.deletedAt)
+        ),
+    });
+
+    if (existingAssignment) {
+      return ctx.json(
+        { message: "User is already assigned to this project" },
+        400
+      );
+    }
+
+    await db.insert(ProjectAssignmentTable).values({
+      id: ulid(),
+      projectId: project.id,
+      userEmail: userEmail,
+      createdAt: dayjs().toISOString(),
+      createdBy: user.email,
+    });
+
+    return ctx.json({ message: "User assigned to project successfully" });
+  }
+);
+
+ProjectRoute.delete(
+  "/:id/assignments/:userEmail",
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+      userEmail: z.string().email(),
+    })
+  ),
+  async (ctx) => {
+    const { id, userEmail } = ctx.req.valid("param");
+    const user = ctx.get("user");
+
+    const assignment = await db.query.ProjectAssignmentTable.findFirst({
+      where: (clm, { eq, and, isNull }) =>
+        and(
+          eq(clm.projectId, id),
+          eq(clm.userEmail, userEmail),
+          isNull(clm.deletedAt)
+        ),
+    });
+
+    if (!assignment) {
+      return ctx.json({ message: "Assignment not found" }, 404);
+    }
+
+    await db
+      .update(ProjectAssignmentTable)
+      .set({
+        deletedAt: dayjs().toISOString(),
+        deletedBy: user.email,
+      })
+      .where(eq(ProjectAssignmentTable.id, assignment.id));
+
+    return ctx.json({ message: "User assignment removed successfully" });
+  }
+);
+
+ProjectRoute.get(
+  "/:id/assignments",
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+
+    const assignments = await db.query.ProjectAssignmentTable.findMany({
+      where: (clm, { eq, isNull, and }) =>
+        and(eq(clm.projectId, id), isNull(clm.deletedAt)),
+    });
+
+    return ctx.json({ assignments });
   }
 );
 

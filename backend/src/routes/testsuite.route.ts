@@ -13,12 +13,14 @@ import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
 import RunTest from "lib/Runner/RunTest";
 import * as TestSuiteSchema from "lib/Zod/TestSuiteSchema";
 import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
+import CheckProjectAccess from "@middlewars/CheckProjectAccess";
 
 const TestSuiteRoute = new Hono();
 
 TestSuiteRoute.get(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
     const { id } = ctx.req.valid("param");
@@ -39,6 +41,7 @@ TestSuiteRoute.get(
 TestSuiteRoute.post(
   "/",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
     const user = ctx.get("user");
@@ -104,6 +107,7 @@ TestSuiteRoute.post(
   .post(
     "/:id/execute",
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+    CheckProjectAccess(),
     zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
     zValidator(
       "json",
@@ -276,6 +280,7 @@ TestSuiteRoute.post(
   .post(
     "/draft-execute",
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+    CheckProjectAccess(),
     zValidator(
       "json",
       z.object({
@@ -315,6 +320,7 @@ TestSuiteRoute.post(
   .post(
     "/execute/all",
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+    CheckProjectAccess(),
     zValidator("json", z.object({ projectId: z.string().ulid() })),
     async (ctx) => {
       const { projectId } = ctx.req.valid("json");
@@ -426,6 +432,7 @@ TestSuiteRoute.post(
 TestSuiteRoute.patch(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
@@ -541,6 +548,7 @@ TestSuiteRoute.patch(
 TestSuiteRoute.delete(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
     const { id } = ctx.req.valid("param");

@@ -1,6 +1,6 @@
 import db from "db/db";
-import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
-import { and, count, eq, inArray, isNull } from "drizzle-orm";
+import { TestSuiteExecuteTable } from "db/schema";
+import { and, count, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
 
@@ -10,15 +10,53 @@ DashboardRoute.get(
   "/",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   async (ctx) => {
-    const projects = await db.query.ProjectTable.findMany({
-      where: (clm, { isNull }) => isNull(clm.deletedAt),
-      orderBy: (clm, { desc }) => desc(clm.id),
-      with: {
-        listTestSuite: {
-          where: (clm, { isNull }) => isNull(clm.deletedAt),
+    const user = ctx.get("user");
+
+    const isStaffOnly =
+      user.roles.includes(ROLES.STAFF) &&
+      !user.roles.includes(ROLES.ADMIN) &&
+      !user.roles.includes(ROLES.MANAGER);
+
+    let projects;
+    if (isStaffOnly) {
+      const assignments = await db.query.ProjectAssignmentTable.findMany({
+        where: (clm, { eq, and, isNull }) =>
+          and(eq(clm.userEmail, user.email), isNull(clm.deletedAt)),
+      });
+
+      const projectIds = assignments.map((a) => a.projectId);
+
+      if (projectIds.length === 0) {
+        return ctx.json({
+          totalProject: 0,
+          totalTestsuite: 0,
+          totalAvgSuccessRate: 0,
+          totalActive: 0,
+          dataTable: [],
+        });
+      }
+
+      projects = await db.query.ProjectTable.findMany({
+        where: (clm, { isNull, and, inArray }) =>
+          and(isNull(clm.deletedAt), inArray(clm.id, projectIds)),
+        orderBy: (clm, { desc }) => desc(clm.id),
+        with: {
+          listTestSuite: {
+            where: (clm, { isNull }) => isNull(clm.deletedAt),
+          },
         },
-      },
-    });
+      });
+    } else {
+      projects = await db.query.ProjectTable.findMany({
+        where: (clm, { isNull }) => isNull(clm.deletedAt),
+        orderBy: (clm, { desc }) => desc(clm.id),
+        with: {
+          listTestSuite: {
+            where: (clm, { isNull }) => isNull(clm.deletedAt),
+          },
+        },
+      });
+    }
 
     let totalTestsuite = 0;
     const dataTable = [];

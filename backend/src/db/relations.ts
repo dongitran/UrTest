@@ -1,9 +1,15 @@
 import { relations } from "drizzle-orm";
-import { ProjectTable, TestSuiteTable, TestResourceTable } from "./schema";
+import {
+  ProjectTable,
+  TestSuiteTable,
+  TestResourceTable,
+  ProjectAssignmentTable,
+} from "./schema";
 
 export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
   listTestSuite: many(TestSuiteTable),
   listTestResource: many(TestResourceTable),
+  assignments: many(ProjectAssignmentTable),
 }));
 
 export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one }) => ({
@@ -18,6 +24,16 @@ export const TestResourceTableRelations = relations(
   ({ one }) => ({
     project: one(ProjectTable, {
       fields: [TestResourceTable.projectId],
+      references: [ProjectTable.id],
+    }),
+  })
+);
+
+export const ProjectAssignmentTableRelations = relations(
+  ProjectAssignmentTable,
+  ({ one }) => ({
+    project: one(ProjectTable, {
+      fields: [ProjectAssignmentTable.projectId],
       references: [ProjectTable.id],
     }),
   })

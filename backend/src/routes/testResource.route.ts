@@ -12,12 +12,14 @@ import { ulid } from "ulid";
 import { z } from "zod";
 import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
+import CheckProjectAccess from "@middlewars/CheckProjectAccess";
 
 const TestResourceRoute = new Hono();
 
 TestResourceRoute.get(
   "/",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator(
     "query",
     z.object({
@@ -39,6 +41,7 @@ TestResourceRoute.get(
 TestResourceRoute.post(
   "/",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator("json", TestResourceSchema.schemaForCreateAndPatch),
   async (ctx) => {
     const body = ctx.req.valid("json");
@@ -137,6 +140,7 @@ TestResourceRoute.post(
 TestResourceRoute.patch(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator(
     "param",
     z.object({
@@ -218,6 +222,7 @@ TestResourceRoute.patch(
 TestResourceRoute.delete(
   "/:id",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
   zValidator(
     "param",
     z.object({
