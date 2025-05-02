@@ -80,7 +80,7 @@ TestResourceRoute.post(
 
         const resourceFilePath = `resources/${testResource.fileName}.robot`;
 
-        const files = [
+        const files: { path: string; content: string; sha?: string }[] = [
           {
             path: resourceFilePath,
             content: testResource.content,
@@ -88,10 +88,7 @@ TestResourceRoute.post(
         ];
 
         if (initRobotFile) {
-          let currentContent = Buffer.from(
-            initRobotFile.content,
-            "base64"
-          ).toString("utf-8");
+          let currentContent = Buffer.from(initRobotFile.content, "base64").toString("utf-8");
 
           const newResourceReference = `Resource    ./${testResource.fileName}.robot`;
           if (!currentContent.includes(newResourceReference)) {
@@ -176,17 +173,13 @@ TestResourceRoute.delete(
         });
 
         if (initRobotFile) {
-          let currentContent = Buffer.from(
-            initRobotFile.content,
-            "base64"
-          ).toString("utf-8");
+          let currentContent = Buffer.from(initRobotFile.content, "base64").toString("utf-8");
 
           const updatedContent = currentContent
             .split("\n")
             .filter((line) => {
               return !(
-                line.includes(`${testResource.fileName}.robot`) ||
-                line.includes(`./${testResource.fileName}.robot`)
+                line.includes(`${testResource.fileName}.robot`) || line.includes(`./${testResource.fileName}.robot`)
               );
             })
             .join("\n");
