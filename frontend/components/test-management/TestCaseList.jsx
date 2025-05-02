@@ -6,6 +6,7 @@ import { TestSuiteApi } from "@/lib/api";
 import { handleEventData } from "@/lib/websocket";
 import dayjs from "dayjs";
 import { get } from "lodash";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 
 export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
   const router = useRouter();
@@ -38,7 +40,146 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
   const totalPages = Math.ceil(totalTests / itemsPerPage);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
   const socketRef = useRef(null);
-
+  const table = useReactTable({
+    data: listTestSuite,
+    columns: [
+      {
+        accessorKey: "name",
+        header: "Test Suite",
+        cell: ({ row }) => {
+          return (
+            <div className="col-span-4">
+              <div className="font-medium text-xl">{row.original.name}</div>
+              <div className="text-xs text-muted-foreground">{row.original.description}</div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "tags",
+        header: "Tags",
+        cell: ({ row }) => {
+          return (
+            <div className="flex gap-1">
+              {row.getValue("tags").map((tag) => (
+                <Badge key={tag} variant="default">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ renderValue }) => {
+          return (
+            <Badge variant="outline" className={`${getStatusBadgeClass(renderValue())}`}>
+              {renderValue() === "Running" && <LoaderCircle className="animate-spin size-3 mr-1" />}
+              {renderValue()}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "lastRunDate",
+        header: "LAST RUN",
+        cell: ({ renderValue }) => {
+          if (renderValue()) {
+            return dayjs(renderValue()).format("HH:mm DD/MM/YYYY");
+          }
+        },
+      },
+      {
+        accessorKey: "duration",
+        header: "DURATION",
+        cell: ({ row }) => {
+          if (get(row.original, "params.duration")) {
+            return `${get(row.original, "params.duration")}s`;
+          }
+        },
+      },
+      {
+        accessorKey: "actions",
+        header: <div className="justify-end flex">Actions</div>,
+        cell: ({ row }) => {
+          const status = row.getValue("status");
+          return (
+            <div className="flex items-center justify-end">
+              <Button
+                disabled={isButtonLoading || status === "Running"}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleExecuteTestSuite(row.original)}
+              >
+                {isButtonLoading ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <Fragment>
+                    {status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  </Fragment>
+                )}
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={() => {}}
+                    disabled={!(status === "Completed" && get(row.original, "params.resultRuner.reportUrl"))}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                  >
+                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="min-w-[1000px]">
+                  <DialogHeader>
+                    <DialogTitle>Xem kết quả của kịch bản test {row.original.name}</DialogTitle>
+                    <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
+                  </DialogHeader>
+                  <div className="w-full min-h-[650px] overflow-auto">
+                    <iframe
+                      src={`${row.original.params?.resultRuner?.reportUrl}/report.html`}
+                      className="w-full h-full border-none"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button
+                onClick={() => {
+                  router.push(
+                    `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
+                      project.id
+                    }&testSuiteId=${row.original.id}&slug=${project?.slug}`
+                  );
+                }}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={isButtonLoading || status === "Running"}
+              >
+                {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
+              </Button>
+              <Button
+                onClick={() => handleDeleteTestSuite(row.original)}
+                disabled={isButtonLoading || status === "Running"}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-red-500 hover:text-red-600"
+              >
+                {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -187,6 +328,62 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         </div>
       </CardHeader>
       <CardContent>
+        <div className="rounded-sm border">
+          <Table className="table-fixed">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="h-7 w-7"
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
         <div className="rounded-md border">
           <div className="grid grid-cols-12 bg-muted/50 p-3 text-sm font-medium">
             <div className="col-span-4">TEST SUITE</div>
@@ -223,73 +420,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
                 <div className="col-span-1 text-sm text-muted-foreground text-end">
                   {get(test, "params.duration") ? `${get(test, "params.duration")}s` : ""}
                 </div>
-                <div className="col-span-2 flex items-center justify-end">
-                  <Button
-                    disabled={isButtonLoading || test.status === "Running"}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleExecuteTestSuite(test)}
-                  >
-                    {isButtonLoading ? (
-                      <LoaderCircle className="animate-spin" />
-                    ) : (
-                      <Fragment>
-                        {test.status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}
-                      </Fragment>
-                    )}
-                  </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        onClick={() => {}}
-                        disabled={!(test.status === "Completed" && get(test, "params.resultRuner.reportUrl"))}
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="min-w-[1000px]">
-                      <DialogHeader>
-                        <DialogTitle>Xem kết quả của kịch bản test {test.name}</DialogTitle>
-                        <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
-                      </DialogHeader>
-                      <div className="w-full min-h-[650px] overflow-auto">
-                        <iframe
-                          src={`${test.params?.resultRuner?.reportUrl}/report.html`}
-                          className="w-full h-full border-none"
-                          allowFullScreen
-                        ></iframe>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <Button
-                    onClick={() => {
-                      router.push(
-                        `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
-                          project.id
-                        }&testSuiteId=${test.id}&slug=${project?.slug}`
-                      );
-                    }}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isButtonLoading || test.status === "Running"}
-                  >
-                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    onClick={() => handleDeleteTestSuite(test)}
-                    disabled={isButtonLoading || test.status === "Running"}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-red-500 hover:text-red-600"
-                  >
-                    {isButtonLoading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <div className="col-span-2 flex items-center justify-end"></div>
               </div>
             ))}
             {listTestSuite.length <= 0 && (
