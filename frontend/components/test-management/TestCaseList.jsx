@@ -320,6 +320,7 @@ const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender })
       setLoading(true);
       await TestSuiteApi().retrySync(testSuite.id);
       toast.success("Đồng bộ dữ liệu thành công");
+      setReRender({});
     } catch (error) {
       toast.error("Đồng bộ dữ liệu thất bại");
     } finally {

@@ -80,15 +80,17 @@ TestSuiteRoute.post(
           fileName: `${testSuite.id}-${testSuite.fileName}.robot`,
         },
         async (data: Record<string, any>) => {
-          await db
-            .update(TestSuiteTable)
-            .set({
-              params: {
-                ...(testSuite.params || {}),
-                githubData: data,
-              },
-            })
-            .where(eq(TestSuiteTable.id, testSuite.id));
+          if (Object.hasOwn(data, 'content') && Object.hasOwn(data, 'commit')) {
+            await db
+              .update(TestSuiteTable)
+              .set({ params: { ...(testSuite.params || {}), githubData: data } })
+              .where(eq(TestSuiteTable.id, testSuite.id));
+          } else {
+            await db
+              .update(TestSuiteTable)
+              .set({ status: 'Aborted', params: { ...(testSuite.params || {}), errorData: data } })
+              .where(eq(TestSuiteTable.id, testSuite.id));
+          }
         }
       );
     }
@@ -130,6 +132,7 @@ TestSuiteRoute.post(
       await db
         .update(TestSuiteTable)
         .set({
+          status: 'Not Run',
           params: newParams,
           updatedAt: dayjs().toISOString(),
           updatedBy: user.email,
