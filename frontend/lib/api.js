@@ -78,6 +78,10 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(`${path}/draft-execute`, data);
     return res.data;
   };
+  const retrySync = async (id) => {
+    const res = await apiClient.post(`${path}/${id}/retry-sync`);
+    return res;
+  };
   const post = async (data) => {
     const res = await apiClient.post(path, data);
     return res;
@@ -102,7 +106,7 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(`${path}/execute/all`, data);
     return res;
   };
-  return { executeAll, draftExecute, post, patch, detail, execute, delete: _delete };
+  return { retrySync, executeAll, draftExecute, post, patch, detail, execute, delete: _delete };
 };
 
 export const ProjectApi = (path = "/api/project") => {

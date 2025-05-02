@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   ChevronLeft,
   ChevronRight,
+  CloudUpload,
   Edit,
   FilePlus2,
   FileText,
@@ -314,7 +315,17 @@ const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender })
       }
     };
   };
-
+  const handleRetrySyncData = async () => {
+    try {
+      setLoading(true);
+      await TestSuiteApi().retrySync(testSuite.id);
+      toast.success("Đồng bộ dữ liệu thành công");
+    } catch (error) {
+      toast.error("Đồng bộ dữ liệu thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleDeleteTestSuite = async () => {
     try {
       setLoading(testSuite.id);
@@ -371,6 +382,15 @@ const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender })
             </div>
           </DialogContent>
         </Dialog>
+        <Button
+          onClick={handleRetrySyncData}
+          disabled={get(testSuite, "params.githubData.content.sha") || loading || status === "Running"}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+        >
+          {loading ? <LoaderCircle className="animate-spin" /> : <CloudUpload className="size-4" />}
+        </Button>
         <Button
           onClick={() => {
             router.push(
