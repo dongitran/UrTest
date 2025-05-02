@@ -1,3 +1,4 @@
+// backend/src/routes/testResource.route.ts
 import { zValidator } from "@hono/zod-validator";
 import dayjs from "dayjs";
 import db from "db/db";
@@ -21,14 +22,15 @@ TestResourceRoute.get(
   async (ctx) => {
     const query = ctx.req.valid("query");
     const listTestResource = await db.query.TestResourceTable.findMany({
-      where: (clm, { and, eq }) => {
-        return and(eq(clm.projectId, query.projectId));
+      where: (clm, { and, eq, isNull }) => {
+        return and(eq(clm.projectId, query.projectId), isNull(clm.deletedAt));
       },
       orderBy: (clm, { desc }) => desc(clm.id),
     });
     return ctx.json({ listTestResource });
   }
 );
+
 TestResourceRoute.post(
   "/",
   zValidator(
@@ -44,78 +46,85 @@ TestResourceRoute.post(
   async (ctx) => {
     const body = ctx.req.valid("json");
     const user = ctx.get("user");
-    
+
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, body.projectId),
     });
-    
+
     if (!project) {
       return ctx.json({ message: "Project not found" }, 404);
     }
-    
-    const testResource = await db.insert(TestResourceTable).values({
-      content: body.content,
-      createdAt: dayjs().toISOString(),
-      createdBy: user.email,
-      description: body.description,
-      id: ulid(),
-      projectId: body.projectId,
-      title: body.title,
-    }).returning().then(res => res[0]);
-    
+
+    const testResource = await db
+      .insert(TestResourceTable)
+      .values({
+        content: body.content,
+        createdAt: dayjs().toISOString(),
+        createdBy: user.email,
+        description: body.description,
+        id: ulid(),
+        projectId: body.projectId,
+        title: body.title,
+      })
+      .returning()
+      .then((res) => res[0]);
+
     if (project.slug && testResource.fileName) {
       try {
         const initRobotPath = `resources/init.robot`;
         const initRobotFile = await CheckFileFromGithub({
           projectSlug: project.slug,
-          fileName: initRobotPath
+          fileName: initRobotPath,
         });
-        
+
         const resourceFilePath = `resources/${testResource.fileName}.robot`;
-        
+
         const files = [
           {
             path: resourceFilePath,
-            content: testResource.content
-          }
+            content: testResource.content,
+          },
         ];
-        
+
         if (initRobotFile) {
-          let currentContent = Buffer.from(initRobotFile.content, 'base64').toString('utf-8');
-          
+          let currentContent = Buffer.from(
+            initRobotFile.content,
+            "base64"
+          ).toString("utf-8");
+
           const newResourceReference = `Resource    ./${testResource.fileName}.robot`;
           if (!currentContent.includes(newResourceReference)) {
-            if (currentContent && !currentContent.endsWith('\n')) {
-              currentContent += '\n';
+            if (currentContent && !currentContent.endsWith("\n")) {
+              currentContent += "\n";
             }
-            currentContent += newResourceReference + '\n';
+            currentContent += newResourceReference + "\n";
           }
-          
+
           files.push({
             path: initRobotPath,
             content: currentContent,
-            sha: initRobotFile.sha
+            sha: initRobotFile.sha,
           });
         } else {
           files.push({
             path: initRobotPath,
-            content: `*** Settings ***\nResource    ./${testResource.fileName}.robot\n`
+            content: `*** Settings ***\nResource    ./${testResource.fileName}.robot\n`,
           });
         }
-        
+
         await CreateMultipleFiles({
           projectSlug: project.slug,
           files: files,
-          commitMessage: `Add test resource ${testResource.fileName} and update init.robot`
+          commitMessage: `Add test resource ${testResource.fileName} and update init.robot`,
         });
-        
+
         await db
           .update(TestResourceTable)
           .set({
             params: {
               ...(testResource.params || {}),
               githubCreated: true,
-              githubCreatedAt: dayjs().toISOString()
+              githubCreatedAt: dayjs().toISOString(),
             },
           })
           .where(eq(TestResourceTable.id, testResource.id));
@@ -123,8 +132,41 @@ TestResourceRoute.post(
         console.log(error, "Create resource error");
       }
     }
-    
+
     return ctx.json({ message: "ok" });
   }
 );
+
+TestResourceRoute.delete(
+  "/:id",
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+    const user = ctx.get("user");
+
+    const testResource = await db.query.TestResourceTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+    });
+
+    if (!testResource) {
+      return ctx.json({ message: "Test resource not found" }, 404);
+    }
+
+    await db
+      .update(TestResourceTable)
+      .set({
+        deletedAt: dayjs().toISOString(),
+        deletedBy: user.email,
+      })
+      .where(eq(TestResourceTable.id, id));
+
+    return ctx.json({ message: "ok" });
+  }
+);
+
 export default TestResourceRoute;
