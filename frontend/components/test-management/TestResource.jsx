@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export default function TestSuccessRate({ project = {} }) {
+export default function TestRoute({ project = {} }) {
   const [openModal, setOpenModal] = useState(false);
 
   const { data, refetch } = useQuery({
