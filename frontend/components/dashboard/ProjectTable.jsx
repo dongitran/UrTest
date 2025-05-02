@@ -16,26 +16,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  EllipsisVertical,
-  Search,
-  SquarePen,
-  Trash2,
-  LoaderCircle,
-} from "lucide-react";
+import { EllipsisVertical, Search, SquarePen, Trash2, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectApi } from "@/lib/api";
 import dayjs from "dayjs";
 import { toast } from "sonner";
@@ -50,13 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export default function ProjectTable({
-  initDataTable,
-  setDataTable,
-  refetch,
-  dataTable = [],
-  setProjectModalOpen,
-}) {
+export default function ProjectTable({ initDataTable, setDataTable, refetch, dataTable = [], setProjectModalOpen }) {
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -91,15 +72,18 @@ export default function ProjectTable({
                 </svg>
               </div>
               <div className="min-w-[200px] flex-1 pr-4">
-                <div className="font-semibold text-base">
-                  {row.getValue("title")}
-                </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {row.original["description"]}
-                </div>
+                <div className="font-semibold text-base">{row.getValue("title")}</div>
+                <div className="text-xs text-muted-foreground truncate">{row.original["description"]}</div>
               </div>
             </div>
           );
+        },
+      },
+      {
+        accessorKey: "totalTestSuite",
+        header: "Test Suite",
+        cell: ({ row }) => {
+          return <div className="text-center">{row.getValue("totalTestSuite")}</div>;
         },
       },
       {
@@ -126,27 +110,13 @@ export default function ProjectTable({
           </div>
         ),
       },
-      {
-        accessorKey: "progress",
-        header: () => <div className="text-center">Progress</div>,
-        cell: ({ row }) => (
-          <div className="flex gap-3 items-center">
-            <Progress
-              value={33}
-              className="w-full"
-              indicatorColor="bg-green-700"
-            />
-            <span className="text-xs whitespace-nowrap">33%</span>
-          </div>
-        ),
-      },
+      { accessorKey: "totalTestSuiteExecute", header: "Total Test Suite Execution" },
       {
         accessorKey: "updatedAt",
         header: () => <div className="text-center">Last Run</div>,
         cell: ({ row }) => (
           <div className="lowercase">
-            {row.getValue("updatedAt") &&
-              dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
+            {row.getValue("updatedAt") && dayjs(row.getValue("updatedAt")).format("HH:mm DD/MM/YYYY")}
           </div>
         ),
       },
@@ -170,9 +140,7 @@ export default function ProjectTable({
                     </DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem
-                  onClick={() => handleDeleteClick(row.original)}
-                >
+                <DropdownMenuItem onClick={() => handleDeleteClick(row.original)}>
                   Delete
                   <DropdownMenuShortcut>
                     <Trash2 className="size-4" />
@@ -229,11 +197,7 @@ export default function ProjectTable({
 
   const handleFilterDataTable = (searchTerm = projectNameFilter) => {
     if (searchTerm && searchTerm.trim() !== "") {
-      setDataTable(
-        initDataTable.filter((item) =>
-          new RegExp(searchTerm, "i").test(item.title)
-        )
-      );
+      setDataTable(initDataTable.filter((item) => new RegExp(searchTerm, "i").test(item.title)));
     } else {
       setDataTable(initDataTable);
     }
@@ -282,19 +246,10 @@ export default function ProjectTable({
                       <TableHead
                         key={header.id}
                         className={
-                          header.id.includes("title")
-                            ? "w-1/2"
-                            : header.id.includes("progress")
-                            ? "w-1/6"
-                            : ""
+                          header.id.includes("title") ? "w-1/4" : header.id.includes("progress") ? "w-1/6" : ""
                         }
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     );
                   })}
@@ -304,26 +259,15 @@ export default function ProjectTable({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
@@ -341,12 +285,7 @@ export default function ProjectTable({
             >
               Previous
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
               Next
             </Button>
           </div>
@@ -357,8 +296,7 @@ export default function ProjectTable({
             <DialogHeader>
               <DialogTitle>Delete Project</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this project? This action cannot
-                be undone.
+                Are you sure you want to delete this project? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             {projectToDelete && (
@@ -366,26 +304,16 @@ export default function ProjectTable({
                 <div className="border p-3 rounded-md">
                   <p className="font-medium">{projectToDelete.title}</p>
                   {projectToDelete.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {projectToDelete.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{projectToDelete.description}</p>
                   )}
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-                disabled={isDeleting}
-              >
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteProject}
-                disabled={isDeleting}
-              >
+              <Button variant="destructive" onClick={handleDeleteProject} disabled={isDeleting}>
                 {isDeleting ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
