@@ -1,4 +1,3 @@
-// backend/src/routes/testResource.route.ts
 import { zValidator } from "@hono/zod-validator";
 import dayjs from "dayjs";
 import db from "db/db";
@@ -7,8 +6,10 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import CreateMultipleFiles from "lib/Github/CreateMultipleFiles";
 import CheckFileFromGithub from "lib/Github/CheckFile";
+import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
 import { ulid } from "ulid";
 import { z } from "zod";
+import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
 
 const TestResourceRoute = new Hono();
 TestResourceRoute.get(
@@ -155,6 +156,53 @@ TestResourceRoute.delete(
 
     if (!testResource) {
       return ctx.json({ message: "Test resource not found" }, 404);
+    }
+
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, testResource.projectId),
+    });
+
+    if (project?.slug && testResource.fileName) {
+      try {
+        await DeleteFileFromGithub({
+          projectSlug: project.slug,
+          fileName: `resources/${testResource.fileName}.robot`,
+        });
+
+        const initRobotPath = `resources/init.robot`;
+        const initRobotFile = await CheckFileFromGithub({
+          projectSlug: project.slug,
+          fileName: initRobotPath,
+        });
+
+        if (initRobotFile) {
+          let currentContent = Buffer.from(
+            initRobotFile.content,
+            "base64"
+          ).toString("utf-8");
+
+          const updatedContent = currentContent
+            .split("\n")
+            .filter((line) => {
+              return !(
+                line.includes(`${testResource.fileName}.robot`) ||
+                line.includes(`./${testResource.fileName}.robot`)
+              );
+            })
+            .join("\n");
+
+          if (updatedContent !== currentContent) {
+            await CreateOrUpdateFile({
+              projectSlug: project.slug,
+              fileContent: updatedContent,
+              fileName: initRobotPath,
+              sha: initRobotFile.sha,
+            });
+          }
+        }
+      } catch (error) {
+        console.log(error, "Delete resource error");
+      }
     }
 
     await db
