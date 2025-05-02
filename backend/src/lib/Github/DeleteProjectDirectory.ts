@@ -2,8 +2,8 @@ export async function DeleteProjectDirectory(
   projectSlug: string
 ): Promise<void> {
   try {
-    const refResponse = await fetch(
-      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/refs/heads/main`,
+    const response = await fetch(
+      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}`,
       {
         headers: {
           Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
@@ -12,11 +12,67 @@ export async function DeleteProjectDirectory(
       }
     );
 
-    const refData = await refResponse.json();
-    const latestCommitSha = refData.object.sha;
+    if (!response.ok) {
+      console.log(
+        `Directory tests/${projectSlug} not found or already deleted`
+      );
+      return;
+    }
 
-    const commitResponse = await fetch(
-      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/commits/${latestCommitSha}`,
+    const contents = await response.json();
+
+    for (const item of contents) {
+      if (item.type === "file") {
+        await fetch(
+          `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/${item.path}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
+              Accept: "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: `Delete file ${item.path} as part of project ${projectSlug} cleanup`,
+              sha: item.sha,
+              branch: "main",
+            }),
+          }
+        );
+      } else if (item.type === "dir") {
+        const subDirContents = await fetch(
+          `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/${item.path}`,
+          {
+            headers: {
+              Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
+              Accept: "application/vnd.github.v3+json",
+            },
+          }
+        ).then((res) => res.json());
+
+        for (const subItem of subDirContents) {
+          await fetch(
+            `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/${subItem.path}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
+                Accept: "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: `Delete file ${subItem.path} as part of project ${projectSlug} cleanup`,
+                sha: subItem.sha,
+                branch: "main",
+              }),
+            }
+          );
+        }
+      }
+    }
+
+    const resourcesResponse = await fetch(
+      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/resources`,
       {
         headers: {
           Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
@@ -25,93 +81,35 @@ export async function DeleteProjectDirectory(
       }
     );
 
-    const commitData = await commitResponse.json();
-    const baseTreeSha = commitData.tree.sha;
+    if (resourcesResponse.ok) {
+      const resourcesContents = await resourcesResponse.json();
 
-    const treeResponse = await fetch(
-      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/trees/${baseTreeSha}?recursive=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-          Accept: "application/vnd.github.v3+json",
-        },
+      for (const item of resourcesContents) {
+        if (
+          item.name.startsWith(`${projectSlug}-`) ||
+          item.name === `${projectSlug}.robot`
+        ) {
+          await fetch(
+            `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/${item.path}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
+                Accept: "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: `Delete resource ${item.path} as part of project ${projectSlug} cleanup`,
+                sha: item.sha,
+                branch: "main",
+              }),
+            }
+          );
+        }
       }
-    );
+    }
 
-    const treeData = await treeResponse.json();
-
-    const newTreeItems = treeData.tree
-      .filter((item) => {
-        const isInProjectDir = item.path.startsWith(`tests/${projectSlug}/`);
-        const isProjectResource =
-          item.path.startsWith(`resources/`) &&
-          (item.path.includes(`${projectSlug}-`) ||
-            item.path.endsWith(`${projectSlug}.robot`));
-
-        return !isInProjectDir && !isProjectResource;
-      })
-      .map((item) => ({
-        path: item.path,
-        mode: item.mode,
-        type: item.type,
-        sha: item.sha,
-      }));
-
-    const createTreeResponse = await fetch(
-      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/trees`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-          Accept: "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          base_tree: null,
-          tree: newTreeItems,
-        }),
-      }
-    );
-
-    const newTreeData = await createTreeResponse.json();
-    const newTreeSha = newTreeData.sha;
-
-    const createCommitResponse = await fetch(
-      `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/commits`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-          Accept: "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Delete project ${projectSlug} files and resources`,
-          tree: newTreeSha,
-          parents: [latestCommitSha],
-        }),
-      }
-    );
-
-    const newCommitData = await createCommitResponse.json();
-    const newCommitSha = newCommitData.sha;
-
-    await fetch(`${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/refs/heads/main`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        sha: newCommitSha,
-        force: false,
-      }),
-    });
-
-    console.log(
-      `Successfully deleted project ${projectSlug} from GitHub in a single commit`
-    );
+    console.log(`Successfully deleted project ${projectSlug} from GitHub`);
   } catch (error) {
     console.error(`Error deleting project ${projectSlug} from GitHub:`, error);
     throw error;
