@@ -22,6 +22,39 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
 
+const createGlobalStyle = () => {
+  if (!document.getElementById("pointer-events-override")) {
+    const style = document.createElement("style");
+    style.id = "pointer-events-override";
+    style.innerHTML = `
+      body[style*="pointer-events: none"] {
+        pointer-events: auto !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
+
+const setupMutationObserver = () => {
+  if (window._bodyObserver) return;
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === "style") {
+        const bodyStyle = document.body.getAttribute("style") || "";
+        if (bodyStyle.includes("pointer-events: none")) {
+          setTimeout(() => {
+            document.body.style.pointerEvents = "auto";
+          }, 100);
+        }
+      }
+    });
+  });
+
+  observer.observe(document.body, { attributes: true });
+  window._bodyObserver = observer;
+};
+
 const ManageStaffModal = ({ open, setOpen, project }) => {
   const [assignedStaff, setAssignedStaff] = useState([]);
   const [availableStaff, setAvailableStaff] = useState([]);
@@ -30,6 +63,25 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
   const [actionStaffId, setActionStaffId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("assigned");
+
+  useEffect(() => {
+    createGlobalStyle();
+    setupMutationObserver();
+
+    document.body.style.pointerEvents = "auto";
+
+    return () => {
+      document.body.style.pointerEvents = "auto";
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setTimeout(() => {
+        document.body.style.pointerEvents = "auto";
+      }, 100);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open && project) {
@@ -176,12 +228,27 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
       staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       staff.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  console.log(selectedTab, "selectedTab");
-  console.log(filteredAssignedStaff, "filteredAssignedStaff");
+
+  const handleCloseModal = () => {
+    document.body.style.pointerEvents = "auto";
+    setOpen(false);
+    setTimeout(() => {
+      document.body.style.pointerEvents = "auto";
+    }, 100);
+  };
 
   return (
     <Fragment>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            handleCloseModal();
+          } else {
+            setOpen(true);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Manage Project Staff</DialogTitle>
@@ -349,7 +416,7 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setOpen(false)}>Close</Button>
+            <Button onClick={handleCloseModal}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
