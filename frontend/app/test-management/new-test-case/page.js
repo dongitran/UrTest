@@ -5,13 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Copy, LoaderCircle, Play, Terminal } from "lucide-react";
+import { LoaderCircle, Play } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
-import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 
 export default function NewTestCasePage() {
@@ -26,7 +24,7 @@ export default function NewTestCasePage() {
     `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [editorHeight, setEditorHeight] = useState("calc(100vh - 320px)");
+  const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
   const { data: testSuiteDetail } = useQuery({
     queryKey: ["detail-test-suite" + testSuiteId],
     queryFn: () => {
@@ -61,6 +59,7 @@ export default function NewTestCasePage() {
       setIsLoading(false);
     }
   };
+
   const handleSave = async () => {
     const data = getValues();
     if (!data.name?.trim()) {
@@ -106,6 +105,7 @@ export default function NewTestCasePage() {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     const updateEditorHeight = () => {
       setEditorHeight("calc(100vh - 260px)");
@@ -118,70 +118,58 @@ export default function NewTestCasePage() {
   useEffect(() => {
     if (testSuiteDetail) {
       setValue("name", testSuiteDetail.name);
-      setValue("description", testSuiteDetail.description);
       setTags(testSuiteDetail.tags || []);
       setScriptContent(testSuiteDetail.content);
-      setValue("fileName", testSuiteDetail.fileName ? `${testSuiteDetail.fileName}.robot` : null);
       if (testSuiteDetail?.params?.resultRuner) {
         setValue("resultRuner", testSuiteDetail.params.resultRuner);
       }
     }
   }, [testSuiteDetail]);
+
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
         <div className="grid gap-4 p-6 border rounded-lg bg-card">
-          <div className="grid grid-cols-1 gap-3 ">
-            <div className="flex items-center gap-2 flex-1">
-              <Input id="test-name" {...register("name")} placeholder="Enter test case name" className="w-full" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <TagInput value={tags} onChange={setTags} placeholder="Press Enter to add tags" />
-            </div>
-            <Textarea placeholder="Mô tả nội dung của kịch bản test..." {...register("description")} />
-            <div className="flex gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 flex items-center gap-2">
+              <span className="whitespace-nowrap font-medium">Test Suite:</span>
               <Input
+                id="test-name"
+                {...register("name")}
+                placeholder="Enter test case name"
                 className="w-full"
-                placeholder="Tên file sẽ được tự động tạo ra khi bạn tạo thành công kịch bản test"
-                disabled
-                {...register("fileName")}
               />
-              <Button
-                size="icon"
-                disabled={testSuiteDetail && testSuiteDetail.fileName ? false : true}
-                onClick={async () => {
-                  const fileName = `${testSuiteDetail.fileName}.robot`;
-                  await navigator.clipboard.writeText(fileName);
-                  toast(`Đã copy tên file: ${fileName}.robot`);
-                }}
-              >
-                <Copy />
-              </Button>
+            </div>
+            <div className="flex-1 flex items-center gap-2">
+              <span className="whitespace-nowrap font-medium">Tags:</span>
+              <TagInput
+                value={tags}
+                onChange={setTags}
+                placeholder="Press Enter to add tags"
+              />
             </div>
           </div>
-
-          <Alert className="">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Lưu ý</AlertTitle>
-            <AlertDescription>Khi viết 1 kịch bản test, thì có thể có 1 hoặc nhiều testcase.</AlertDescription>
-          </Alert>
 
           <div className="grid gap-2">
-          <div className="border rounded-sm bg-card overflow-hidden" style={{ height: editorHeight }}>
-            <MonacoEditor 
-              language="robotframework" 
-              value={scriptContent} 
-              onChange={setScriptContent} 
-              slug={slug} 
-            />
+            <div
+              className="border rounded-sm bg-card overflow-hidden"
+              style={{ height: editorHeight }}
+            >
+              <MonacoEditor
+                language="robotframework"
+                value={scriptContent}
+                onChange={setScriptContent}
+                slug={slug}
+              />
+            </div>
           </div>
-          </div>
+
           {showProgress && (
             <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden">
               <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
             </div>
           )}
+
           {!showProgress && watch("resultRuner")?.reportUrl && (
             <div className="w-full min-h-[650px] overflow-auto">
               <iframe
@@ -191,28 +179,42 @@ export default function NewTestCasePage() {
               ></iframe>
             </div>
           )}
+
           <div className="flex items-center pt-4">
             <Button
               variant="outline"
-              onClick={() => router.push(`/test-management?projectId=${projectId}`)}
+              onClick={() =>
+                router.push(`/test-management?projectId=${projectId}`)
+              }
               size="sm"
               className="mr-2"
             >
               {isLoading && <LoaderCircle className="animate-spin" />}
               Cancel
             </Button>
+
             {projectId && (
               <Fragment>
                 {testSuiteId ? (
                   <Fragment>
-                    <Button onClick={handleEdit} disabled={isLoading} className="" size="sm">
+                    <Button
+                      onClick={handleEdit}
+                      disabled={isLoading}
+                      className=""
+                      size="sm"
+                    >
                       {isLoading && <LoaderCircle className="animate-spin" />}
                       Edit
                     </Button>
                   </Fragment>
                 ) : (
                   <Fragment>
-                    <Button onClick={handleSave} disabled={isLoading} className="" size="sm">
+                    <Button
+                      onClick={handleSave}
+                      disabled={isLoading}
+                      className=""
+                      size="sm"
+                    >
                       {isLoading && <LoaderCircle className="animate-spin" />}
                       Create
                     </Button>
@@ -220,14 +222,20 @@ export default function NewTestCasePage() {
                 )}
               </Fragment>
             )}
+
             <div className="ml-auto"></div>
+
             <Button
               onClick={handleRunTest}
               disabled={isLoading}
               className="bg-green-700 text-white hover:bg-green-800"
               size="sm"
             >
-              {isLoading ? <LoaderCircle className="animate-spin" /> : <Play className="h-4 w-4" />}
+              {isLoading ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
               Run Test
             </Button>
           </div>
