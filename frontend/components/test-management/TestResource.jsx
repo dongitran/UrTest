@@ -45,8 +45,8 @@ export default function TestRoute({ project = {} }) {
   }, [data, page]);
 
   return (
-    <Card className="overflow-hidden border border-gray-200 rounded-lg bg-white shadow-sm">
-      <CardHeader className="pb-2 p-6 border-b bg-white">
+    <Card className="overflow-hidden border rounded-lg shadow-sm">
+      <CardHeader className="pb-2 p-6 border-b">
         <CardTitle className="flex gap-3 items-center justify-between">
           <span className="text-lg font-semibold">Test Resources</span>
           <TestResourceModal
@@ -56,7 +56,7 @@ export default function TestRoute({ project = {} }) {
                   onClick={() => setOpenModal(true)}
                   variant="outline"
                   size="sm"
-                  className="text-gray-700 border-gray-300 hover:bg-gray-100 text-xs h-8 flex items-center gap-1"
+                  className="hover:bg-muted text-xs h-8 flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" />
                   Create Resource
@@ -73,7 +73,7 @@ export default function TestRoute({ project = {} }) {
       <CardContent className="p-6">
         <div className="grid grid-cols-1 gap-4">
           {listTestResource.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No test resources available
             </div>
           ) : (
@@ -133,7 +133,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
 
   return (
     <Fragment>
-      <div className="flex gap-3 items-center p-3 border rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="flex gap-3 items-center p-3 border rounded-md bg-muted/50 hover:bg-muted transition-colors">
         <div className="flex-1">
           <p className="text-sm font-medium">{item.title}</p>
         </div>
@@ -146,7 +146,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
                   className="h-8 w-8 p-0"
                   variant="ghost"
                 >
-                  <Edit className="size-4 text-gray-600" />
+                  <Edit className="size-4 text-muted-foreground" />
                 </Button>
               );
             }}
@@ -158,7 +158,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
           />
           <Button
             variant="ghost"
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50"
             onClick={() => openDeleteDialog(item)}
           >
             <Trash2 className="size-4" />

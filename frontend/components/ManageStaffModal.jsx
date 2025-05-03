@@ -325,7 +325,7 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
                                     actionStaffId === staff.email ? (
                                       <LoaderCircle className="h-4 w-4 animate-spin" />
                                     ) : (
-                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                      <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                                     )}
                                   </Button>
                                 </TableCell>
@@ -388,7 +388,7 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
                                     actionStaffId === staff.email ? (
                                       <LoaderCircle className="h-4 w-4 animate-spin" />
                                     ) : (
-                                      <UserPlus className="h-4 w-4 text-green-500" />
+                                      <UserPlus className="h-4 w-4 text-green-500 dark:text-green-400" />
                                     )}
                                   </Button>
                                 </TableCell>

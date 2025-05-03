@@ -1,6 +1,13 @@
 import MonacoEditor from "@/components/MonacoEditor";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TestResourceApi } from "@/lib/api";
@@ -10,7 +17,14 @@ import { Fragment, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpenModal, dialogChild }) => {
+const TestResourceModal = ({
+  refetch,
+  projectId,
+  testResource,
+  openModal,
+  setOpenModal,
+  dialogChild,
+}) => {
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register, getValues, setValue } = useForm();
@@ -19,11 +33,11 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
     try {
       setIsLoading(true);
       if (!projectId) {
-        toast.warning("Vui lòng truyền thêm giá trị ProjectId");
+        toast.warning("Please provide a ProjectId value");
         return;
       }
       if (!scriptContent || !scriptContent.trim()) {
-        toast.warning("Vui lòng nhập nội dung thì mới có thể tạo Test Resource");
+        toast.warning("Please enter content to create a Test Resource");
         return;
       }
       const data = getValues();
@@ -33,7 +47,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
           content: scriptContent,
           projectId,
         });
-        toast.success("Đã chỉnh sửa thông tin Test Resource thành công");
+        toast.success("Test Resource information updated successfully");
         setOpenModal(false);
       } else {
         await TestResourceApi().create({
@@ -41,7 +55,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
           content: scriptContent,
           projectId,
         });
-        toast.success("Đã tạo Test Resource thành công");
+        toast.success("Test Resource created successfully");
         setOpenModal(false);
       }
       if (refetch) refetch();
@@ -50,7 +64,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
       setValue("description", "");
       setScriptContent("");
     } catch (error) {
-      const message = "Có lỗi khi tạo Test Resource";
+      const message = "Error creating Test Resource";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -75,16 +89,24 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
             <DialogTitle>Test Resource</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3">
-            <Input {...register("title")} placeholder="Nhập tên cho Test Resource" className="rounded-sm" />
+            <Input
+              {...register("title")}
+              placeholder="Enter a name for Test Resource"
+              className="rounded-sm"
+            />
             <Textarea
               {...register("description")}
               className="rounded-sm"
-              placeholder="Mô tả nội dung của Test Resource"
+              placeholder="Describe the content of Test Resource"
             />
             <div className="flex gap-3 items-center">
               <Input
-                value={testResource?.fileName ? `${testResource?.fileName}.robot` : null}
-                placeholder="Tên file của Test Resource sẽ được tự động tạo"
+                value={
+                  testResource?.fileName
+                    ? `${testResource?.fileName}.robot`
+                    : null
+                }
+                placeholder="Test Resource filename will be automatically generated"
                 disabled
                 className="rounded-sm"
               />
@@ -98,7 +120,11 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
                 height: `calc(85vh - 320px)`,
               }}
             >
-              <MonacoEditor language="robotframework" value={scriptContent} onChange={setScriptContent} />
+              <MonacoEditor
+                language="robotframework"
+                value={scriptContent}
+                onChange={setScriptContent}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -115,7 +141,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
               <div className="ml-auto"></div>
               <Button disabled={isLoading}>
                 {isLoading && <LoaderCircle className="animate-spin" />}
-                Thiết lập lại
+                Reset
               </Button>
               <Button
                 disabled={isLoading}
@@ -123,7 +149,7 @@ const TestResourceModal = ({ refetch, projectId, testResource, openModal, setOpe
                 className="bg-blue-700 hover:bg-blue-800 text-white"
               >
                 {isLoading && <LoaderCircle className="animate-spin" />}
-                Lưu
+                Save
               </Button>
             </div>
           </DialogFooter>

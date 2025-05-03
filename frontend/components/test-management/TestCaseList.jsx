@@ -69,7 +69,7 @@ export default function TestCaseList({
                 <Badge
                   key={tag}
                   variant="outline"
-                  className="rounded-md bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
+                  className="rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900"
                 >
                   {tag}
                 </Badge>
@@ -117,7 +117,7 @@ export default function TestCaseList({
       },
       {
         accessorKey: "actions",
-        header: "Actions",
+        header: ({ column }) => <div className="text-center">Actions</div>,
         cell: ({ row }) => {
           return (
             <RenderActions
@@ -147,17 +147,17 @@ export default function TestCaseList({
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800";
       case "Failed":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 border-red-200 dark:border-red-800";
       case "Aborted":
-        return "bg-orange-100 text-orange-800 border-orange-200";
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 border-orange-200 dark:border-orange-800";
       case "Completed":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800";
       case "Not Run":
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
       default:
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800";
     }
   };
 
@@ -219,17 +219,17 @@ export default function TestCaseList({
   }, []);
 
   return (
-    <div className="border rounded-lg bg-gray-50 overflow-hidden">
+    <div className="border rounded-lg bg-card overflow-hidden">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Test Suites</h2>
 
           <div className="flex items-center gap-4">
             <div className="relative w-[300px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search test cases..."
-                className="pl-10 h-10 border-gray-200 rounded-md w-full bg-white"
+                className="pl-10 h-10 w-full"
               />
             </div>
 
@@ -257,15 +257,15 @@ export default function TestCaseList({
           </div>
         </div>
 
-        <div className="w-full border rounded-md overflow-hidden bg-white">
+        <div className="w-full border rounded-md overflow-hidden bg-background">
           <Table className="w-full">
-            <TableHeader className="bg-gray-50">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 {table.getHeaderGroups().map((headerGroup) =>
                   headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="py-3 px-4 text-sm font-medium text-gray-600"
+                      className="py-3 px-4 text-sm font-medium text-foreground"
                     >
                       {header.isPlaceholder
                         ? null
@@ -281,10 +281,7 @@ export default function TestCaseList({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
+                  <TableRow key={row.id} className="border-b hover:bg-muted/50">
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-4 px-4">
                         {flexRender(
@@ -405,12 +402,12 @@ const RenderActions = ({
 
   return (
     <Fragment>
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-center gap-1">
         <Button
           disabled={loading || status === "Running"}
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+          className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:text-blue-300"
           onClick={handleExecuteTestSuite()}
         >
           {loading ? (
@@ -423,7 +420,7 @@ const RenderActions = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+          className="h-8 w-8 text-foreground/70 hover:bg-muted"
           onClick={() => {
             router.push(
               `/test-management/new-test-case?project=${encodeURIComponent(
@@ -441,7 +438,7 @@ const RenderActions = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+          className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100 dark:hover:text-red-300 dark:hover:bg-red-900"
           onClick={() => setDeleteDialogOpen(true)}
           disabled={loading || status === "Running"}
         >

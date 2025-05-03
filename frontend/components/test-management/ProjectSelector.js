@@ -62,7 +62,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-10 w-[400px] border rounded-md px-3 bg-white">
+      <div className="flex justify-center items-center h-10 w-[400px] border rounded-md px-3">
         <LoadingSpinner size="small" message="Loading projects..." />
       </div>
     );
@@ -70,8 +70,8 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-10 border rounded-md px-3 bg-white w-[400px]">
-        <div className="text-red-500 text-sm">{error}</div>
+      <div className="flex justify-center items-center h-10 border rounded-md px-3 w-[400px]">
+        <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[400px] h-10 bg-white border-gray-200 text-gray-800">
+            <SelectTrigger className="w-[400px] h-10">
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
