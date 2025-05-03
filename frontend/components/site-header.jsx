@@ -23,7 +23,7 @@ export function SiteHeader() {
         breadcrumbs: [
           { title: "Test Management", path: "/test-management" },
           { title: projectName, path: `/test-management?projectId=${projectId}` },
-          { title: "New Test Case", path: pathname },
+          { title: "New Test Suite", path: pathname },
         ],
       };
     }

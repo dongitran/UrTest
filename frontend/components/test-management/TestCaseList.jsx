@@ -42,12 +42,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         accessorKey: "name",
         header: "Test Suite",
         cell: ({ row }) => {
-          return (
-            <div className="col-span-4">
-              <div className="font-medium text-xl">{row.original.name}</div>
-              <div className="text-xs text-muted-foreground">{row.original.description}</div>
-            </div>
-          );
+          return row.original.name;
         },
       },
       {
