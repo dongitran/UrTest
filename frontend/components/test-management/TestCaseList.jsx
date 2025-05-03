@@ -224,17 +224,15 @@ export default function TestCaseList({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Test Suites</h2>
 
-          <div className="flex items-center gap-4 flex-grow mx-6">
-            <div className="relative w-full max-w-md">
+          <div className="flex items-center gap-4">
+            <div className="relative w-[300px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search test cases..."
                 className="pl-10 h-10 border-gray-200 rounded-md w-full bg-white"
               />
             </div>
-          </div>
 
-          <div className="flex gap-3">
             <Button
               onClick={handleExecuteAllTestSuite}
               className="bg-blue-600 hover:bg-blue-700 text-white h-10"
@@ -421,39 +419,6 @@ const RenderActions = ({
             <Play className="h-4 w-4" />
           )}
         </Button>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              disabled={
-                !(
-                  status === "Completed" &&
-                  get(testSuite, "params.resultRuner.reportUrl")
-                )
-              }
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-            >
-              <FileText className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="min-w-[1000px]">
-            <DialogHeader>
-              <DialogTitle>Test Results: {testSuite.name}</DialogTitle>
-              <DialogDescription>
-                Detailed test execution results
-              </DialogDescription>
-            </DialogHeader>
-            <div className="w-full min-h-[650px] overflow-auto">
-              <iframe
-                src={`${testSuite.params?.resultRuner?.reportUrl}/report.html`}
-                className="w-full h-full border-none"
-                allowFullScreen
-              ></iframe>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         <Button
           variant="ghost"
