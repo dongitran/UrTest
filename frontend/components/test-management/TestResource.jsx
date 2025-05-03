@@ -1,7 +1,13 @@
 import MyPagination from "@/components/MyPagination";
 import TestResourceModal from "@/components/test-management/TestResourceModal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { TestResourceApi } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Edit, LoaderCircle, Trash2 } from "lucide-react";
+import { Edit, LoaderCircle, Trash2, Plus } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +35,7 @@ export default function TestRoute({ project = {} }) {
       return TestResourceApi().list({ projectId: project.id });
     },
   });
+
   useEffect(() => {
     if (data && Array.isArray(data.listTestResource)) {
       const startIndex = (page - 1) * itemsPerPage;
@@ -36,36 +43,65 @@ export default function TestRoute({ project = {} }) {
       setListTestResource(data.listTestResource.slice(startIndex, endIndex));
     }
   }, [data, page]);
+
   return (
-    <>
-      <Card>
-        <CardHeader className="">
-          <CardTitle className="flex gap-3 items-center">
-            <span className="text-ml font-semibold">Test Resource</span>
-            <div className="ml-auto"></div>
-            <TestResourceModal
-              dialogChild={() => {
-                return <Button onClick={() => setOpenModal(true)}>Create Test Resource</Button>;
-              }}
-              openModal={openModal}
-              setOpenModal={setOpenModal}
-              projectId={project.id}
-              refetch={refetch}
+    <Card className="overflow-hidden border border-gray-200 rounded-lg bg-white shadow-sm">
+      <CardHeader className="pb-2 p-6 border-b bg-white">
+        <CardTitle className="flex gap-3 items-center justify-between">
+          <span className="text-lg font-semibold">Test Resources</span>
+          <TestResourceModal
+            dialogChild={() => {
+              return (
+                <Button
+                  onClick={() => setOpenModal(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-gray-700 border-gray-300 hover:bg-gray-100 text-xs h-8 flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  Create Resource
+                </Button>
+              );
+            }}
+            openModal={openModal}
+            setOpenModal={setOpenModal}
+            projectId={project.id}
+            refetch={refetch}
+          />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 gap-4">
+          {listTestResource.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No test resources available
+            </div>
+          ) : (
+            listTestResource.map((item) => {
+              return (
+                <TestResourceItem
+                  refetch={refetch}
+                  item={item}
+                  project={project}
+                  key={item.id}
+                />
+              );
+            })
+          )}
+        </div>
+      </CardContent>
+      {data &&
+        data.listTestResource &&
+        data.listTestResource.length > itemsPerPage && (
+          <CardFooter className="justify-center p-4 border-t">
+            <MyPagination
+              setPage={setPage}
+              page={page}
+              total={data ? data.listTestResource.length : 1}
             />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="min-h-[235px]">
-          <div className="grid grid-cols-1 gap-3">
-            {listTestResource.map((item) => {
-              return <TestResourceItem refetch={refetch} item={item} project={project} key={item.id} />;
-            })}
-          </div>
-        </CardContent>
-        <CardFooter className="justify-end">
-          <MyPagination setPage={setPage} page={page} total={data ? data.listTestResource.length : 1} />
-        </CardFooter>
-      </Card>
-    </>
+          </CardFooter>
+        )}
+    </Card>
   );
 }
 
@@ -77,6 +113,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
   const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
   };
+
   const handleDeleteResource = async () => {
     try {
       setIsDeleting(true);
@@ -93,20 +130,23 @@ const TestResourceItem = ({ item, refetch, project }) => {
       setIsDeleting(false);
     }
   };
+
   return (
     <Fragment>
-      <div className="flex gap-3 items-center" key={item.id}>
-        <div>
-          <p className="text-lg font-semibold">{item.title}</p>
-          <div className="max-w-80 text-xs text-muted-foreground truncate">{item.description}</div>
+      <div className="flex gap-3 items-center p-3 border rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+        <div className="flex-1">
+          <p className="text-sm font-medium">{item.title}</p>
         </div>
-        <div className="ml-auto"></div>
-        <div>
+        <div className="flex items-center gap-1">
           <TestResourceModal
             dialogChild={() => {
               return (
-                <Button onClick={() => setOpenModal(true)} className="h-8 w-8" variant="ghost">
-                  <Edit className="size-4" />
+                <Button
+                  onClick={() => setOpenModal(true)}
+                  className="h-8 w-8 p-0"
+                  variant="ghost"
+                >
+                  <Edit className="size-4 text-gray-600" />
                 </Button>
               );
             }}
@@ -118,33 +158,44 @@ const TestResourceItem = ({ item, refetch, project }) => {
           />
           <Button
             variant="ghost"
-            className="h-8 w-8 text-red-700 hover:text-red-800"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
             onClick={() => openDeleteDialog(item)}
           >
             <Trash2 className="size-4" />
           </Button>
         </div>
       </div>
-      {/* Delete Confirmation Dialog */}
+
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Delete Test Resource</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this test resource? This action cannot be undone.
+              Are you sure you want to delete this test resource? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="pt-3">
             <div className="border p-3 rounded-md">
               <p className="font-medium">{item.title}</p>
-              <p className="text-sm text-muted-foreground">{item.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.description}
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteResource} disabled={isDeleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteResource}
+              disabled={isDeleting}
+            >
               {isDeleting ? (
                 <>
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />

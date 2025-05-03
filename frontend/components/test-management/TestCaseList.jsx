@@ -1,24 +1,28 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TestSuiteApi } from "@/lib/api";
 import { handleEventData } from "@/lib/websocket";
 import dayjs from "dayjs";
 import { get, isEmpty } from "lodash";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Play,
+  FileText,
+  Edit,
+  Trash2,
+  Search,
+  FilePlus2,
+  LoaderCircle,
   ChevronLeft,
   ChevronRight,
-  CloudUpload,
-  Edit,
-  FilePlus2,
-  FileText,
-  LoaderCircle,
-  Pause,
-  Play,
-  Search,
-  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
@@ -30,10 +34,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
-export default function TestCaseList({ project = {}, listTestSuite = [], setReRender }) {
+export default function TestCaseList({
+  project = {},
+  listTestSuite = [],
+  setReRender,
+}) {
   const router = useRouter();
   const socketRef = useRef(null);
   const columns = useMemo(() => {
@@ -42,7 +56,7 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         accessorKey: "name",
         header: "Test Suite",
         cell: ({ row }) => {
-          return row.original.name;
+          return <div className="font-medium">{row.original.name}</div>;
         },
       },
       {
@@ -52,7 +66,11 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
           return (
             <div className="flex gap-1">
               {row.getValue("tags").map((tag) => (
-                <Badge key={tag} variant="default">
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="rounded-md bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"
+                >
                   {tag}
                 </Badge>
               ))}
@@ -65,8 +83,13 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
         header: "Status",
         cell: ({ renderValue }) => {
           return (
-            <Badge variant="outline" className={`${getStatusBadgeClass(renderValue())}`}>
-              {renderValue() === "Running" && <LoaderCircle className="animate-spin size-3 mr-1" />}
+            <Badge
+              variant="outline"
+              className={`${getStatusBadgeClass(renderValue())}`}
+            >
+              {renderValue() === "Running" && (
+                <LoaderCircle className="animate-spin size-3 mr-1" />
+              )}
               {renderValue()}
             </Badge>
           );
@@ -74,39 +97,53 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       },
       {
         accessorKey: "lastRunDate",
-        header: "LAST RUN",
+        header: "Last Run",
         cell: ({ renderValue }) => {
           if (renderValue()) {
             return dayjs(renderValue()).format("HH:mm DD/MM/YYYY");
           }
+          return "-";
         },
       },
       {
         accessorKey: "duration",
-        header: "DURATION",
+        header: "Duration",
         cell: ({ row }) => {
           if (get(row.original, "params.duration") >= 0) {
             return `${get(row.original, "params.duration")}s`;
           }
+          return "-";
         },
       },
       {
         accessorKey: "actions",
-        header: <div className="justify-end flex">Actions</div>,
+        header: "Actions",
         cell: ({ row }) => {
           return (
-            <RenderActions socketRef={socketRef} project={project} setReRender={setReRender} testSuite={row.original} />
+            <RenderActions
+              socketRef={socketRef}
+              project={project}
+              setReRender={setReRender}
+              testSuite={row.original}
+            />
           );
         },
       },
     ];
   }, []);
+
   const table = useReactTable({
     data: listTestSuite,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 5,
+      },
+    },
   });
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Passed":
@@ -114,9 +151,9 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       case "Failed":
         return "bg-red-100 text-red-800 border-red-200";
       case "Aborted":
-        return "bg-orange-600 text-orange-100 border-orange-600";
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "Completed":
-        return "bg-green-700 text-white border-green-700";
+        return "bg-green-100 text-green-800 border-green-200";
       case "Not Run":
         return "bg-gray-100 text-gray-800 border-gray-200";
       default:
@@ -124,32 +161,25 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
     }
   };
 
-  const getTypeBadgeClass = (type) => {
-    switch (type) {
-      case "Authentication":
-        return "bg-purple-100 text-purple-800";
-      case "Search":
-        return "bg-blue-100 text-blue-800";
-      case "Product":
-        return "bg-green-100 text-green-800";
-      case "Cart":
-        return "bg-amber-100 text-amber-800";
-      case "Checkout":
-        return "bg-teal-100 text-teal-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
   const handleExecuteAllTestSuite = async () => {
     try {
       await TestSuiteApi().executeAll({ projectId: project.id });
       setReRender({});
-      toast("Đã gửi yêu cầu thực hiện tất cả kịch bản test");
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuiteAll", projectId: project.id }));
+      toast.success("Test execution started for all test suites");
+      if (
+        socketRef.current &&
+        socketRef.current.readyState === WebSocket.OPEN
+      ) {
+        socketRef.current.send(
+          JSON.stringify({
+            key: "checkStatusTestSuiteAll",
+            projectId: project.id,
+          })
+        );
       }
     } catch (error) {
-      const message = get(error, "response.data.message") || "Có lỗi xảy ra";
+      const message =
+        get(error, "response.data.message") || "An error occurred";
       toast.error(message);
     }
   };
@@ -165,10 +195,10 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       handleEventData(event.data, ({ key, testSuiteName }) => {
         if (key === "reRenderTestSuiteList") {
           setReRender({});
-          toast(`Kịch bản test ${testSuiteName} đã được thực thi xong`);
+          toast.success(`Test suite ${testSuiteName} execution completed`);
         } else if (key === "reRenderTestSuiteListAll") {
           setReRender({});
-          toast(`Tất cả kịch bản test đã hoàn tất thực thi`);
+          toast.success(`All test suites execution completed`);
         }
       });
     };
@@ -187,67 +217,92 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
       socket.close();
     };
   }, []);
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex gap-3 items-center">
-          <CardTitle>Danh sách Testsuite</CardTitle>
-          <div className="ml-auto"></div>
-          <div className="flex gap-2">
-            <div className="relative w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search test cases..." className="pl-8" />
+    <div className="border rounded-lg bg-gray-50 overflow-hidden">
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold">Test Suites</h2>
+
+          <div className="flex items-center gap-4 flex-grow mx-6">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search test cases..."
+                className="pl-10 h-10 border-gray-200 rounded-md w-full bg-white"
+              />
             </div>
           </div>
 
-          <Button
-            size="sm"
-            className="rounded-sm gap-1 items-center bg-blue-700 hover:bg-blue-800 text-white"
-            onClick={handleExecuteAllTestSuite}
-          >
-            <Play className="!size-4" />
-            Run All Tests
-          </Button>
-          <Button
-            onClick={() => {
-              router.push(
-                `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${project.id}`
-              );
-            }}
-          >
-            <FilePlus2 className="size-4" />
-            Create Test Suite
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={handleExecuteAllTestSuite}
+              className="bg-blue-600 hover:bg-blue-700 text-white h-10"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Run All Tests
+            </Button>
+
+            <Button
+              onClick={() => {
+                router.push(
+                  `/test-management/new-test-case?project=${encodeURIComponent(
+                    project.title
+                  )}&projectId=${project.id}`
+                );
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white h-10"
+            >
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              Create Test Suite
+            </Button>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-sm border">
-          <Table className="table-fixed">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
+
+        <div className="w-full border rounded-md overflow-hidden bg-white">
+          <Table className="w-full">
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="py-3 px-4 text-sm font-medium text-gray-600"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))
+                )}
+              </TableRow>
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      <TableCell key={cell.id} className="py-4 px-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
                     No results.
                   </TableCell>
                 </TableRow>
@@ -255,35 +310,51 @@ export default function TestCaseList({ project = {}, listTestSuite = [], setReRe
             </TableBody>
           </Table>
         </div>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="space-x-2">
+
+        <div className="flex justify-end mt-4">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="h-7 w-7"
+              className="h-7 w-7 rounded-md p-0"
             >
-              <ChevronLeft />
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 w-7 rounded-md p-0 bg-blue-600 text-xs"
+            >
+              1
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="h-7 w-7"
+              size="icon"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              className="h-7 w-7 rounded-md p-0"
             >
-              <ChevronRight />
+              <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
-const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender }) => {
+
+const RenderActions = ({
+  socketRef,
+  project = {},
+  testSuite = {},
+  setReRender,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const status = testSuite.status;
 
   const handleExecuteTestSuite = () => {
@@ -298,76 +369,81 @@ const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender })
           testSuiteStatus: "Running",
         });
         setReRender({});
-        toast.success("Bắt đầu thực thi kịch bản test");
+        toast.success("Test execution started");
         const isSocketValid = socketRef && socketRef.current;
         if (isSocketValid && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ key: "checkStatusTestSuite", testSuiteId: testSuite.id }));
+          socketRef.current.send(
+            JSON.stringify({
+              key: "checkStatusTestSuite",
+              testSuiteId: testSuite.id,
+            })
+          );
         }
       } catch (error) {
         console.log("error :>> ", error);
-        const message = get(error, "response.data.message") || "Có lỗi khi bắt đầu thực thi kịch bản test";
+        const message =
+          get(error, "response.data.message") ||
+          "Error starting test execution";
         toast.error(message);
       }
     };
   };
-  const handleRetrySyncData = async () => {
-    try {
-      setLoading(true);
-      await TestSuiteApi().retrySync(testSuite.id);
-      toast.success("Đồng bộ dữ liệu thành công");
-      setReRender({});
-    } catch (error) {
-      toast.error("Đồng bộ dữ liệu thất bại");
-    } finally {
-      setLoading(false);
-    }
-  };
+
   const handleDeleteTestSuite = async () => {
     try {
-      setLoading(testSuite.id);
+      setIsDeleting(true);
       await TestSuiteApi().delete(testSuite.id);
       if (setReRender) {
         setReRender({});
       }
-      toast.success(`Đã xóa kịch bản ${testSuite.name} thành công`);
+      toast.success(`Test suite ${testSuite.name} deleted successfully`);
+      setDeleteDialogOpen(false);
     } catch (error) {
-      toast.error(`Có lỗi khi xóa kịch bản test thất bại`);
+      toast.error(`Error deleting test suite`);
     } finally {
-      setLoading(null);
+      setIsDeleting(false);
     }
   };
+
   return (
     <Fragment>
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-1">
         <Button
           disabled={loading || status === "Running"}
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
           onClick={handleExecuteTestSuite()}
         >
           {loading ? (
-            <LoaderCircle className="animate-spin" />
+            <LoaderCircle className="animate-spin h-4 w-4" />
           ) : (
-            <Fragment>{status === "Running" ? <Pause className="size-4" /> : <Play className="size-4" />}</Fragment>
+            <Play className="h-4 w-4" />
           )}
         </Button>
+
         <Dialog>
           <DialogTrigger asChild>
             <Button
-              onClick={() => {}}
-              disabled={!(status === "Completed" && get(testSuite, "params.resultRuner.reportUrl"))}
+              disabled={
+                !(
+                  status === "Completed" &&
+                  get(testSuite, "params.resultRuner.reportUrl")
+                )
+              }
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
             >
-              {loading ? <LoaderCircle className="animate-spin" /> : <FileText className="size-4" />}
+              <FileText className="h-4 w-4" />
             </Button>
           </DialogTrigger>
           <DialogContent className="min-w-[1000px]">
             <DialogHeader>
-              <DialogTitle>Xem kết quả của kịch bản test {testSuite.name}</DialogTitle>
-              <DialogDescription>Chi tiết các thông số về kết quả của kịch bản test</DialogDescription>
+              <DialogTitle>Test Results: {testSuite.name}</DialogTitle>
+              <DialogDescription>
+                Detailed test execution results
+              </DialogDescription>
             </DialogHeader>
             <div className="w-full min-h-[650px] overflow-auto">
               <iframe
@@ -378,40 +454,75 @@ const RenderActions = ({ socketRef, project = {}, testSuite = {}, setReRender })
             </div>
           </DialogContent>
         </Dialog>
+
         <Button
-          onClick={handleRetrySyncData}
-          disabled={get(testSuite, "params.githubData.content.sha") || loading || status === "Running"}
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
-        >
-          {loading ? <LoaderCircle className="animate-spin" /> : <CloudUpload className="size-4" />}
-        </Button>
-        <Button
+          className="h-8 w-8 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
           onClick={() => {
             router.push(
-              `/test-management/new-test-case?project=${encodeURIComponent(project.title)}&projectId=${
-                project.id
-              }&testSuiteId=${testSuite.id}&slug=${project?.slug}`
+              `/test-management/new-test-case?project=${encodeURIComponent(
+                project.title
+              )}&projectId=${project.id}&testSuiteId=${testSuite.id}&slug=${
+                project?.slug
+              }`
             );
           }}
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
           disabled={loading || status === "Running"}
         >
-          {loading ? <LoaderCircle className="animate-spin" /> : <Edit className="h-4 w-4" />}
+          <Edit className="h-4 w-4" />
         </Button>
+
         <Button
-          onClick={() => handleDeleteTestSuite()}
-          disabled={loading || status === "Running"}
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-red-500 hover:text-red-600"
+          className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={loading || status === "Running"}
         >
-          {loading ? <LoaderCircle className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Test Suite</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this test suite? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-3">
+            <div className="border p-3 rounded-md">
+              <p className="font-medium">{testSuite.name}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTestSuite}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Fragment>
   );
 };
