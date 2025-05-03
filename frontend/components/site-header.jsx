@@ -10,19 +10,27 @@ export function SiteHeader() {
   const searchParams = useSearchParams();
 
   const pageInfo = useMemo(() => {
-    if (pathname.startsWith("/test-management/new-test-case")) {
+    if (pathname.startsWith("/test-management/ur-editor")) {
       const projectName = searchParams.get("project");
       const projectId = searchParams.get("projectId");
+      const testSuiteId = searchParams.get("testSuiteId");
+
       return {
         title: "Test Management",
         isBreadcrumb: true,
         breadcrumbs: [
-          { title: "Test Management", path: "/test-management" },
+          {
+            title: "Test Management",
+            path: `/test-management?projectId=${projectId}`,
+          },
           {
             title: projectName,
             path: `/test-management?projectId=${projectId}`,
           },
-          { title: "New Test Suite", path: pathname },
+          {
+            title: testSuiteId ? "Edit Test Suite" : "New Test Suite",
+            path: pathname + window.location.search,
+          },
         ],
       };
     }

@@ -244,7 +244,7 @@ export default function TestCaseList({
             <Button
               onClick={() => {
                 router.push(
-                  `/test-management/new-test-case?project=${encodeURIComponent(
+                  `/test-management/ur-editor?project=${encodeURIComponent(
                     project.title
                   )}&projectId=${project.id}`
                 );
@@ -423,7 +423,7 @@ const RenderActions = ({
           className="h-8 w-8 text-foreground/70 hover:bg-muted"
           onClick={() => {
             router.push(
-              `/test-management/new-test-case?project=${encodeURIComponent(
+              `/test-management/ur-editor?project=${encodeURIComponent(
                 project.title
               )}&projectId=${project.id}&testSuiteId=${testSuite.id}&slug=${
                 project?.slug
