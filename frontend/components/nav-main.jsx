@@ -49,8 +49,13 @@ const MySidebarMenuItem = ({ item = {} }) => {
   const pathname = usePathname();
 
   const current = stripTrailingSlash(pathname);
-  const target = stripTrailingSlash(item.url);
-  const isActive = current === target || current.startsWith(`${target}/`);
+  const targetUrl = new URL(item.url, "https://urtest.click");
+  const target = stripTrailingSlash(targetUrl.pathname);
+
+  const isTestManagement =
+    target === "/test-management" && current === "/test-management";
+  const isActive =
+    current === target || current.startsWith(`${target}/`) || isTestManagement;
 
   const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
 
