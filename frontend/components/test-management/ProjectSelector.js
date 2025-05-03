@@ -1,5 +1,11 @@
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ProjectApi } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -21,7 +27,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
         setListProject(data.projects);
         setLoading(false);
       } catch (err) {
-        toast.error("Không thể tải danh sách Project");
+        toast.error("Failed to load projects");
         console.error("Failed to fetch projects:", err);
         setError("Failed to load projects. Please try again later.");
         setLoading(false);
@@ -30,11 +36,14 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
 
     getProjects();
   }, []);
+
   const handleGetProjectDetail = async (projectId) => {
     try {
       const data = await ProjectApi().detail(projectId);
       setProject(data.project);
-    } catch (error) {}
+    } catch (error) {
+      toast.error("Failed to load project details");
+    }
   };
 
   useEffect(() => {
@@ -53,7 +62,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-16">
+      <div className="flex justify-center items-center h-10 w-[400px] border rounded-md px-3">
         <LoadingSpinner size="small" message="Loading projects..." />
       </div>
     );
@@ -61,8 +70,8 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-16">
-        <div className="text-red-500">{error}</div>
+      <div className="flex justify-center items-center h-10 border rounded-md px-3 w-[400px]">
+        <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>
       </div>
     );
   }
@@ -72,8 +81,8 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[400px]">
-              <SelectValue placeholder={`Chọn Project để xem thông tin`} />
+            <SelectTrigger className="w-[400px] h-10">
+              <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
               {listProject.map((project) => (
