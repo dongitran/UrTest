@@ -1,14 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, LoaderCircle } from "lucide-react";
+import { Send, LoaderCircle, User, MessageSquare, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "@/lib/keycloak";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { useSearchParams } from "next/navigation";
 
 export default function ChatPanel() {
-  const [messages, setMessages] = useState([]);
+  const searchParams = useSearchParams();
+  const testSuiteId = searchParams.get("testSuiteId");
+
+  const getChatKey = () => `chat_messages_${testSuiteId || 'new'}`;
+
+  const [messages, setMessages] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedMessages = sessionStorage.getItem(getChatKey());
+      return savedMessages ? JSON.parse(savedMessages) : [];
+    }
+    return [];
+  });
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -20,6 +33,12 @@ export default function ChatPanel() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(getChatKey(), JSON.stringify(messages));
+    }
+  }, [messages, testSuiteId]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -106,11 +125,10 @@ export default function ChatPanel() {
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
-                  : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
-              }`}
+              className={`p-3 rounded-lg ${message.role === "user"
+                ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
+                : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
+                }`}
             >
               <div className="font-semibold text-sm mb-1 text-foreground">
                 {message.role === "user" ? "You" : "UrTest"}

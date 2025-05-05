@@ -159,11 +159,11 @@ export default function ProjectTable({
       },
       {
         accessorKey: "totalTestSuiteExecute",
-        header: "Total Test Suite Execution",
+        header: "Test Executions",
       },
       {
         accessorKey: "createdBy",
-        header: () => <div className="text-center">Người tạo</div>,
+        header: () => <div className="text-center">Creator</div>,
         cell: ({ row }) => (
           <div className="lowercase">{row.getValue("createdBy")}</div>
         ),

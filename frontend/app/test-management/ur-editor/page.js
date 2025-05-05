@@ -50,6 +50,19 @@ export default function NewTestCasePage() {
 
   const { register, getValues, setValue, watch } = useForm();
 
+  const clearChatHistory = useCallback(() => {
+    const chatKey = `chat_messages_${testSuiteId || "new"}`;
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(chatKey);
+    }
+  }, [testSuiteId]);
+
+  useEffect(() => {
+    return () => {
+      clearChatHistory();
+    };
+  }, [clearChatHistory]);
+
   const autoSave = useCallback(() => {
     if (!autoSaveEnabled || !projectId) return;
 
