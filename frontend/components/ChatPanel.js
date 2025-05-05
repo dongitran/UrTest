@@ -100,9 +100,9 @@ export default function ChatPanel() {
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">
+    <Card className="h-full flex flex-col bg-card border-border">
+      <CardHeader className="pb-2 border-b border-border">
+        <CardTitle className="text-lg font-semibold text-foreground">
           UrTest Assistant
         </CardTitle>
       </CardHeader>
@@ -113,44 +113,60 @@ export default function ChatPanel() {
               key={index}
               className={`p-3 rounded-lg ${
                 message.role === "user"
-                  ? "bg-blue-100 dark:bg-blue-900 ml-auto max-w-[80%]"
-                  : "bg-gray-100 dark:bg-gray-800 mr-auto max-w-[80%]"
+                  ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
+                  : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
               }`}
             >
-              <div className="font-semibold text-sm mb-1">
+              <div className="font-semibold text-sm mb-1 text-foreground">
                 {message.role === "user" ? "You" : "UrTest"}
               </div>
-              <div className="whitespace-pre-wrap">
+              <div className="whitespace-pre-wrap text-foreground prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown
                   components={{
-                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    p: ({ children }) => (
+                      <p className="mb-2 text-foreground">{children}</p>
+                    ),
                     strong: ({ children }) => (
-                      <strong className="font-semibold">{children}</strong>
+                      <strong className="font-semibold text-foreground">
+                        {children}
+                      </strong>
                     ),
                     em: ({ children }) => (
-                      <em className="italic">{children}</em>
+                      <em className="italic text-foreground">{children}</em>
                     ),
                     code: ({ children }) => (
-                      <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-sm">
+                      <code className="bg-secondary/50 px-1 rounded text-sm text-foreground font-mono">
                         {children}
                       </code>
                     ),
                     h1: ({ children }) => (
-                      <h1 className="text-xl font-bold mb-2">{children}</h1>
+                      <h1 className="text-xl font-bold mb-2 text-foreground">
+                        {children}
+                      </h1>
                     ),
                     h2: ({ children }) => (
-                      <h2 className="text-lg font-bold mb-2">{children}</h2>
+                      <h2 className="text-lg font-bold mb-2 text-foreground">
+                        {children}
+                      </h2>
                     ),
                     h3: ({ children }) => (
-                      <h3 className="text-md font-bold mb-2">{children}</h3>
+                      <h3 className="text-md font-bold mb-2 text-foreground">
+                        {children}
+                      </h3>
                     ),
                     ul: ({ children }) => (
-                      <ul className="list-disc pl-5 mb-2">{children}</ul>
+                      <ul className="list-disc pl-5 mb-2 text-foreground">
+                        {children}
+                      </ul>
                     ),
                     ol: ({ children }) => (
-                      <ol className="list-decimal pl-5 mb-2">{children}</ol>
+                      <ol className="list-decimal pl-5 mb-2 text-foreground">
+                        {children}
+                      </ol>
                     ),
-                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    li: ({ children }) => (
+                      <li className="mb-1 text-foreground">{children}</li>
+                    ),
                   }}
                 >
                   {message.content}
@@ -160,19 +176,20 @@ export default function ChatPanel() {
           ))}
           <div ref={messagesEndRef} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 border-t border-border pt-4">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask about your test case..."
             disabled={isLoading}
-            className="flex-1"
+            className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
           />
           <Button
             onClick={sendMessage}
             disabled={isLoading || !input.trim()}
             size="sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isLoading ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />

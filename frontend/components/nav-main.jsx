@@ -15,14 +15,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import WorkspaceModal from "@/components/Modal";
 import { castArray, compact } from "lodash";
 import { MoreHorizontalIcon, Pen, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 export function NavMain({ items }) {
-  const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -32,11 +30,6 @@ export function NavMain({ items }) {
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
-
-      <WorkspaceModal
-        openWorkspaceModal={openWorkspaceModal}
-        setOpenWorkspaceModal={setOpenWorkspaceModal}
-      />
     </SidebarGroup>
   );
 }
@@ -114,11 +107,6 @@ const MySidebarMenuItem = ({ item = {} }) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <WorkspaceModal
-        workspace={item}
-        openWorkspaceModal={openWorkspaceModal}
-        setOpenWorkspaceModal={setOpenWorkspaceModal}
-      />
     </Fragment>
   );
 };
