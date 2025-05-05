@@ -5,13 +5,10 @@ import {
   BookOpenIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
-  Lightbulb,
   SearchIcon,
   SettingsIcon,
   ClipboardListIcon,
-  BugIcon,
   ZapIcon,
-  CodeIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -114,16 +111,19 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="p-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-0 h-auto hover:bg-transparent"
             >
-              <a href="#" className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
-                <span className="text-base font-semibold">UrTest</span>
+              <a href="#" className="block w-full p-0">
+                <img
+                  src="https://s0.dtur.xyz/cover/urtest-dash-banner.jpg"
+                  alt="UrTest Dashboard Banner"
+                  className="w-full h-auto object-cover"
+                />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
