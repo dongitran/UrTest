@@ -70,7 +70,11 @@ export const TestResourceApi = (path = "/api/test-resource") => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  return { patch, create, list, delete: _delete };
+  const get = async (id) => {
+    const res = await apiClient.get(`${path}/${id}`);
+    return res.data;
+  };
+  return { patch, create, list, delete: _delete, get };
 };
 
 export const TestSuiteApi = (path = "/api/testsuite") => {

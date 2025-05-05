@@ -1,0 +1,204 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Send, LoaderCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { getToken } from "@/lib/keycloak";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+
+export default function ChatPanel() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch("http://localhost:3020/api/ai/chat", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [userMessage],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI response");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiMessage = { role: "assistant", content: "" };
+      setMessages((prev) => [...prev, aiMessage]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") {
+              break;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                aiMessage.content += parsed.content;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = { ...aiMessage };
+                  return newMessages;
+                });
+              }
+            } catch (e) {
+              console.error("Failed to parse SSE data:", e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message to AI");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <Card className="h-full flex flex-col bg-card border-border">
+      <CardHeader className="pb-2 border-b border-border">
+        <CardTitle className="text-lg font-semibold text-foreground">
+          UrTest Assistant
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[calc(100vh-280px)]">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`p-3 rounded-lg ${
+                message.role === "user"
+                  ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
+                  : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
+              }`}
+            >
+              <div className="font-semibold text-sm mb-1 text-foreground">
+                {message.role === "user" ? "You" : "UrTest"}
+              </div>
+              <div className="whitespace-pre-wrap text-foreground prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-2 text-foreground">{children}</p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-foreground">
+                        {children}
+                      </strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic text-foreground">{children}</em>
+                    ),
+                    code: ({ children }) => (
+                      <code className="bg-secondary/50 px-1 rounded text-sm text-foreground font-mono">
+                        {children}
+                      </code>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className="text-xl font-bold mb-2 text-foreground">
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-lg font-bold mb-2 text-foreground">
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-md font-bold mb-2 text-foreground">
+                        {children}
+                      </h3>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5 mb-2 text-foreground">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-5 mb-2 text-foreground">
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="mb-1 text-foreground">{children}</li>
+                    ),
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className="flex gap-2 border-t border-border pt-4">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask about your test case..."
+            disabled={isLoading}
+            className="flex-1 bg-background border-input text-foreground placeholder:text-muted-foreground"
+          />
+          <Button
+            onClick={sendMessage}
+            disabled={isLoading || !input.trim()}
+            size="sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {isLoading ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

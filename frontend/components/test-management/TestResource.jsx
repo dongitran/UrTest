@@ -1,5 +1,4 @@
 import MyPagination from "@/components/MyPagination";
-import TestResourceModal from "@/components/test-management/TestResourceModal";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,15 +18,17 @@ import {
 import { TestResourceApi } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Edit, LoaderCircle, Trash2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const itemsPerPage = 4;
 
 export default function TestRoute({ project = {} }) {
-  const [openModal, setOpenModal] = useState(false);
   const [page, setPage] = useState(1);
   const [listTestResource, setListTestResource] = useState([]);
+  const router = useRouter();
+
   const { data, refetch } = useQuery({
     enabled: project.id ? true : false,
     queryKey: ["test-resource"],
@@ -49,25 +50,21 @@ export default function TestRoute({ project = {} }) {
       <CardHeader className="pb-2 p-6 border-b">
         <CardTitle className="flex gap-3 items-center justify-between">
           <span className="text-lg font-semibold">Test Resources</span>
-          <TestResourceModal
-            dialogChild={() => {
-              return (
-                <Button
-                  onClick={() => setOpenModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="hover:bg-muted text-xs h-8 flex items-center gap-1"
-                >
-                  <Plus className="h-3 w-3" />
-                  Create Resource
-                </Button>
+          <Button
+            onClick={() => {
+              router.push(
+                `/test-management/ur-editor/resource?project=${encodeURIComponent(
+                  project.title
+                )}&projectId=${project.id}`
               );
             }}
-            openModal={openModal}
-            setOpenModal={setOpenModal}
-            projectId={project.id}
-            refetch={refetch}
-          />
+            variant="outline"
+            size="sm"
+            className="hover:bg-muted text-xs h-8 flex items-center gap-1"
+          >
+            <Plus className="h-3 w-3" />
+            Create Resource
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
@@ -106,9 +103,9 @@ export default function TestRoute({ project = {} }) {
 }
 
 const TestResourceItem = ({ item, refetch, project }) => {
-  const [openModal, setOpenModal] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
 
   const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
@@ -120,7 +117,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
       await TestResourceApi().delete(item.id);
       toast.success("Test resource deleted successfully");
       if (refetch) {
-        refetch(); // Refresh the list after deletion
+        refetch();
       }
       setDeleteDialogOpen(false);
     } catch (error) {
@@ -138,24 +135,21 @@ const TestResourceItem = ({ item, refetch, project }) => {
           <p className="text-sm font-medium">{item.title}</p>
         </div>
         <div className="flex items-center gap-1">
-          <TestResourceModal
-            dialogChild={() => {
-              return (
-                <Button
-                  onClick={() => setOpenModal(true)}
-                  className="h-8 w-8 p-0"
-                  variant="ghost"
-                >
-                  <Edit className="size-4 text-muted-foreground" />
-                </Button>
+          <Button
+            onClick={() => {
+              router.push(
+                `/test-management/ur-editor/resource?project=${encodeURIComponent(
+                  project.title
+                )}&projectId=${project.id}&resourceId=${item.id}&slug=${
+                  project?.slug
+                }`
               );
             }}
-            openModal={openModal}
-            setOpenModal={setOpenModal}
-            projectId={project.id}
-            refetch={refetch}
-            testResource={item}
-          />
+            className="h-8 w-8 p-0"
+            variant="ghost"
+          >
+            <Edit className="size-4 text-muted-foreground" />
+          </Button>
           <Button
             variant="ghost"
             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50"
