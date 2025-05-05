@@ -11,7 +11,9 @@ import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatPanel from "@/components/ChatPanel";
+import CommentPanel from "@/components/CommentPanel";
 import {
   saveTestSuiteDraft,
   getTestSuiteDraft,
@@ -372,7 +374,24 @@ export default function NewTestCasePage() {
           </div>
 
           <div className="w-[30%] h-full">
-            <ChatPanel />
+            <Tabs defaultValue="assistant" className="h-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="assistant">UrTest Assistant</TabsTrigger>
+                <TabsTrigger value="comments">Comments</TabsTrigger>
+              </TabsList>
+              <TabsContent
+                value="assistant"
+                className="mt-2 h-[calc(100%-40px)]"
+              >
+                <ChatPanel />
+              </TabsContent>
+              <TabsContent
+                value="comments"
+                className="mt-2 h-[calc(100%-40px)]"
+              >
+                <CommentPanel projectId={projectId} testSuiteId={testSuiteId} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

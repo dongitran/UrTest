@@ -9,8 +9,9 @@ import VerifyToken from '@middlewars/VerifyToken';
 import CheckPermission from '@middlewars/CheckPermission';
 import DashboardRoute from '@route/dashboard.route';
 import TestSuiteRoute from '@route/testsuite.route';
-import TestResourceRoute from '@route/testresource.route';
+import TestResourceRoute from '@route/testResource.route';
 import AIChatRoute from '@route/ai-chat.route';
+import CommentRoute from '@route/comment.route';
 
 const app = new Hono();
 
@@ -25,6 +26,7 @@ app.route('/api/project', ProjectRoute);
 app.route('/api/testsuite', TestSuiteRoute);
 app.route('/api/test-resource', TestResourceRoute);
 app.route('/api/ai', AIChatRoute);
+app.route('/api/comment', CommentRoute);
 
 app.onError(ErrorLog);
 
