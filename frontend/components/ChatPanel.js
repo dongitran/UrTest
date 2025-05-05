@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, LoaderCircle, User, MessageSquare, Trash2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Send, LoaderCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "@/lib/keycloak";
 import { toast } from "sonner";
@@ -12,10 +12,10 @@ export default function ChatPanel() {
   const searchParams = useSearchParams();
   const testSuiteId = searchParams.get("testSuiteId");
 
-  const getChatKey = () => `chat_messages_${testSuiteId || 'new'}`;
+  const getChatKey = () => `chat_messages_${testSuiteId || "new"}`;
 
   const [messages, setMessages] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const savedMessages = sessionStorage.getItem(getChatKey());
       return savedMessages ? JSON.parse(savedMessages) : [];
     }
@@ -24,7 +24,22 @@ export default function ChatPanel() {
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showProcessingMessage, setShowProcessingMessage] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState("");
   const messagesEndRef = useRef(null);
+
+  const processingMessages = [
+    "Analyzing your request...",
+    "Gathering information...",
+    "Processing data...",
+    "Preparing response...",
+    "Checking information...",
+    "Fetching data...",
+    "UrTest is thinking...",
+    "Reviewing context...",
+    "Analyzing question...",
+    "Finding the best answer...",
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,13 +47,36 @@ export default function ChatPanel() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, processingMessage]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       sessionStorage.setItem(getChatKey(), JSON.stringify(messages));
     }
   }, [messages, testSuiteId]);
+
+  useEffect(() => {
+    let interval;
+    let messageIndex = 0;
+
+    if (showProcessingMessage) {
+      setProcessingMessage(processingMessages[messageIndex]);
+      messageIndex = 1;
+
+      interval = setInterval(() => {
+        setProcessingMessage(
+          processingMessages[messageIndex % processingMessages.length]
+        );
+        messageIndex++;
+      }, 1500);
+    } else {
+      setProcessingMessage("");
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showProcessingMessage]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -47,6 +85,7 @@ export default function ChatPanel() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setShowProcessingMessage(true);
 
     try {
       const token = getToken();
@@ -54,16 +93,19 @@ export default function ChatPanel() {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:3020/api/ai/chat", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [userMessage],
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/ai/chat`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [userMessage],
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to get AI response");
@@ -73,6 +115,7 @@ export default function ChatPanel() {
       const decoder = new TextDecoder();
       let aiMessage = { role: "assistant", content: "" };
       setMessages((prev) => [...prev, aiMessage]);
+      let firstContentReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -90,6 +133,11 @@ export default function ChatPanel() {
             try {
               const parsed = JSON.parse(data);
               if (parsed.content) {
+                if (!firstContentReceived) {
+                  firstContentReceived = true;
+                  setShowProcessingMessage(false);
+                }
+
                 aiMessage.content += parsed.content;
                 setMessages((prev) => {
                   const newMessages = [...prev];
@@ -108,6 +156,7 @@ export default function ChatPanel() {
       toast.error("Failed to send message to AI");
     } finally {
       setIsLoading(false);
+      setShowProcessingMessage(false);
     }
   };
 
@@ -125,10 +174,11 @@ export default function ChatPanel() {
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg ${message.role === "user"
-                ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
-                : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
-                }`}
+              className={`p-3 rounded-lg ${
+                message.role === "user"
+                  ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
+                  : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
+              }`}
             >
               <div className="font-semibold text-sm mb-1 text-foreground">
                 {message.role === "user" ? "You" : "UrTest"}
@@ -187,6 +237,17 @@ export default function ChatPanel() {
               </div>
             </div>
           ))}
+
+          {showProcessingMessage && processingMessage && (
+            <div className="p-3 rounded-lg bg-secondary/30 text-foreground/80 mr-auto max-w-[80%] animate-pulse">
+              <div className="font-semibold text-sm mb-1 text-foreground/80 flex items-center gap-2">
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                UrTest
+              </div>
+              <div className="text-sm italic">{processingMessage}</div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
         <div className="flex gap-2 border-t border-border pt-4">
