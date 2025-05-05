@@ -24,7 +24,7 @@ export default function ChatPanel() {
     if (!input.trim() || isLoading) return;
 
     const userMessage = { role: "user", content: input };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
@@ -37,11 +37,11 @@ export default function ChatPanel() {
       const response = await fetch("http://localhost:3020/api/ai/chat", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [userMessage]
+          messages: [userMessage],
         }),
       });
 
@@ -52,7 +52,7 @@ export default function ChatPanel() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiMessage = { role: "assistant", content: "" };
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -71,7 +71,7 @@ export default function ChatPanel() {
               const parsed = JSON.parse(data);
               if (parsed.content) {
                 aiMessage.content += parsed.content;
-                setMessages(prev => {
+                setMessages((prev) => {
                   const newMessages = [...prev];
                   newMessages[newMessages.length - 1] = { ...aiMessage };
                   return newMessages;
@@ -101,20 +101,21 @@ export default function ChatPanel() {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">AI Assistant</CardTitle>
+        <CardTitle className="text-lg font-semibold">UrTest Assistant</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[calc(100vh-280px)]">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg ${message.role === "user"
+              className={`p-3 rounded-lg ${
+                message.role === "user"
                   ? "bg-blue-100 dark:bg-blue-900 ml-auto max-w-[80%]"
                   : "bg-gray-100 dark:bg-gray-800 mr-auto max-w-[80%]"
-                }`}
+              }`}
             >
               <div className="font-semibold text-sm mb-1">
-                {message.role === "user" ? "You" : "AI"}
+                {message.role === "user" ? "You" : "UrTest"}
               </div>
               <div className="whitespace-pre-wrap">{message.content}</div>
             </div>

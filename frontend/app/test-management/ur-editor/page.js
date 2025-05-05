@@ -236,7 +236,7 @@ export default function NewTestCasePage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
-        <div className="flex gap-6">
+        <div className="flex gap-6 h-[calc(100vh-120px)]">
           <div className="w-[70%] gap-4 p-6 border rounded-lg bg-card">
             <div className="flex items-center gap-4">
               <div className="flex-1 flex items-center gap-2">
@@ -371,7 +371,7 @@ export default function NewTestCasePage() {
             </div>
           </div>
 
-          <div className="w-[30%]">
+          <div className="w-[30%] h-full">
             <ChatPanel />
           </div>
         </div>
