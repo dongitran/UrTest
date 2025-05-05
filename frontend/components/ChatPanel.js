@@ -5,6 +5,7 @@ import { Send, LoaderCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "@/lib/keycloak";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 export default function ChatPanel() {
   const [messages, setMessages] = useState([]);
@@ -101,7 +102,9 @@ export default function ChatPanel() {
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">UrTest Assistant</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          UrTest Assistant
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
         <div className="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[calc(100vh-280px)]">
@@ -117,7 +120,42 @@ export default function ChatPanel() {
               <div className="font-semibold text-sm mb-1">
                 {message.role === "user" ? "You" : "UrTest"}
               </div>
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              <div className="whitespace-pre-wrap">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    strong: ({ children }) => (
+                      <strong className="font-semibold">{children}</strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic">{children}</em>
+                    ),
+                    code: ({ children }) => (
+                      <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded text-sm">
+                        {children}
+                      </code>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className="text-xl font-bold mb-2">{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-lg font-bold mb-2">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-md font-bold mb-2">{children}</h3>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5 mb-2">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-5 mb-2">{children}</ol>
+                    ),
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
           <div ref={messagesEndRef} />
