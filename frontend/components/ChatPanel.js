@@ -101,11 +101,6 @@ export default function ChatPanel() {
 
   return (
     <Card className="h-full flex flex-col bg-card border-border">
-      <CardHeader className="pb-2 border-b border-border">
-        <CardTitle className="text-lg font-semibold text-foreground">
-          UrTest Assistant
-        </CardTitle>
-      </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
         <div className="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[calc(100vh-280px)]">
           {messages.map((message, index) => (
