@@ -11,6 +11,7 @@ import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
+import ChatPanel from "@/components/ChatPanel";
 import {
   saveTestSuiteDraft,
   getTestSuiteDraft,
@@ -235,135 +236,143 @@ export default function NewTestCasePage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="grid gap-6">
-        <div className="grid gap-4 p-6 border rounded-lg bg-card">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="whitespace-nowrap font-medium">Test Suite:</span>
-              <Input
-                id="test-name"
-                {...register("name")}
-                placeholder="Enter test case name"
-                className="w-full"
-              />
+        <div className="flex gap-6">
+          <div className="w-[70%] gap-4 p-6 border rounded-lg bg-card">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-2">
+                <span className="whitespace-nowrap font-medium">
+                  Test Suite:
+                </span>
+                <Input
+                  id="test-name"
+                  {...register("name")}
+                  placeholder="Enter test case name"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <span className="whitespace-nowrap font-medium">Tags:</span>
+                <TagInput
+                  value={tags}
+                  onChange={setTags}
+                  placeholder="Press Enter to add tags"
+                />
+              </div>
             </div>
-            <div className="flex-1 flex items-center gap-2">
-              <span className="whitespace-nowrap font-medium">Tags:</span>
-              <TagInput
-                value={tags}
-                onChange={setTags}
-                placeholder="Press Enter to add tags"
-              />
+
+            <div className="grid gap-2 mt-4">
+              <div
+                className="border rounded-sm bg-card overflow-hidden"
+                style={{ height: editorHeight }}
+              >
+                <MonacoEditor
+                  language="robotframework"
+                  value={scriptContent}
+                  onChange={setScriptContent}
+                  slug={slug}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <div
-              className="border rounded-sm bg-card overflow-hidden"
-              style={{ height: editorHeight }}
-            >
-              <MonacoEditor
-                language="robotframework"
-                value={scriptContent}
-                onChange={setScriptContent}
-                slug={slug}
-              />
-            </div>
-          </div>
-
-          {showProgress && (
-            <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden">
-              <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
-            </div>
-          )}
-
-          {!showProgress && watch("resultRuner")?.reportUrl && (
-            <div className="w-full min-h-[650px] overflow-auto">
-              <iframe
-                src={`${watch("resultRuner").reportUrl}/report.html`}
-                className="w-full h-full border-none"
-                allowFullScreen
-              ></iframe>
-            </div>
-          )}
-
-          <div className="flex items-center pt-4">
-            <Button
-              variant="outline"
-              onClick={() =>
-                router.push(`/test-management?projectId=${projectId}`)
-              }
-              size="sm"
-              className="mr-2"
-            >
-              {isLoading && <LoaderCircle className="animate-spin mr-2" />}
-              Cancel
-            </Button>
-
-            {projectId && (
-              <Fragment>
-                {testSuiteId ? (
-                  <Fragment>
-                    <Button
-                      onClick={handleEdit}
-                      disabled={isLoading}
-                      className=""
-                      size="sm"
-                    >
-                      {isLoading && (
-                        <LoaderCircle className="animate-spin mr-2" />
-                      )}
-                      Edit
-                    </Button>
-                  </Fragment>
-                ) : (
-                  <Fragment>
-                    <Button
-                      onClick={handleSave}
-                      disabled={isLoading}
-                      className=""
-                      size="sm"
-                    >
-                      {isLoading && (
-                        <LoaderCircle className="animate-spin mr-2" />
-                      )}
-                      Create
-                    </Button>
-                  </Fragment>
-                )}
-              </Fragment>
+            {showProgress && (
+              <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden mt-4">
+                <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
+              </div>
             )}
 
-            <div className="ml-auto flex items-center gap-3">
-              {hasDraft && (
-                <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                  <History className="h-3 w-3" />
-                  <span>Auto-saved {formatDraftSavedTime(lastSaved)}</span>
-                  <Button
-                    onClick={handleResetToOriginal}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 py-0 text-xs"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    {testSuiteId ? "Restore original" : "Delete draft"}
-                  </Button>
-                </div>
+            {!showProgress && watch("resultRuner")?.reportUrl && (
+              <div className="w-full min-h-[650px] overflow-auto mt-4">
+                <iframe
+                  src={`${watch("resultRuner").reportUrl}/report.html`}
+                  className="w-full h-full border-none"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            )}
+
+            <div className="flex items-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  router.push(`/test-management?projectId=${projectId}`)
+                }
+                size="sm"
+                className="mr-2"
+              >
+                {isLoading && <LoaderCircle className="animate-spin mr-2" />}
+                Cancel
+              </Button>
+
+              {projectId && (
+                <Fragment>
+                  {testSuiteId ? (
+                    <Fragment>
+                      <Button
+                        onClick={handleEdit}
+                        disabled={isLoading}
+                        className=""
+                        size="sm"
+                      >
+                        {isLoading && (
+                          <LoaderCircle className="animate-spin mr-2" />
+                        )}
+                        Edit
+                      </Button>
+                    </Fragment>
+                  ) : (
+                    <Fragment>
+                      <Button
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className=""
+                        size="sm"
+                      >
+                        {isLoading && (
+                          <LoaderCircle className="animate-spin mr-2" />
+                        )}
+                        Create
+                      </Button>
+                    </Fragment>
+                  )}
+                </Fragment>
               )}
 
-              <Button
-                onClick={handleRunTest}
-                disabled={isLoading}
-                className="bg-green-700 text-white hover:bg-green-800"
-                size="sm"
-              >
-                {isLoading ? (
-                  <LoaderCircle className="animate-spin mr-2" />
-                ) : (
-                  <Play className="h-4 w-4 mr-2" />
+              <div className="ml-auto flex items-center gap-3">
+                {hasDraft && (
+                  <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                    <History className="h-3 w-3" />
+                    <span>Auto-saved {formatDraftSavedTime(lastSaved)}</span>
+                    <Button
+                      onClick={handleResetToOriginal}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 py-0 text-xs"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      {testSuiteId ? "Restore original" : "Delete draft"}
+                    </Button>
+                  </div>
                 )}
-                Run Test
-              </Button>
+
+                <Button
+                  onClick={handleRunTest}
+                  disabled={isLoading}
+                  className="bg-green-700 text-white hover:bg-green-800"
+                  size="sm"
+                >
+                  {isLoading ? (
+                    <LoaderCircle className="animate-spin mr-2" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  Run Test
+                </Button>
+              </div>
             </div>
+          </div>
+
+          <div className="w-[30%]">
+            <ChatPanel />
           </div>
         </div>
       </div>
