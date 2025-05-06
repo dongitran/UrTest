@@ -68,7 +68,7 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
   });
 
   monaco.languages.registerCompletionItemProvider("robotframework", {
-    triggerCharacters: ["\n", "\t"],
+    triggerCharacters: ["*"],
     provideCompletionItems: (model, position) => {
       const lineContent = model.getLineContent(position.lineNumber);
       const wordUntil = model.getWordUntilPosition(position);
@@ -76,27 +76,79 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
         .substring(0, position.column - 1)
         .trim();
 
+      if (trimmedLineBefore.match(/^\*{1,2}$/)) {
+        const sectionHeaders = keywords.filter(
+          (item) => item.label.startsWith("***") && item.label.endsWith("***")
+        );
+
+        const asteriskStart = lineContent.indexOf("*");
+
+        return {
+          suggestions: sectionHeaders.map((item) => {
+            let insertText = item.insertText;
+
+            return {
+              label: item.label,
+              kind: monaco.languages.CompletionItemKind[item.kind],
+              insertText: insertText,
+              insertTextRules:
+                item.kind === "Snippet" || insertText.includes("${")
+                  ? monaco.languages.CompletionItemInsertTextRule
+                      .InsertAsSnippet
+                  : undefined,
+              documentation: item.documentation,
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: asteriskStart + 1,
+                endColumn: position.column,
+              },
+            };
+          }),
+        };
+      }
+
       if (trimmedLineBefore.includes("  ") && position.column > 2) {
         return { suggestions: [] };
       }
 
       return {
-        suggestions: keywords.map((item) => ({
-          label: item.label,
-          kind: monaco.languages.CompletionItemKind[item.kind],
-          insertText: item.insertText,
-          insertTextRules:
-            item.kind === "Snippet" || item.insertText.includes("${")
-              ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
-              : undefined,
-          documentation: item.documentation,
-          range: {
-            startLineNumber: position.lineNumber,
-            endLineNumber: position.lineNumber,
-            startColumn: wordUntil.startColumn,
-            endColumn: wordUntil.endColumn,
-          },
-        })),
+        suggestions: keywords.map((item) => {
+          let insertText = item.insertText;
+
+          if (item.kind === "Function" && insertText.includes("    ")) {
+            const parts = insertText.split(/\s{2,}/);
+            const funcName = parts[0];
+
+            if (parts.length > 1) {
+              const parameters = parts.slice(1);
+
+              insertText = funcName + "\n";
+              parameters.forEach((param) => {
+                insertText += "    ...    " + param + "\n";
+              });
+
+              insertText = insertText.slice(0, -1);
+            }
+          }
+
+          return {
+            label: item.label,
+            kind: monaco.languages.CompletionItemKind[item.kind],
+            insertText: insertText,
+            insertTextRules:
+              item.kind === "Snippet" || insertText.includes("${")
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                : undefined,
+            documentation: item.documentation,
+            range: {
+              startLineNumber: position.lineNumber,
+              endLineNumber: position.lineNumber,
+              startColumn: wordUntil.startColumn,
+              endColumn: wordUntil.endColumn,
+            },
+          };
+        }),
       };
     },
   });

@@ -38,6 +38,33 @@ TestResourceRoute.get(
   }
 );
 
+TestResourceRoute.get(
+  "/:id",
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
+  zValidator(
+    "param",
+    z.object({
+      id: z.string().ulid(),
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid("param");
+    
+    const testResource = await db.query.TestResourceTable.findFirst({
+      where: (clm, { and, eq, isNull }) => {
+        return and(eq(clm.id, id), isNull(clm.deletedAt));
+      },
+    });
+
+    if (!testResource) {
+      return ctx.json({ message: "Test resource not found" }, 404);
+    }
+
+    return ctx.json({ testResource });
+  }
+);
+
 TestResourceRoute.post(
   "/",
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),

@@ -34,10 +34,10 @@ export default function NewResourcePage() {
   const { register, getValues, setValue } = useForm();
 
   useEffect(() => {
-    if (resourceDetail && resourceId) {
-      setValue("title", resourceDetail.title);
-      setValue("description", resourceDetail.description);
-      setScriptContent(resourceDetail.content);
+    if (resourceDetail?.testResource && resourceId) {
+      setValue("title", resourceDetail.testResource.title);
+      setValue("description", resourceDetail.testResource.description);
+      setScriptContent(resourceDetail.testResource.content);
     }
   }, [resourceDetail, resourceId, setValue]);
 

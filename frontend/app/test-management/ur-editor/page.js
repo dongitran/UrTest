@@ -37,7 +37,7 @@ export default function NewTestCasePage() {
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
   const [scriptContent, setScriptContent] = useState(
-    `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`
+    `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
   );
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
@@ -241,7 +241,7 @@ export default function NewTestCasePage() {
       setValue("name", "");
       setTags([]);
       setScriptContent(
-        `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`
+        `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
       );
 
       clearTestSuiteDraft(projectId, "new");

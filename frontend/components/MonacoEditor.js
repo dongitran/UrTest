@@ -78,28 +78,40 @@ export default function MonacoEditor({
     [language, readOnly]
   );
 
-  const handleEditorDidMount = useCallback((editor, monacoInstance) => {
-    editorRef.current = editor;
-    setMonaco(monacoInstance);
+  const handleEditorDidMount = useCallback(
+    (editor, monacoInstance) => {
+      editorRef.current = editor;
+      setMonaco(monacoInstance);
 
-    editor.onKeyDown((e) => {
-      if (e.keyCode === 13 || e.keyCode === monacoInstance.KeyCode.Enter) {
-        setTimeout(() => {
-          const position = editor.getPosition();
-          const model = editor.getModel();
+      if (language === "robotframework") {
+        editor.onKeyDown((e) => {
+          if (e.keyCode === 56 && e.shiftKey) {
+            setTimeout(() => {
+              const position = editor.getPosition();
+              const model = editor.getModel();
 
-          if (model && position) {
-            const lineContent = model.getLineContent(position.lineNumber);
-            const lineBefore = lineContent.substring(0, position.column - 1);
+              if (model && position) {
+                const lineContent = model.getLineContent(position.lineNumber);
+                const lineBefore = lineContent.substring(
+                  0,
+                  position.column - 1
+                );
 
-            if (!lineBefore.trim() || lineBefore.trim() === "") {
-              editor.trigger("keyboard", "editor.action.triggerSuggest", {});
-            }
+                if (lineBefore.trim().match(/^\*{1,2}$/)) {
+                  editor.trigger(
+                    "keyboard",
+                    "editor.action.triggerSuggest",
+                    {}
+                  );
+                }
+              }
+            }, 100);
           }
-        }, 100);
+        });
       }
-    });
-  }, []);
+    },
+    [language]
+  );
 
   const handleEditorChange = useCallback(
     (value) => {
