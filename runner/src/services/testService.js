@@ -27,10 +27,19 @@ exports.runTest = async (requestId, project, content) => {
 
     const robotCommand = `robot tests/tests/${project}/run-test-tmp.robot`;
 
-    const { stdout, stderr } = await execPromise(robotCommand);
+    let stdout, stderr;
+    try {
+      const result = await execPromise(robotCommand);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (error) {
+      stdout = error.stdout;
+      stderr = error.stderr;
+      console.error('Error running test:', error);
+    }
 
     if (stderr) {
-      console.error('Robot test error:', stderr);
+      console.error('Robot test stderr:', stderr);
     }
 
     const reportFiles = [
