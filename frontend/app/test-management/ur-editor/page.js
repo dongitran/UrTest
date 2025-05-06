@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { LoaderCircle, Play, RefreshCw, History } from "lucide-react";
+import {
+  LoaderCircle,
+  Play,
+  RefreshCw,
+  History,
+  ExternalLink,
+} from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
@@ -31,7 +37,7 @@ export default function NewTestCasePage() {
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
   const [scriptContent, setScriptContent] = useState(
-    `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
+    `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`
   );
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
@@ -210,6 +216,13 @@ export default function NewTestCasePage() {
     }
   };
 
+  const handleOpenResults = () => {
+    const resultRuner = watch("resultRuner");
+    if (resultRuner?.reportUrl) {
+      window.open(`${resultRuner.reportUrl}/report.html`, "_blank");
+    }
+  };
+
   const handleResetToOriginal = () => {
     if (testSuiteDetail) {
       setValue("name", testSuiteDetail.name);
@@ -228,7 +241,7 @@ export default function NewTestCasePage() {
       setValue("name", "");
       setTags([]);
       setScriptContent(
-        `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
+        `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`
       );
 
       clearTestSuiteDraft(projectId, "new");
@@ -275,7 +288,7 @@ export default function NewTestCasePage() {
               </div>
             </div>
 
-            <div className="grid gap-2 mt-4">
+            <div className="grid gap-2 mt-4 relative">
               <div
                 className="border rounded-sm bg-card overflow-hidden"
                 style={{ height: editorHeight }}
@@ -287,23 +300,13 @@ export default function NewTestCasePage() {
                   slug={slug}
                 />
               </div>
+
+              {showProgress && (
+                <div className="absolute bottom-0 left-0 w-full bg-blue-700 rounded-full h-2 overflow-hidden z-50">
+                  <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
+                </div>
+              )}
             </div>
-
-            {showProgress && (
-              <div className="w-full bg-blue-700 rounded-full h-2 overflow-hidden mt-4">
-                <div className="bg-blue-700 w-full h-full rounded-full transition-all duration-300 progress-stripes"></div>
-              </div>
-            )}
-
-            {!showProgress && watch("resultRuner")?.reportUrl && (
-              <div className="w-full min-h-[650px] overflow-auto mt-4">
-                <iframe
-                  src={`${watch("resultRuner").reportUrl}/report.html`}
-                  className="w-full h-full border-none"
-                  allowFullScreen
-                ></iframe>
-              </div>
-            )}
 
             <div className="flex items-center pt-4">
               <Button
@@ -312,7 +315,7 @@ export default function NewTestCasePage() {
                   router.push(`/test-management?projectId=${projectId}`)
                 }
                 size="sm"
-                className="mr-2"
+                className="mr-2 w-24"
               >
                 {isLoading && <LoaderCircle className="animate-spin mr-2" />}
                 Cancel
@@ -325,13 +328,13 @@ export default function NewTestCasePage() {
                       <Button
                         onClick={handleEdit}
                         disabled={isLoading}
-                        className=""
+                        className="w-24 bg-blue-600 hover:bg-blue-700 text-white"
                         size="sm"
                       >
                         {isLoading && (
                           <LoaderCircle className="animate-spin mr-2" />
                         )}
-                        Edit
+                        Save
                       </Button>
                     </Fragment>
                   ) : (
@@ -339,7 +342,7 @@ export default function NewTestCasePage() {
                       <Button
                         onClick={handleSave}
                         disabled={isLoading}
-                        className=""
+                        className="w-24 bg-blue-600 hover:bg-blue-700 text-white"
                         size="sm"
                       >
                         {isLoading && (
@@ -369,19 +372,33 @@ export default function NewTestCasePage() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleRunTest}
-                  disabled={isLoading}
-                  className="bg-green-700 text-white hover:bg-green-800"
-                  size="sm"
-                >
-                  {isLoading ? (
-                    <LoaderCircle className="animate-spin mr-2" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
+                <>
+                  <Button
+                    onClick={handleRunTest}
+                    disabled={isLoading}
+                    className="bg-green-700 text-white hover:bg-green-800"
+                    size="sm"
+                  >
+                    {isLoading ? (
+                      <LoaderCircle className="animate-spin mr-2" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Run Test
+                  </Button>
+
+                  {!showProgress && watch("resultRuner")?.reportUrl && (
+                    <Button
+                      variant="default"
+                      className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
+                      size="sm"
+                      onClick={handleOpenResults}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Test Results
+                    </Button>
                   )}
-                  Run Test
-                </Button>
+                </>
               </div>
             </div>
           </div>
