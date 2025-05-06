@@ -20,7 +20,7 @@ const commonTable = {
 };
 export const TestResourceTable = pgTable('tbl_test_resource', {
   title: varchar({ length: 255 }).notNull(),
-  description: text().notNull(),
+  description: text(),
   projectId: varchar('project_id', { length: 255 }).notNull(),
   content: text().notNull(),
   fileName: varchar('file_name', { length: 255 }),
@@ -28,7 +28,7 @@ export const TestResourceTable = pgTable('tbl_test_resource', {
 });
 export const ProjectTable = pgTable('tbl_projects', {
   title: varchar({ length: 255 }).notNull(),
-  description: text().notNull(),
+  description: text(),
   slug: varchar().notNull(),
   ...commonTable,
 });

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const shemaForCreateAndPatch = z.object({
   projectId: z.string().ulid(),
   name: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   content: z.string(),
   tags: z.array(z.string()).optional(),
   resultRuner: z

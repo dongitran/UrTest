@@ -1,19 +1,19 @@
-import { zValidator } from "@hono/zod-validator";
-import fp from "lodash/fp";
-import dayjs from "dayjs";
-import db from "db/db";
-import { TestSuiteExecuteTable, TestSuiteTable } from "db/schema";
-import { eq, inArray } from "drizzle-orm";
-import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
-import { Hono } from "hono";
-import { get, set } from "lodash";
-import { ulid } from "ulid";
-import { z } from "zod";
-import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
-import RunTest from "lib/Runner/RunTest";
-import * as TestSuiteSchema from "lib/Zod/TestSuiteSchema";
-import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
-import CheckProjectAccess from "@middlewars/CheckProjectAccess";
+import { zValidator } from '@hono/zod-validator';
+import fp from 'lodash/fp';
+import dayjs from 'dayjs';
+import db from 'db/db';
+import { TestSuiteExecuteTable, TestSuiteTable } from 'db/schema';
+import { eq, inArray } from 'drizzle-orm';
+import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
+import { Hono } from 'hono';
+import { get, set } from 'lodash';
+import { ulid } from 'ulid';
+import { z } from 'zod';
+import { DeleteFileFromGithub } from 'lib/Github/DeleteFile';
+import RunTest from 'lib/Runner/RunTest';
+import * as TestSuiteSchema from 'lib/Zod/TestSuiteSchema';
+import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
+import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import CheckFileFromGithub from 'lib/Github/CheckFile';
 
 const TestSuiteRoute = new Hono();
@@ -22,7 +22,7 @@ TestSuiteRoute.get(
   '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
-  zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
+  zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const testSuite = await db.query.TestSuiteTable.findFirst({
@@ -39,7 +39,7 @@ TestSuiteRoute.post(
   '/',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
-  zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
+  zValidator('json', TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
     const user = ctx.get('user');
     const body = ctx.req.valid('json');
@@ -148,7 +148,7 @@ TestSuiteRoute.post(
     '/:id/execute',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
     CheckProjectAccess(),
-    zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
+    zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
     zValidator(
       'json',
       z.object({
@@ -352,7 +352,7 @@ TestSuiteRoute.post(
     '/execute/all',
     CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
     CheckProjectAccess(),
-    zValidator("json", z.object({ projectId: z.string().ulid() })),
+    zValidator('json', z.object({ projectId: z.string().ulid() })),
     async (ctx) => {
       const { projectId } = ctx.req.valid('json');
       const user = ctx.get('user');
@@ -448,8 +448,8 @@ TestSuiteRoute.patch(
   '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
-  zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
-  zValidator("json", TestSuiteSchema.shemaForCreateAndPatch),
+  zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
+  zValidator('json', TestSuiteSchema.shemaForCreateAndPatch),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const user = ctx.get('user');
@@ -552,7 +552,7 @@ TestSuiteRoute.delete(
   '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
-  zValidator("param", TestSuiteSchema.schemaForIdParamOnly),
+  zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const user = ctx.get('user');

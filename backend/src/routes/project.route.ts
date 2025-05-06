@@ -119,7 +119,7 @@ ProjectRoute.post(
     'json',
     z.object({
       title: z.string(),
-      description: z.string(),
+      description: z.string().optional(),
     })
   ),
   async (ctx) => {
@@ -171,7 +171,7 @@ ProjectRoute.patch(
     'json',
     z.object({
       title: z.string(),
-      description: z.string(),
+      description: z.string().optional(),
     })
   ),
   async (ctx) => {
