@@ -81,8 +81,8 @@ export default function TestManagement() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <RecentTestRuns recentTestRun={project.recentTestRun} />
             <TestRoute project={project} />
+            <RecentTestRuns recentTestRun={project.recentTestRun} />
           </div>
 
           <EditProjectModal

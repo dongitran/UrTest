@@ -1,4 +1,4 @@
-const testService = require('../services/testService');
+const testService = require("../services/testService");
 
 exports.runTest = async (req, res) => {
   try {
@@ -7,7 +7,7 @@ exports.runTest = async (req, res) => {
     if (!requestId || !project || !content) {
       return res.status(400).json({
         error: true,
-        message: 'Invalid data'
+        message: "Invalid data",
       });
     }
 
@@ -17,13 +17,14 @@ exports.runTest = async (req, res) => {
       success: true,
       requestId,
       project,
-      reportUrl: result.reportUrl
+      reportUrl: result.reportUrl,
+      results: result.results,
     });
   } catch (error) {
-    console.error('Error running test:', error);
+    console.error("Error running test:", error);
     res.status(500).json({
       error: true,
-      message: error.message || 'Failed to run test'
+      message: error.message || "Failed to run test",
     });
   }
 };
