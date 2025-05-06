@@ -428,17 +428,19 @@ export default function NewTestCasePage() {
                     Run Test
                   </Button>
 
-                  {!showProgress && watch("resultRuner")?.reportUrl && (
-                    <Button
-                      variant="default"
-                      className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
-                      size="sm"
-                      onClick={handleOpenResults}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Test Results
-                    </Button>
-                  )}
+                  {!showProgress && watch("resultRuner")?.reportUrl &&
+                    typeof watch("resultRuner")?.results?.passed === 'number' &&
+                    typeof watch("resultRuner")?.results?.totalTests === 'number' && (
+                      <Button
+                        variant="default"
+                        className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
+                        size="sm"
+                        onClick={handleOpenResults}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Results ({watch("resultRuner").results.passed}/{watch("resultRuner").results.totalTests})
+                      </Button>
+                    )}
                 </>
               </div>
             </div>
