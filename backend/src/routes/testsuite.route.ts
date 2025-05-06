@@ -245,6 +245,7 @@ TestSuiteRoute.post(
       RunTest({
         projectName: testSuite.project.slug,
         content: testSuite.content,
+        testResultTitle: 'TestSuite-' + testSuite.fileName,
       })
         .then(async (res) => {
           const endRun = dayjs();

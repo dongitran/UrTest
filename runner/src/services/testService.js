@@ -36,7 +36,7 @@ function extractTestResults(stdout) {
   }
 }
 
-exports.runTest = async (requestId, project, content) => {
+exports.runTest = async (requestId, project, content, testResultTitle) => {
   try {
     let decodedContent;
     try {
@@ -47,14 +47,14 @@ exports.runTest = async (requestId, project, content) => {
 
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, "tests", project);
-    const testFilePath = path.join(projectPath, "run-test-tmp.robot");
+    const testFilePath = path.join(projectPath, `${testResultTitle}.robot`);
 
     await fs.ensureDir(projectPath);
 
     const formattedContent = decodedContent.replace(/\n/g, "\n");
     await fs.writeFile(testFilePath, formattedContent);
 
-    const robotCommand = `robot tests/tests/${project}/run-test-tmp.robot`;
+    const robotCommand = `robot tests/tests/${project}/${testResultTitle}.robot`;
 
     let stdout, stderr;
     try {
