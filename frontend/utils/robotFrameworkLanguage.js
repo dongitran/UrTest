@@ -1,6 +1,6 @@
 let cachedKeywords = null;
 let lastFetchTime = 0;
-const CACHE_TTL = 60000; // 60s
+const CACHE_TTL = 60000;
 
 export async function fetchRobotFrameworkKeywords(slug = null) {
   const currentTime = Date.now();
@@ -45,22 +45,84 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
 
   const keywords = await fetchRobotFrameworkKeywords(slug);
 
+  const functionKeywordsList = keywords
+    .filter((item) => item.kind === "Function")
+    .map((item) => item.label);
+
+  const keywordKeywordsList = keywords
+    .filter((item) => item.kind === "Keyword")
+    .map((item) => item.label);
+
   monaco.languages.register({ id: "robotframework" });
+
+  monaco.editor.defineTheme("vs-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "function", foreground: "FF8C00", fontStyle: "bold" },
+      { token: "keyword", foreground: "569CD6" },
+      { token: "variable", foreground: "9CDCFE" },
+      { token: "tag", foreground: "C586C0" },
+      { token: "comment", foreground: "6A9955" },
+      { token: "section", foreground: "CC99FF", fontStyle: "bold" },
+    ],
+    colors: {},
+  });
+
+  monaco.editor.defineTheme("vs", {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "function", foreground: "FF8C00", fontStyle: "bold" },
+      { token: "keyword", foreground: "0000FF" },
+      { token: "variable", foreground: "001080" },
+      { token: "tag", foreground: "AF00DB" },
+      { token: "comment", foreground: "008000" },
+      { token: "section", foreground: "8A2BE2", fontStyle: "bold" },
+    ],
+    colors: {},
+  });
 
   monaco.languages.setMonarchTokensProvider("robotframework", {
     defaultToken: "",
+
+    functionKeywords: functionKeywordsList,
+    keywordKeywords: keywordKeywordsList,
+
     tokenizer: {
       root: [
         [
           /^\*{3}\s*(Settings|Variables|Test Cases|Keywords|Tasks)\s*\*{3}/,
-          "keyword",
+          "section",
         ],
         [/#.*$/, "comment"],
-        [/\${[\w\s]+}/, "variable"],
-        [/@{[\w\s]+}/, "variable"],
-        [/&{[\w\s]+}/, "variable"],
-        [/%{[\w\s]+}/, "variable"],
+        [/\${[\w\s.]+}/, "variable"],
+        [/@{[\w\s.]+}/, "variable"],
+        [/&{[\w\s.]+}/, "variable"],
+        [/%{[\w\s.]+}/, "variable"],
+
+        [
+          /(\s+|=\s+)([A-Za-z][A-Za-z0-9 ]*)\b/,
+          {
+            cases: {
+              "$2@functionKeywords": ["", "function"],
+              "@default": "",
+            },
+          },
+        ],
+
         [/^(Given|When|Then|And|But)\s+/, "keyword"],
+
+        [
+          /^([A-Za-z][A-Za-z0-9 ]*)\b/,
+          {
+            cases: {
+              "@keywordKeywords": "keyword",
+              "@default": "",
+            },
+          },
+        ],
+
         [/\[.*?\]/, "tag"],
         [/^(Library|Resource|Variables|Documentation)/, "keyword"],
       ],

@@ -61,18 +61,18 @@ export default function MonacoEditor({
       quickSuggestions:
         language === "robotframework"
           ? {
-              other: true,
-              comments: true,
-              strings: true,
-            }
+            other: true,
+            comments: true,
+            strings: true,
+          }
           : undefined,
       suggestOnTriggerCharacters:
         language === "robotframework" ? true : undefined,
       parameterHints:
         language === "robotframework"
           ? {
-              enabled: true,
-            }
+            enabled: true,
+          }
           : undefined,
     }),
     [language, readOnly]
