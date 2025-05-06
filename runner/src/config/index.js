@@ -5,8 +5,8 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   API_KEY: process.env.API_KEY,
   
-  GITHUB_REPO: process.env.GH_REPO,
-  GITHUB_TOKEN: process.env.GH_TOKEN,
+  GITHUB_REPO: process.env.GITHUB_REPO,
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   REPO_FOLDER: process.env.REPO_FOLDER || 'tests',
   
   MINIO_CONFIG: {
