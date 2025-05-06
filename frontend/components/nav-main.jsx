@@ -15,14 +15,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import WorkspaceModal from "@/components/Modal";
 import { castArray, compact } from "lodash";
 import { MoreHorizontalIcon, Pen, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
 export function NavMain({ items }) {
-  const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -32,11 +30,6 @@ export function NavMain({ items }) {
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
-
-      <WorkspaceModal
-        openWorkspaceModal={openWorkspaceModal}
-        setOpenWorkspaceModal={setOpenWorkspaceModal}
-      />
     </SidebarGroup>
   );
 }
@@ -49,8 +42,13 @@ const MySidebarMenuItem = ({ item = {} }) => {
   const pathname = usePathname();
 
   const current = stripTrailingSlash(pathname);
-  const target = stripTrailingSlash(item.url);
-  const isActive = current === target || current.startsWith(`${target}/`);
+  const targetUrl = new URL(item.url, "https://urtest.click");
+  const target = stripTrailingSlash(targetUrl.pathname);
+
+  const isTestManagement =
+    target === "/test-management" && current === "/test-management";
+  const isActive =
+    current === target || current.startsWith(`${target}/`) || isTestManagement;
 
   const [openWorkspaceModal, setOpenWorkspaceModal] = useState("");
 
@@ -109,11 +107,6 @@ const MySidebarMenuItem = ({ item = {} }) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <WorkspaceModal
-        workspace={item}
-        openWorkspaceModal={openWorkspaceModal}
-        setOpenWorkspaceModal={setOpenWorkspaceModal}
-      />
     </Fragment>
   );
 };

@@ -11,7 +11,7 @@ export async function DeleteFileFromGithub({
   projectSlug: string;
   fileName: string;
 }): Promise<void> {
-  const fileData = await CheckFileFromGithub({ projectSlug, fileName });
+  const fileData = await CheckFileFromGithub({ projectSlug, path: fileName });
   if (fileData) {
     await fetch(`${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${fileName}`, {
       method: "DELETE",

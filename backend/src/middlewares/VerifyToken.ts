@@ -20,6 +20,8 @@ type User = {
   id: string;
   username: string;
   email: string;
+  roles: string[];
+  groups: string[];
 };
 export type UserVariables<T = User> = { user: T };
 
@@ -49,10 +51,23 @@ const VerifyToken = (): MiddlewareHandler => {
         );
       });
 
+      const realmRoles = get(decoded, "realm_access.roles", []);
+      const resourceRoles = get(
+        decoded,
+        `resource_access.${Bun.env.KEYCLOAK_CLIENT_ID}.roles`,
+        []
+      );
+
+      const groups = get(decoded, "groups", []);
+
+      const roles = [...realmRoles, ...resourceRoles];
+
       ctx.set("user", {
         id: get(decoded, "sub")! as string,
         username: get(decoded, "preferred_username")!,
         email: get(decoded, "email")!,
+        roles,
+        groups,
       });
 
       await next();

@@ -48,8 +48,8 @@ export default function DashboardStats({ data = {} }) {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-medium">Total Test Cases</p>
-            <h2 className="text-3xl font-bold">{data.totalTestcase}</h2>
+            <p className="text-sm font-medium">Total Test Suite</p>
+            <h2 className="text-3xl font-bold">{data.totalTestsuite}</h2>
           </div>
         </CardContent>
       </Card>

@@ -1,0 +1,58 @@
+name: Init Vault Keyword Extractor
+
+on:
+  push:
+    branches:
+      - init-vault-keyword-extractor
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+          version: "latest"
+
+      - name: Apply Kubernetes deployment
+        env:
+          GH_REPO: ${{ secrets.GH_REPO }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_PORT: ${{ secrets.MINIO_PORT }}
+          MINIO_USE_SSL: ${{ secrets.MINIO_USE_SSL }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+          KEYWORDS_URL: ${{ secrets.KEYWORDS_URL }}
+          API_PORT: ${{ secrets.API_PORT }}
+          API_KEY: ${{ secrets.API_KEY }}
+          KEYWORDS_URL_BASE: ${{ secrets.KEYWORDS_URL_BASE }}
+        run: |
+          kubectl exec -n vault -i vault-0 -- vault kv put \
+            kv/urtest-keyword-extractor-dev \
+            GH_REPO="${GH_REPO}" \
+            GH_TOKEN="${GH_TOKEN}" \
+            MINIO_ENDPOINT="${MINIO_ENDPOINT}" \
+            MINIO_PORT="${MINIO_PORT}" \
+            MINIO_USE_SSL="${MINIO_USE_SSL}" \
+            MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY}" \
+            MINIO_SECRET_KEY="${MINIO_SECRET_KEY}" \
+            MINIO_BUCKET="${MINIO_BUCKET}" \
+            KEYWORDS_URL="${KEYWORDS_URL}" \
+            API_PORT="${API_PORT}" \
+            API_KEY="${API_KEY}" \
+            KEYWORDS_URL_BASE="${KEYWORDS_URL_BASE}"
+
+          kubectl exec -n vault -i vault-0 -- vault policy write urtest-keyword-extractor-svc-policy - <<EOH
+          path "kv/data/urtest-keyword-extractor-dev" {
+            capabilities = ["read"]
+          }
+          EOH
+
+          kubectl exec -n vault -i vault-0 -- vault write auth/kubernetes/role/urtest-keyword-extractor-dev \
+            bound_service_account_names=urtest-keyword-extractor-dev-auth \
+            bound_service_account_namespaces=urtest \
+            policies=urtest-keyword-extractor-svc-policy \
+            ttl=72h

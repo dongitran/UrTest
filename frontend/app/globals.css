@@ -82,3 +82,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+.progress-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 0,
+    rgba(255, 255, 255, 0.2) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  background-size: 40px 40px;
+  animation: moveStripes 0.5s linear infinite;
+}
+
+@keyframes moveStripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}

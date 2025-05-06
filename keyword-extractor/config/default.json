@@ -1,0 +1,11 @@
+{
+  "directories": [
+    "core",
+    "tests",
+    "utils",
+    "resources"
+  ],
+  "output": {
+    "file": "robotFrameworkKeywords.json"
+  }
+}
