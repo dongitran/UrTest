@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment, useCallback } from "react";
+import { useState, useEffect, Fragment, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,15 +36,16 @@ export default function NewTestCasePage() {
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const [scriptContent, setScriptContent] = useState(
-    `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
-  );
+  const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
+  const [scriptContent, setScriptContent] = useState(defaultScriptContent);
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false); // Start with auto-save disabled
   const [draftChecked, setDraftChecked] = useState(false);
+
+  const userInteractedRef = useRef(false);
 
   const { data: testSuiteDetail } = useQuery({
     queryKey: ["detail-test-suite" + testSuiteId],
@@ -69,8 +70,35 @@ export default function NewTestCasePage() {
     };
   }, [clearChatHistory]);
 
+  const markUserInteraction = () => {
+    userInteractedRef.current = true;
+    setAutoSaveEnabled(true);
+  };
+
+  const handleScriptContentChange = (newContent) => {
+    setScriptContent(newContent);
+    if (newContent !== scriptContent) {
+      markUserInteraction();
+    }
+  };
+
+  const handleTagsChange = (newTags) => {
+    if (JSON.stringify(newTags) !== JSON.stringify(tags)) {
+      markUserInteraction();
+    }
+    setTags(newTags);
+  };
+
+  const handleNameChange = (e) => {
+    const newValue = e.target.value;
+    const currentValue = getValues("name") || "";
+    if (newValue !== currentValue) {
+      markUserInteraction();
+    }
+  };
+
   const autoSave = useCallback(() => {
-    if (!autoSaveEnabled || !projectId) return;
+    if (!autoSaveEnabled || !projectId || !userInteractedRef.current) return;
 
     const data = getValues();
     const draftData = {
@@ -79,7 +107,9 @@ export default function NewTestCasePage() {
       content: scriptContent,
     };
 
-    if (saveTestSuiteDraft(projectId, testSuiteId, draftData)) {
+    const wasSaved = saveTestSuiteDraft(projectId, testSuiteId, draftData);
+
+    if (wasSaved) {
       setLastSaved(new Date().toISOString());
       setHasDraft(true);
     }
@@ -107,6 +137,8 @@ export default function NewTestCasePage() {
     if (!projectId) return;
 
     setDraftChecked(false);
+    userInteractedRef.current = false;
+    setAutoSaveEnabled(false);
 
     const draft = getTestSuiteDraft(projectId, testSuiteId);
     if (draft) {
@@ -116,6 +148,9 @@ export default function NewTestCasePage() {
       setValue("name", draft.name);
       setTags(draft.tags || []);
       setScriptContent(draft.content);
+
+      userInteractedRef.current = false;
+      setAutoSaveEnabled(false);
     } else {
       setHasDraft(false);
     }
@@ -131,6 +166,9 @@ export default function NewTestCasePage() {
       if (testSuiteDetail?.params?.resultRuner) {
         setValue("resultRuner", testSuiteDetail.params.resultRuner);
       }
+
+      userInteractedRef.current = false;
+      setAutoSaveEnabled(false);
     }
   }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
 
@@ -235,18 +273,20 @@ export default function NewTestCasePage() {
       clearTestSuiteDraft(projectId, testSuiteId);
       setHasDraft(false);
       setLastSaved(null);
+      userInteractedRef.current = false;
+      setAutoSaveEnabled(false);
 
       toast.success("Restored to original version");
     } else {
       setValue("name", "");
       setTags([]);
-      setScriptContent(
-        `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`
-      );
+      setScriptContent(defaultScriptContent);
 
       clearTestSuiteDraft(projectId, "new");
       setHasDraft(false);
       setLastSaved(null);
+      userInteractedRef.current = false;
+      setAutoSaveEnabled(false);
 
       toast.success("Draft deleted");
     }
@@ -276,13 +316,14 @@ export default function NewTestCasePage() {
                   {...register("name")}
                   placeholder="Enter test case name"
                   className="w-full"
+                  onChange={handleNameChange}
                 />
               </div>
               <div className="flex-1 flex items-center gap-2">
                 <span className="whitespace-nowrap font-medium">Tags:</span>
                 <TagInput
                   value={tags}
-                  onChange={setTags}
+                  onChange={handleTagsChange}
                   placeholder="Press Enter to add tags"
                 />
               </div>
@@ -296,7 +337,7 @@ export default function NewTestCasePage() {
                 <MonacoEditor
                   language="robotframework"
                   value={scriptContent}
-                  onChange={setScriptContent}
+                  onChange={handleScriptContentChange}
                   slug={slug}
                 />
               </div>

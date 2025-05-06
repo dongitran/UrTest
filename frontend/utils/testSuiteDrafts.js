@@ -1,7 +1,7 @@
 const TEST_SUITE_DRAFTS_KEY = "urtest_test_suite_drafts";
 
 export const saveTestSuiteDraft = (projectId, testSuiteId, data) => {
-  if (!projectId) return;
+  if (!projectId) return false;
 
   try {
     const draftsJson = localStorage.getItem(TEST_SUITE_DRAFTS_KEY);
@@ -12,15 +12,46 @@ export const saveTestSuiteDraft = (projectId, testSuiteId, data) => {
     }
 
     const draftId = testSuiteId || "new";
+    const currentDraft = drafts[projectId][draftId];
 
-    drafts[projectId][draftId] = {
-      ...data,
-      lastSaved: new Date().toISOString(),
-    };
+    if (!currentDraft) {
+      drafts[projectId][draftId] = {
+        ...data,
+        lastSaved: new Date().toISOString(),
+      };
+      localStorage.setItem(TEST_SUITE_DRAFTS_KEY, JSON.stringify(drafts));
+      return true;
+    }
 
-    localStorage.setItem(TEST_SUITE_DRAFTS_KEY, JSON.stringify(drafts));
+    const hasNameChanged = currentDraft.name !== data.name;
+    const hasContentChanged = currentDraft.content !== data.content;
 
-    return true;
+    let haveTagsChanged = false;
+    if (currentDraft.tags && data.tags) {
+      if (currentDraft.tags.length !== data.tags.length) {
+        haveTagsChanged = true;
+      } else {
+        for (let i = 0; i < data.tags.length; i++) {
+          if (currentDraft.tags[i] !== data.tags[i]) {
+            haveTagsChanged = true;
+            break;
+          }
+        }
+      }
+    } else {
+      haveTagsChanged = currentDraft.tags !== data.tags;
+    }
+
+    if (hasNameChanged || hasContentChanged || haveTagsChanged) {
+      drafts[projectId][draftId] = {
+        ...data,
+        lastSaved: new Date().toISOString(),
+      };
+      localStorage.setItem(TEST_SUITE_DRAFTS_KEY, JSON.stringify(drafts));
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error("Error saving test suite draft:", error);
     return false;
