@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import {
   Play,
-  FileText,
   Edit,
   Trash2,
   Search,
@@ -33,7 +32,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -220,24 +218,24 @@ export default function TestCaseList({
 
   return (
     <div className="border rounded-lg bg-card overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold">Test Suites</h2>
+      <div className="px-6 py-3">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-medium">Test Suites</h2>
 
-          <div className="flex items-center gap-4">
-            <div className="relative w-[300px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <div className="relative w-[250px]">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
               <Input
                 placeholder="Search test cases..."
-                className="pl-10 h-10 w-full"
+                className="pl-8 h-8 w-full text-sm"
               />
             </div>
 
             <Button
               onClick={handleExecuteAllTestSuite}
-              className="bg-blue-600 hover:bg-blue-700 text-white h-10"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
             >
-              <Play className="mr-2 h-4 w-4" />
+              <Play className="mr-1.5 h-3.5 w-3.5" />
               Run All Tests
             </Button>
 
@@ -249,15 +247,15 @@ export default function TestCaseList({
                   )}&projectId=${project.id}`
                 );
               }}
-              className="bg-green-600 hover:bg-green-700 text-white h-10"
+              className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
             >
-              <FilePlus2 className="mr-2 h-4 w-4" />
+              <FilePlus2 className="mr-1.5 h-3.5 w-3.5" />
               Create Test Suite
             </Button>
           </div>
         </div>
 
-        <div className="w-full border rounded-md overflow-hidden bg-background">
+        <div className="w-full border rounded-md overflow-hidden bg-background min-h-[300px]">
           <Table className="w-full">
             <TableHeader className="bg-muted/50">
               <TableRow>
@@ -265,7 +263,7 @@ export default function TestCaseList({
                   headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="py-3 px-4 text-sm font-medium text-foreground"
+                      className="py-2 px-4 text-sm font-medium text-foreground"
                     >
                       {header.isPlaceholder
                         ? null
@@ -283,7 +281,7 @@ export default function TestCaseList({
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} className="border-b hover:bg-muted/50">
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-4 px-4">
+                      <TableCell key={cell.id} className="py-3 px-4">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -306,7 +304,7 @@ export default function TestCaseList({
           </Table>
         </div>
 
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end mt-3">
           <div className="flex items-center gap-1">
             <Button
               variant="outline"

@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import db from 'db/db';
 import { ProjectTable, ProjectAssignmentTable } from 'db/schema';
 import { Hono } from 'hono';
+import { get } from 'lodash';
 import { ulid } from 'ulid';
 import { z } from 'zod';
 import { eq, isNull, and, desc, inArray } from 'drizzle-orm';
@@ -86,7 +87,6 @@ ProjectRoute.get(
       const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
         where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
         orderBy: (clm, { desc }) => desc(clm.id),
-        limit: 5,
       });
 
       return ctx.json({
@@ -96,6 +96,7 @@ ProjectRoute.get(
             const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
             return {
               id: item.id,
+              reportUrl: get(item?.params, 'resultRunner.reportUrl'),
               testSuiteName: testSuite?.name,
               status: item.status,
               createdAt: item.createdAt,

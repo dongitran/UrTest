@@ -163,8 +163,8 @@ export default function NewTestCasePage() {
       setValue("name", testSuiteDetail.name);
       setTags(testSuiteDetail.tags || []);
       setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRuner) {
-        setValue("resultRuner", testSuiteDetail.params.resultRuner);
+      if (testSuiteDetail?.params?.resultRunner) {
+        setValue("resultRunner", testSuiteDetail.params.resultRunner);
       }
 
       userInteractedRef.current = false;
@@ -240,11 +240,11 @@ export default function NewTestCasePage() {
       toast.success("Test execution requested. Please wait for results");
       setShowProgress(true);
       setIsLoading(true);
-      const { resultRuner, duration } = await TestSuiteApi().draftExecute({
+      const { resultRunner, duration } = await TestSuiteApi().draftExecute({
         content: scriptContent,
         projectId,
       });
-      setValue("resultRuner", resultRuner);
+      setValue("resultRunner", resultRunner);
       setValue("duration", duration);
     } catch (error) {
       toast.error("Failed to run test");
@@ -255,9 +255,9 @@ export default function NewTestCasePage() {
   };
 
   const handleOpenResults = () => {
-    const resultRuner = watch("resultRuner");
-    if (resultRuner?.reportUrl) {
-      window.open(`${resultRuner.reportUrl}/report.html`, "_blank");
+    const resultRunner = watch("resultRunner");
+    if (resultRunner?.reportUrl) {
+      window.open(`${resultRunner.reportUrl}/report.html`, "_blank");
     }
   };
 
@@ -266,8 +266,8 @@ export default function NewTestCasePage() {
       setValue("name", testSuiteDetail.name);
       setTags(testSuiteDetail.tags || []);
       setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRuner) {
-        setValue("resultRuner", testSuiteDetail.params.resultRuner);
+      if (testSuiteDetail?.params?.resultRunner) {
+        setValue("resultRunner", testSuiteDetail.params.resultRunner);
       }
 
       clearTestSuiteDraft(projectId, testSuiteId);
@@ -428,9 +428,9 @@ export default function NewTestCasePage() {
                     Run Test
                   </Button>
 
-                  {!showProgress && watch("resultRuner")?.reportUrl &&
-                    typeof watch("resultRuner")?.results?.passed === 'number' &&
-                    typeof watch("resultRuner")?.results?.totalTests === 'number' && (
+                  {!showProgress && watch("resultRunner")?.reportUrl &&
+                    typeof watch("resultRunner")?.results?.passed === 'number' &&
+                    typeof watch("resultRunner")?.results?.totalTests === 'number' && (
                       <Button
                         variant="default"
                         className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
@@ -438,7 +438,7 @@ export default function NewTestCasePage() {
                         onClick={handleOpenResults}
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View Results ({watch("resultRuner").results.passed}/{watch("resultRuner").results.totalTests})
+                        View Results ({watch("resultRunner").results.passed}/{watch("resultRunner").results.totalTests})
                       </Button>
                     )}
                 </>

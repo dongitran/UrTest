@@ -1,12 +1,6 @@
 import MyPagination from "@/components/MyPagination";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -47,9 +41,18 @@ export default function TestRoute({ project = {} }) {
 
   return (
     <Card className="overflow-hidden border rounded-lg shadow-sm">
-      <CardHeader className="pb-2 p-6 border-b">
-        <CardTitle className="flex gap-3 items-center justify-between">
-          <span className="text-lg font-semibold">Test Resources</span>
+      <div className="flex items-center justify-between px-4 py-2 border-b">
+        <h3 className="font-medium">Test Resources</h3>
+        <div className="flex items-center gap-2">
+          {data &&
+            data.listTestResource &&
+            data.listTestResource.length > itemsPerPage && (
+              <MyPagination
+                setPage={setPage}
+                page={page}
+                total={data ? data.listTestResource.length : 1}
+              />
+            )}
           <Button
             onClick={() => {
               router.push(
@@ -60,17 +63,17 @@ export default function TestRoute({ project = {} }) {
             }}
             variant="outline"
             size="sm"
-            className="hover:bg-muted text-xs h-8 flex items-center gap-1"
+            className="hover:bg-muted text-xs h-7 flex items-center gap-1"
           >
             <Plus className="h-3 w-3" />
             Create Resource
           </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 gap-4">
+        </div>
+      </div>
+      <CardContent className="p-4">
+        <div className="grid grid-cols-1 gap-2">
           {listTestResource.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-4 text-muted-foreground">
               No test resources available
             </div>
           ) : (
@@ -87,17 +90,6 @@ export default function TestRoute({ project = {} }) {
           )}
         </div>
       </CardContent>
-      {data &&
-        data.listTestResource &&
-        data.listTestResource.length > itemsPerPage && (
-          <CardFooter className="justify-center p-4 border-t">
-            <MyPagination
-              setPage={setPage}
-              page={page}
-              total={data ? data.listTestResource.length : 1}
-            />
-          </CardFooter>
-        )}
     </Card>
   );
 }
@@ -130,7 +122,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
 
   return (
     <Fragment>
-      <div className="flex gap-3 items-center p-3 border rounded-md bg-muted/50 hover:bg-muted transition-colors">
+      <div className="flex gap-3 items-center p-2 border rounded-md bg-muted/50 hover:bg-muted transition-colors">
         <div className="flex-1">
           <p className="text-sm font-medium">{item.title}</p>
         </div>
@@ -145,14 +137,14 @@ const TestResourceItem = ({ item, refetch, project }) => {
                 }`
               );
             }}
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
             variant="ghost"
           >
             <Edit className="size-4 text-muted-foreground" />
           </Button>
           <Button
             variant="ghost"
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50"
+            className="h-7 w-7 p-0 text-red-600 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/50"
             onClick={() => openDeleteDialog(item)}
           >
             <Trash2 className="size-4" />

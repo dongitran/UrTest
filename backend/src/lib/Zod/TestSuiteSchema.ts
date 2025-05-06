@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const shemaForCreateAndPatch = z.object({
   projectId: z.string().ulid(),
@@ -6,7 +6,7 @@ export const shemaForCreateAndPatch = z.object({
   description: z.string().optional(),
   content: z.string(),
   tags: z.array(z.string()).optional(),
-  resultRuner: z
+  resultRunner: z
     .object({
       reportUrl: z.string().optional(),
       project: z.string().optional(),

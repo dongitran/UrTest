@@ -51,8 +51,8 @@ TestSuiteRoute.post(
     } else if (project.deletedAt) {
       return ctx.json({ message: 'Project đã bị xóa nên không thể tạo kịch bản test' }, 400);
     }
-    const status = body.resultRuner ? 'Completed' : 'Not Run';
-    const lastRunDate = body.resultRuner ? dayjs().toISOString() : undefined;
+    const status = body.resultRunner ? 'Completed' : 'Not Run';
+    const lastRunDate = body.resultRunner ? dayjs().toISOString() : undefined;
     const testSuite = await db
       .insert(TestSuiteTable)
       .values({
@@ -67,7 +67,7 @@ TestSuiteRoute.post(
         tags: body.tags,
         lastRunDate,
         params: {
-          resultRuner: body.resultRuner,
+          resultRunner: body.resultRunner,
           duration: body.duration,
         },
       })
@@ -259,7 +259,7 @@ TestSuiteRoute.post(
             .set({
               params: {
                 ...(testSuiteExecute.params || {}),
-                resultRuner: res,
+                resultRunner: res,
               },
               status: testSuiteExecuteStatus as any,
               updatedAt: dayjs().toISOString(),
@@ -271,7 +271,7 @@ TestSuiteRoute.post(
             .set({
               params: {
                 ...(testSuite.params || {}),
-                resultRuner: res,
+                resultRunner: res,
                 duration: endRun.diff(startRun, 'second'),
               },
               status: testSuiteStatus as any,
@@ -297,7 +297,7 @@ TestSuiteRoute.post(
               params: {
                 ...(testSuite.params || {}),
                 duration: endRun.diff(startRun, 'second'),
-                resultRuner: null,
+                resultRunner: null,
               },
               status: 'Failed',
               lastRunDate: dayjs().toISOString(),
@@ -329,12 +329,12 @@ TestSuiteRoute.post(
         return ctx.json({ message: 'Không tìm thấy thông tin Project' }, 404);
       }
       const startRun = dayjs();
-      const resultRuner = await RunTest({
+      const resultRunner = await RunTest({
         content: body.content,
         projectName: project.slug,
       });
       const endRun = dayjs();
-      if (!get(resultRuner, 'reportUrl')) {
+      if (!get(resultRunner, 'reportUrl')) {
         return ctx.json(
           {
             message: 'Không có thông tin reportUrl từ phản hồi khi chạy kịch bản test',
@@ -343,7 +343,7 @@ TestSuiteRoute.post(
         );
       }
       return ctx.json({
-        resultRuner,
+        resultRunner,
         duration: endRun.diff(startRun, 'second'),
       });
     }
@@ -404,7 +404,7 @@ TestSuiteRoute.post(
           const testExecute = listTextSuiteJustCreated.find(
             fp.isMatch({ testSuiteId: testSuite.id })
           );
-          const resultRuner = await RunTest({
+          const resultRunner = await RunTest({
             content: testSuite.content,
             projectName: project.slug,
           });
@@ -418,7 +418,7 @@ TestSuiteRoute.post(
               status: 'Completed',
               params: {
                 ...(testSuite.params || {}),
-                resultRuner,
+                resultRunner,
                 duration: endRun.diff(startRun, 'second'),
               },
             })
@@ -430,7 +430,7 @@ TestSuiteRoute.post(
                 status: 'success',
                 params: {
                   ...(testExecute.params || {}),
-                  resultRuner,
+                  resultRunner,
                 },
                 updatedAt: dayjs().toISOString(),
                 updatedBy: user.email,
@@ -497,8 +497,8 @@ TestSuiteRoute.patch(
         400
       );
     }
-    if (body.resultRuner) {
-      set(testSuite, 'params.resultRuner', body.resultRuner);
+    if (body.resultRunner) {
+      set(testSuite, 'params.resultRunner', body.resultRunner);
     }
     const testSuiteUpdated = await db
       .update(TestSuiteTable)
