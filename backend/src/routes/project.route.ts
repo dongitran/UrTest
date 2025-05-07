@@ -87,6 +87,7 @@ ProjectRoute.get(
       const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
         where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
         orderBy: (clm, { desc }) => desc(clm.id),
+        limit: 24,
       });
 
       return ctx.json({

@@ -5,7 +5,6 @@ import { Send, LoaderCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "@/lib/keycloak";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "next/navigation";
 
 export default function ChatPanel() {
@@ -167,88 +166,131 @@ export default function ChatPanel() {
     }
   };
 
+  const formatMessage = (content) => {
+    const formattedContent = content
+      .split("```")
+      .map((part, index) => {
+        if (index % 2 === 1) {
+          return `<div style="background-color: rgba(0,0,0,0.1); padding: 8px; border-radius: 4px; overflow-x: auto; max-width: 100%; font-family: monospace; white-space: pre; margin: 8px 0;">${part}</div>`;
+        }
+
+        const withInlineCode = part.replace(
+          /`([^`]+)`/g,
+          '<code style="background-color: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px; font-family: monospace; white-space: pre;">${1}</code>'
+        );
+
+        return withInlineCode
+          .split("\n")
+          .map((line) => {
+            const leadingSpaces = line.match(/^(\s*)/)[1].length;
+            if (leadingSpaces > 0) {
+              const spaces = "&nbsp;".repeat(leadingSpaces);
+
+              return spaces + line.substring(leadingSpaces);
+            }
+            return line;
+          })
+          .join("<br>");
+      })
+      .join("");
+
+    return formattedContent;
+  };
+
   return (
     <Card className="h-full flex flex-col bg-card border-border">
-      <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[calc(100vh-280px)]">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`p-3 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-100/50 dark:bg-blue-900/30 text-foreground ml-auto max-w-[80%]"
-                  : "bg-secondary/50 text-foreground mr-auto max-w-[80%]"
-              }`}
-            >
-              <div className="font-semibold text-sm mb-1 text-foreground">
-                {message.role === "user" ? "You" : "UrTest"}
-              </div>
-              <div className="whitespace-pre-wrap text-foreground prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  components={{
-                    p: ({ children }) => (
-                      <p className="mb-2 text-foreground">{children}</p>
-                    ),
-                    strong: ({ children }) => (
-                      <strong className="font-semibold text-foreground">
-                        {children}
-                      </strong>
-                    ),
-                    em: ({ children }) => (
-                      <em className="italic text-foreground">{children}</em>
-                    ),
-                    code: ({ children }) => (
-                      <code className="bg-secondary/50 px-1 rounded text-sm text-foreground font-mono">
-                        {children}
-                      </code>
-                    ),
-                    h1: ({ children }) => (
-                      <h1 className="text-xl font-bold mb-2 text-foreground">
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-lg font-bold mb-2 text-foreground">
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-md font-bold mb-2 text-foreground">
-                        {children}
-                      </h3>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="list-disc pl-5 mb-2 text-foreground">
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="list-decimal pl-5 mb-2 text-foreground">
-                        {children}
-                      </ol>
-                    ),
-                    li: ({ children }) => (
-                      <li className="mb-1 text-foreground">{children}</li>
-                    ),
+      <CardContent
+        className="flex-1 flex flex-col p-4 overflow-hidden"
+        style={{ width: "100%" }}
+      >
+        <div
+          className="flex-1 overflow-y-auto mb-4"
+          style={{
+            maxHeight: "calc(100vh - 280px)",
+            width: "100%",
+            overflowX: "hidden",
+          }}
+        >
+          <div className="space-y-4" style={{ width: "100%" }}>
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                style={{
+                  marginTop: "16px",
+                  maxWidth: "100%",
+                  width: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px",
+                    borderRadius: "8px",
+                    maxWidth: "80%",
+                    marginLeft: message.role === "user" ? "auto" : "0",
+                    marginRight: message.role === "assistant" ? "auto" : "0",
+                    backgroundColor:
+                      message.role === "user"
+                        ? "rgba(59, 130, 246, 0.1)"
+                        : "rgba(107, 114, 128, 0.1)",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
                   }}
                 >
-                  {message.content}
-                </ReactMarkdown>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.875rem",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {message.role === "user" ? "You" : "UrTest"}
+                  </div>
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: "100%",
+                      overflowX: "auto",
+                      fontSize: "0.75rem",
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: formatMessage(message.content),
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {showProcessingMessage && processingMessage && (
-            <div className="p-3 rounded-lg bg-secondary/30 text-foreground/80 mr-auto max-w-[80%] animate-pulse">
-              <div className="font-semibold text-sm mb-1 text-foreground/80 flex items-center gap-2">
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                UrTest
+            {showProcessingMessage && processingMessage && (
+              <div
+                style={{
+                  padding: "12px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(107, 114, 128, 0.1)",
+                  marginRight: "auto",
+                  maxWidth: "80%",
+                  marginTop: "16px",
+                  animation: "pulse 2s infinite",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  UrTest
+                </div>
+                <div className="text-sm italic">{processingMessage}</div>
               </div>
-              <div className="text-sm italic">{processingMessage}</div>
-            </div>
-          )}
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
         <div className="flex gap-2 border-t border-border pt-4">
           <Input
