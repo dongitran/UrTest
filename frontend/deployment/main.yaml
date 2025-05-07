@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: urdraw-workspace-frontend
-  namespace: urdraw
+  name: urtest-frontend
+  namespace: urtest
   labels:
-    app: urdraw-workspace-frontend
+    app: urtest-frontend
 spec:
-  serviceName: urdraw-workspace-frontend
+  serviceName: urtest-frontend
   replicas: 4
   selector:
     matchLabels:
-      app: urdraw-workspace-frontend
+      app: urtest-frontend
   template:
     metadata:
       labels:
-        app: urdraw-workspace-frontend
+        app: urtest-frontend
     spec:
       containers:
-        - name: urdraw-workspace-frontend
-          image: ideavn/urdraw-workspace-frontend:v{latest}
+        - name: urtest-frontend
+          image: ideavn/urtest-frontend:{latest}
           ports:
             - containerPort: 3000
           resources:
@@ -32,11 +32,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: urdraw-workspace-frontend-service
-  namespace: urdraw
+  name: urtest-frontend-service
+  namespace: urtest
 spec:
   selector:
-    app: urdraw-workspace-frontend
+    app: urtest-frontend
   type: ClusterIP
   ports:
     - protocol: TCP
@@ -46,19 +46,19 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: urdraw-workspace-frontend-ingress
-  namespace: urdraw
+  name: urtest-frontend-ingress
+  namespace: urtest
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-  - host: urdraw.click
+  - host: urtest.click
     http:
       paths:
       - pathType: Prefix
         path: "/"
         backend:
           service:
-            name: urdraw-workspace-frontend-service
+            name: urtest-frontend-service
             port:
               number: 3000
