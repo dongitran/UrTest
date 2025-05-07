@@ -17,11 +17,11 @@ export default async function CreateOrUpdateFile(
   callback?: (data: Record<string, any>) => void
 ): Promise<void> {
   const response = await fetch(
-    `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${fileName}`,
+    `${Bun.env.GH_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${fileName}`,
     {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
+        Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
         Accept: 'application/vnd.github.v3+json',
       },
       body: JSON.stringify({

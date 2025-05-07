@@ -1,4 +1,4 @@
-import CheckFileFromGithub from "./CheckFile";
+import CheckFileFromGithub from './CheckFile';
 
 /**
  * Hàm dùng để xóa file trên Github
@@ -13,15 +13,15 @@ export async function DeleteFileFromGithub({
 }): Promise<void> {
   const fileData = await CheckFileFromGithub({ projectSlug, path: fileName });
   if (fileData) {
-    await fetch(`${Bun.env.GITHUB_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${fileName}`, {
-      method: "DELETE",
+    await fetch(`${Bun.env.GH_URTEST_WORKFLOW_API}/contents/tests/${projectSlug}/${fileName}`, {
+      method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
+        Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
       },
       body: JSON.stringify({
-        message: "Delete old file",
-        branch: "main",
+        message: 'Delete old file',
+        branch: 'main',
         sha: fileData.sha,
       }),
     });
