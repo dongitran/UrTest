@@ -19,31 +19,28 @@ export default async function CreateMultipleFiles({
   for (const file of files) {
     treeItems.push({
       path: `tests/${projectSlug}/${file.path}`,
-      mode: "100644",
-      type: "blob",
+      mode: '100644',
+      type: 'blob',
       content: file.content,
     });
   }
 
-  const refResponse = await fetch(
-    `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/refs/heads/main`,
-    {
-      headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-    }
-  );
+  const refResponse = await fetch(`${Bun.env.GH_URTEST_WORKFLOW_API}/git/refs/heads/main`, {
+    headers: {
+      Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  });
 
   const refData = await refResponse.json();
   const latestCommitSha = refData.object.sha;
 
   const commitResponse = await fetch(
-    `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/commits/${latestCommitSha}`,
+    `${Bun.env.GH_URTEST_WORKFLOW_API}/git/commits/${latestCommitSha}`,
     {
       headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
+        Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
       },
     }
   );
@@ -51,51 +48,45 @@ export default async function CreateMultipleFiles({
   const commitData = await commitResponse.json();
   const baseTreeSha = commitData.tree.sha;
 
-  const createTreeResponse = await fetch(
-    `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/trees`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        base_tree: baseTreeSha,
-        tree: treeItems,
-      }),
-    }
-  );
+  const createTreeResponse = await fetch(`${Bun.env.GH_URTEST_WORKFLOW_API}/git/trees`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      base_tree: baseTreeSha,
+      tree: treeItems,
+    }),
+  });
 
   const treeData = await createTreeResponse.json();
   const newTreeSha = treeData.sha;
 
-  const createCommitResponse = await fetch(
-    `${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/commits`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: commitMessage,
-        tree: newTreeSha,
-        parents: [latestCommitSha],
-      }),
-    }
-  );
+  const createCommitResponse = await fetch(`${Bun.env.GH_URTEST_WORKFLOW_API}/git/commits`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: commitMessage,
+      tree: newTreeSha,
+      parents: [latestCommitSha],
+    }),
+  });
 
   const newCommitData = await createCommitResponse.json();
   const newCommitSha = newCommitData.sha;
 
-  await fetch(`${Bun.env.GITHUB_URTEST_WORKFLOW_API}/git/refs/heads/main`, {
-    method: "PATCH",
+  await fetch(`${Bun.env.GH_URTEST_WORKFLOW_API}/git/refs/heads/main`, {
+    method: 'PATCH',
     headers: {
-      Authorization: `Bearer ${Bun.env.GITHUB_TOKEN}`,
-      Accept: "application/vnd.github.v3+json",
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${Bun.env.GH_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       sha: newCommitSha,

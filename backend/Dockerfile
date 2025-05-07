@@ -2,8 +2,8 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PORT=3020
+ENV BACKEND_NODE_ENV=production
+ENV BACKEND_PORT=3020
 
 COPY . .
 
