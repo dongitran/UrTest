@@ -183,7 +183,7 @@ export default function TestCaseList({
   };
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:3020/ws");
+    const socket = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
 
     socket.onopen = () => {
       console.log("WebSocket connected");
