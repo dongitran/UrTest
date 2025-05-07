@@ -1,4 +1,4 @@
-name: Deploy Keyword Extractor Service
+name: Deploy Frontend
 
 on:
   push:
@@ -45,6 +45,5 @@ jobs:
       - name: Apply Kubernetes deployment
         run: |
           kubectl apply -f ./frontend/deployment/namespace.yaml
-          kubectl apply -f ./frontend/deployment/service-account.yaml
           sed -i 's/{latest}/${{ github.run_number }}/g' ./frontend/deployment/main.yaml
           kubectl apply -f ./frontend/deployment/main.yaml --validate=false
