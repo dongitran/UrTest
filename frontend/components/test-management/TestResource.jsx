@@ -106,7 +106,9 @@ const TestResourceItem = ({ item, refetch, project }) => {
   const handleDeleteResource = async () => {
     try {
       setIsDeleting(true);
-      await TestResourceApi().delete(item.id);
+      await TestResourceApi().delete(item.id, {
+        projectId: project.id,
+      });
       toast.success("Test resource deleted successfully");
       if (refetch) {
         refetch();
