@@ -12,7 +12,7 @@ export async function fetchRobotFrameworkKeywords(slug = null) {
   try {
     let url = "https://s0.dtur.xyz/urtest/robotFrameworkKeywords.json"; // TODO: remove
     if (slug) {
-      url = `http://s0.dtur.xyz/urtest/keywords/${slug}/robotFrameworkKeywords.json`;
+      url = `https://s0.dtur.xyz/urtest/keywords/${slug}/robotFrameworkKeywords.json`;
     }
 
     const response = await fetch(url);
