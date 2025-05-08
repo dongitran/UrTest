@@ -62,16 +62,16 @@ export const TestResourceApi = (path = "/api/test-resource") => {
     const res = await apiClient.post(path, data);
     return res;
   };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, params);
     return res;
   };
   const patch = async (id, data) => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  const get = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
+  const get = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, params);
     return res.data;
   };
   return { patch, create, list, delete: _delete, get };
@@ -90,20 +90,20 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(path, data);
     return res;
   };
-  const detail = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
+  const detail = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, { params });
     return res.data;
   };
   const patch = async (id, data) => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, { params });
     return res;
   };
-  const execute = async (id, data) => {
-    const res = await apiClient.post(`${path}/${id}/execute`, data);
+  const execute = async (id, data, params = {}) => {
+    const res = await apiClient.post(`${path}/${id}/execute`, data, { params });
     return res;
   };
   const executeAll = async (data) => {

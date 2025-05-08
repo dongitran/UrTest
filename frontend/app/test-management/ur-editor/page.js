@@ -50,7 +50,7 @@ export default function NewTestCasePage() {
   const { data: testSuiteDetail } = useQuery({
     queryKey: ["detail-test-suite" + testSuiteId],
     queryFn: () => {
-      return TestSuiteApi().detail(testSuiteId);
+      return TestSuiteApi().detail(testSuiteId, { projectId });
     },
     enabled: testSuiteId ? true : false,
   });

@@ -1,3 +1,5 @@
+// File path: frontend/components/test-management/ProjectSelector.js
+
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   Select,
@@ -52,12 +54,25 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
     }
   }, [selectedProjectId, reRender]);
 
-  const handleProjectChange = (value) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("projectId", value);
-    router.push(`?${params.toString()}`);
+  const handleProjectChange = async (value) => {
+    try {
+      const data = await ProjectApi().detail(value);
+      setProject(data.project);
 
-    setSelectedProject(value);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("projectId", value);
+      params.set("project", data.project.title);
+
+      router.push(`?${params.toString()}`);
+      setSelectedProject(value);
+    } catch (error) {
+      toast.error("Failed to load project details");
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("projectId", value);
+      router.push(`?${params.toString()}`);
+      setSelectedProject(value);
+    }
   };
 
   if (loading) {

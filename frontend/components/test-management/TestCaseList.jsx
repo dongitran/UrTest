@@ -357,10 +357,14 @@ const RenderActions = ({
         return;
       }
       try {
-        await TestSuiteApi().execute(testSuite.id, {
-          status: "processing",
-          testSuiteStatus: "Running",
-        });
+        await TestSuiteApi().execute(
+          testSuite.id,
+          {
+            status: "processing",
+            testSuiteStatus: "Running",
+          },
+          { projectId: project.id }
+        );
         setReRender({});
         toast.success("Test execution started");
         const isSocketValid = socketRef && socketRef.current;
@@ -385,7 +389,9 @@ const RenderActions = ({
   const handleDeleteTestSuite = async () => {
     try {
       setIsDeleting(true);
-      await TestSuiteApi().delete(testSuite.id);
+      await TestSuiteApi().delete(testSuite.id, {
+        params: { projectId: project.id },
+      });
       if (setReRender) {
         setReRender({});
       }
@@ -420,12 +426,17 @@ const RenderActions = ({
           size="icon"
           className="h-8 w-8 text-foreground/70 hover:bg-muted"
           onClick={() => {
+            const currentUrl = new URL(window.location.href);
+            const params = new URLSearchParams(currentUrl.search);
+            const currentProjectId = params.get("projectId");
+            const currentProjectName = params.get("project");
+
             router.push(
               `/test-management/ur-editor?project=${encodeURIComponent(
-                project.title
-              )}&projectId=${project.id}&testSuiteId=${testSuite.id}&slug=${
-                project?.slug
-              }`
+                currentProjectName || project.title
+              )}&projectId=${currentProjectId || project.id}&testSuiteId=${
+                testSuite.id
+              }&slug=${project?.slug}`
             );
           }}
           disabled={loading || status === "Running"}
