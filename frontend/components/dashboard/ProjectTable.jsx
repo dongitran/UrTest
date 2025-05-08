@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import * as React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ export default function ProjectTable({
   dataTable = [],
   setProjectModalOpen,
 }) {
+  const router = useRouter();
   const [sorting, setSorting] = React.useState();
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -88,6 +90,10 @@ export default function ProjectTable({
     }
   };
 
+  const navigateToProject = (projectId) => {
+    router.push(`/test-management?projectId=${projectId}`);
+  };
+
   const columns = React.useMemo(() => {
     return [
       {
@@ -113,7 +119,10 @@ export default function ProjectTable({
                 </svg>
               </div>
               <div className="min-w-[200px] flex-1 pr-4">
-                <div className="font-semibold text-base">
+                <div
+                  className="font-semibold text-base cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => navigateToProject(row.original["id"])}
+                >
                   {row.getValue("title")}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
@@ -126,7 +135,7 @@ export default function ProjectTable({
       },
       {
         accessorKey: "totalTestSuite",
-        header: "Test Suite",
+        header: () => <div className="text-center">Test Suite</div>,
         cell: ({ row }) => {
           return (
             <div className="text-center">{row.getValue("totalTestSuite")}</div>
@@ -159,7 +168,14 @@ export default function ProjectTable({
       },
       {
         accessorKey: "totalTestSuiteExecute",
-        header: "Test Executions",
+        header: () => <div className="text-center">Test Executions</div>,
+        cell: ({ row }) => {
+          return (
+            <div className="text-center">
+              {row.getValue("totalTestSuiteExecute")}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "createdBy",
@@ -180,14 +196,14 @@ export default function ProjectTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <Link href={`/test-management?projectId=${row.original["id"]}`}>
-                  <DropdownMenuItem>
-                    Edit
-                    <DropdownMenuShortcut>
-                      <SquarePen className="size-4" />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </Link>
+                <DropdownMenuItem
+                  onClick={() => navigateToProject(row.original["id"])}
+                >
+                  Edit
+                  <DropdownMenuShortcut>
+                    <SquarePen className="size-4" />
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
 
                 {isAdminOrManager() && (
                   <DropdownMenuItem
