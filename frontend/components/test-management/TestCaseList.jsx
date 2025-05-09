@@ -255,9 +255,9 @@ export default function TestCaseList({
           </div>
         </div>
 
-        <div className="w-full border rounded-md overflow-hidden bg-background min-h-[300px]">
+        <div className="w-full border rounded-md overflow-hidden bg-card min-h-[300px]">
           <Table className="w-full">
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/30">
               <TableRow>
                 {table.getHeaderGroups().map((headerGroup) =>
                   headerGroup.headers.map((header) => (
@@ -279,7 +279,7 @@ export default function TestCaseList({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-b hover:bg-muted/50">
+                  <TableRow key={row.id} className="border-b hover:bg-muted/40">
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 px-4">
                         {flexRender(

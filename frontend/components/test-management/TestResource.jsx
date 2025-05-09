@@ -25,7 +25,7 @@ export default function TestRoute({ project = {} }) {
 
   const { data, refetch } = useQuery({
     enabled: project.id ? true : false,
-    queryKey: ["test-resource"],
+    queryKey: ["test-resource", project.id],
     queryFn: () => {
       return TestResourceApi().list({ projectId: project.id });
     },
