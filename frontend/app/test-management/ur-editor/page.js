@@ -37,23 +37,29 @@ export default function NewTestCasePage() {
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
   const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
-  const [scriptContent, setScriptContent] = useState(defaultScriptContent);
+
+  const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false); // Start with auto-save disabled
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [draftChecked, setDraftChecked] = useState(false);
 
   const userInteractedRef = useRef(false);
 
-  const { data: testSuiteDetail } = useQuery({
-    queryKey: ["detail-test-suite" + testSuiteId],
-    queryFn: () => {
-      return TestSuiteApi().detail(testSuiteId, { projectId });
-    },
-    enabled: testSuiteId ? true : false,
-  });
+  const { data: testSuiteDetail, isLoading: testSuiteContentLoading } =
+    useQuery({
+      queryKey: ["detail-test-suite" + testSuiteId],
+      queryFn: () => {
+        return TestSuiteApi().detail(testSuiteId, { projectId });
+      },
+      enabled: testSuiteId ? true : false,
+    });
+
+  const editorContentLoading = testSuiteId
+    ? testSuiteContentLoading || !draftChecked
+    : !draftChecked;
 
   const { register, getValues, setValue, watch } = useForm();
 
@@ -153,6 +159,9 @@ export default function NewTestCasePage() {
       setAutoSaveEnabled(false);
     } else {
       setHasDraft(false);
+      if (!testSuiteId) {
+        setScriptContent(defaultScriptContent);
+      }
     }
 
     setDraftChecked(true);
@@ -331,15 +340,26 @@ export default function NewTestCasePage() {
 
             <div className="grid gap-2 mt-4 relative">
               <div
-                className="border rounded-sm bg-card overflow-hidden"
+                className="border rounded-sm bg-card overflow-hidden relative"
                 style={{ height: editorHeight }}
               >
-                <MonacoEditor
-                  language="robotframework"
-                  value={scriptContent}
-                  onChange={handleScriptContentChange}
-                  slug={slug}
-                />
+                {editorContentLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
+                    <div className="flex flex-col items-center">
+                      <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                      <span className="mt-2 text-sm text-muted-foreground">
+                        Loading test suite content...
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <MonacoEditor
+                    language="robotframework"
+                    value={scriptContent}
+                    onChange={handleScriptContentChange}
+                    slug={slug}
+                  />
+                )}
               </div>
 
               {showProgress && (
@@ -428,9 +448,12 @@ export default function NewTestCasePage() {
                     Run Test
                   </Button>
 
-                  {!showProgress && watch("resultRunner")?.reportUrl &&
-                    typeof watch("resultRunner")?.results?.passed === 'number' &&
-                    typeof watch("resultRunner")?.results?.totalTests === 'number' && (
+                  {!showProgress &&
+                    watch("resultRunner")?.reportUrl &&
+                    typeof watch("resultRunner")?.results?.passed ===
+                    "number" &&
+                    typeof watch("resultRunner")?.results?.totalTests ===
+                    "number" && (
                       <Button
                         variant="default"
                         className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
@@ -438,7 +461,8 @@ export default function NewTestCasePage() {
                         onClick={handleOpenResults}
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View Results ({watch("resultRunner").results.passed}/{watch("resultRunner").results.totalTests})
+                        View Results ({watch("resultRunner").results.passed}/
+                        {watch("resultRunner").results.totalTests})
                       </Button>
                     )}
                 </>
