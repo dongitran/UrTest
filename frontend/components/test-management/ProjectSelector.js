@@ -35,8 +35,6 @@ export default function ProjectSelector({ setProject, projectId }) {
 
   const handleProjectChange = async (value) => {
     try {
-      setSelectedProject(value);
-
       const params = new URLSearchParams(searchParams.toString());
       params.set("projectId", value);
 
