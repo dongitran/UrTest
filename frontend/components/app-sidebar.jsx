@@ -1,5 +1,4 @@
-"use client";
-
+// frontend/components/app-sidebar.jsx
 import {
   BarChart3Icon,
   BookOpenIcon,
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
-import { ProjectApi } from "@/lib/api";
+import { useProjects } from "@/hooks/useProjects";
 
 export function AppSidebar({ ...props }) {
   const { user } = useAuth();
@@ -60,31 +59,24 @@ export function AppSidebar({ ...props }) {
     },
   ]);
 
+  const { data } = useProjects();
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await ProjectApi().get();
-        if (data.projects && data.projects.length > 0) {
-          const firstProjectId = data.projects[0].id;
+    if (data?.projects?.length > 0) {
+      const firstProjectId = data.projects[0].id;
 
-          setNavItems((prevItems) =>
-            prevItems.map((item) =>
-              item.id === "2"
-                ? {
-                    ...item,
-                    url: `/test-management?projectId=${firstProjectId}`,
-                  }
-                : item
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Failed to fetch projects for navigation:", error);
-      }
-    };
-
-    fetchProjects();
-  }, []);
+      setNavItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === "2"
+            ? {
+                ...item,
+                url: `/test-management?projectId=${firstProjectId}`,
+              }
+            : item
+        )
+      );
+    }
+  }, [data?.projects]);
 
   const navSecondaryItems = [
     {
