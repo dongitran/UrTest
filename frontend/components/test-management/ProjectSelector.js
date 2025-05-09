@@ -72,7 +72,7 @@ export default function ProjectSelector({ setProject, projectId }) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[400px] h-10">
+            <SelectTrigger className="w-[400px] h-8">
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
