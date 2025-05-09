@@ -1,5 +1,3 @@
-// File path: frontend/components/test-management/ProjectSelector.js
-
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   Select,
@@ -8,74 +6,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProjectApi } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useProjects, useProjectDetails } from "@/hooks/useProjects";
 
-export default function ProjectSelector({ reRender, setProject, projectId }) {
+export default function ProjectSelector({ setProject, projectId }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const [listProject, setListProject] = useState([]);
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const { data, isLoading, error } = useProjects();
+  const { data: projectDetails } = useProjectDetails(selectedProjectId);
 
   useEffect(() => {
-    const getProjects = async () => {
-      try {
-        const data = await ProjectApi().get();
-        setListProject(data.projects);
-        setLoading(false);
-      } catch (err) {
-        toast.error("Failed to load projects");
-        console.error("Failed to fetch projects:", err);
-        setError("Failed to load projects. Please try again later.");
-        setLoading(false);
-      }
-    };
-
-    getProjects();
-  }, []);
-
-  const handleGetProjectDetail = async (projectId) => {
-    try {
-      const data = await ProjectApi().detail(projectId);
-      setProject(data.project);
-    } catch (error) {
-      toast.error("Failed to load project details");
+    if (projectDetails?.project) {
+      setProject(projectDetails.project);
     }
-  };
+  }, [projectDetails, setProject]);
 
   useEffect(() => {
-    if (selectedProjectId) {
-      handleGetProjectDetail(selectedProjectId);
+    if (projectId) {
+      setSelectedProject(projectId);
+    } else if (data?.projects?.length > 0) {
+      setSelectedProject(data.projects[0].id);
     }
-  }, [selectedProjectId, reRender]);
+  }, [projectId, data]);
 
   const handleProjectChange = async (value) => {
     try {
-      const data = await ProjectApi().detail(value);
-      setProject(data.project);
+      setSelectedProject(value);
 
       const params = new URLSearchParams(searchParams.toString());
       params.set("projectId", value);
-      params.set("project", data.project.title);
+
+      const selectedProject = data?.projects?.find((p) => p.id === value);
+      if (selectedProject) {
+        params.set("project", selectedProject.title);
+      }
 
       router.push(`?${params.toString()}`);
-      setSelectedProject(value);
     } catch (error) {
-      toast.error("Failed to load project details");
-
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("projectId", value);
-      router.push(`?${params.toString()}`);
-      setSelectedProject(value);
+      toast.error("Failed to change project");
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-10 w-[400px] border rounded-md px-3">
         <LoadingSpinner size="small" message="Loading projects..." />
@@ -86,7 +62,9 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
   if (error) {
     return (
       <div className="flex justify-center items-center h-10 border rounded-md px-3 w-[400px]">
-        <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>
+        <div className="text-red-500 dark:text-red-400 text-sm">
+          Failed to load projects
+        </div>
       </div>
     );
   }
@@ -100,7 +78,7 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
-              {listProject.map((project) => (
+              {data?.projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.title}
                 </SelectItem>
