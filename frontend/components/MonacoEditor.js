@@ -56,7 +56,7 @@ export default function MonacoEditor({
       insertSpaces: true,
       wordWrap: "on",
       fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-      fontSize: 14,
+      fontSize: 13,
       padding: { top: 8, bottom: 8 },
       quickSuggestions:
         language === "robotframework"
