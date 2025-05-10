@@ -16,7 +16,7 @@ import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatPanel from "@/components/ChatPanel";
 import CommentPanel from "@/components/CommentPanel";
@@ -26,6 +26,7 @@ import {
   clearTestSuiteDraft,
   formatDraftSavedTime,
 } from "@/utils/testSuiteDrafts";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
@@ -33,10 +34,11 @@ export default function NewTestCasePage() {
   const testSuiteId = searchParams.get("testSuiteId");
   const slug = searchParams.get("slug");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
+  const defaultScriptContent = `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`;
 
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -182,6 +184,14 @@ export default function NewTestCasePage() {
     }
   }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
 
+  const invalidateCaches = async () => {
+    await queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
+    await queryClient.invalidateQueries(["test-resource", projectId]);
+    await queryClient.invalidateQueries(["detail-test-suite"]);
+
+    await queryClient.resetQueries();
+  };
+
   const handleEdit = async () => {
     const data = getValues();
     if (!data.name?.trim()) {
@@ -205,6 +215,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success(`Test script edited successfully`);
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       toast.error(`Error editing test script`);
@@ -236,6 +250,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success("Test case saved successfully");
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
@@ -493,9 +511,9 @@ export default function NewTestCasePage() {
 
                 <div className="flex gap-2">
                   {!showProgress &&
-                    watch("resultRunner")?.reportUrl &&
-                    typeof watch("resultRunner")?.results?.passed === "number" &&
-                    typeof watch("resultRunner")?.results?.totalTests ===
+                  watch("resultRunner")?.reportUrl &&
+                  typeof watch("resultRunner")?.results?.passed === "number" &&
+                  typeof watch("resultRunner")?.results?.totalTests ===
                     "number" ? (
                     <Button
                       variant="default"
