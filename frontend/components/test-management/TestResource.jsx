@@ -25,7 +25,7 @@ export default function TestRoute({ project = {} }) {
 
   const { data, refetch } = useQuery({
     enabled: project.id ? true : false,
-    queryKey: ["test-resource"],
+    queryKey: ["test-resource", project.id],
     queryFn: () => {
       return TestResourceApi().list({ projectId: project.id });
     },
@@ -106,7 +106,9 @@ const TestResourceItem = ({ item, refetch, project }) => {
   const handleDeleteResource = async () => {
     try {
       setIsDeleting(true);
-      await TestResourceApi().delete(item.id);
+      await TestResourceApi().delete(item.id, {
+        projectId: project.id,
+      });
       toast.success("Test resource deleted successfully");
       if (refetch) {
         refetch();

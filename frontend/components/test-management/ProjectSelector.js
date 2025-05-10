@@ -6,61 +6,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProjectApi } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useProjects, useProjectDetails } from "@/hooks/useProjects";
 
-export default function ProjectSelector({ reRender, setProject, projectId }) {
+export default function ProjectSelector({ setProject, projectId }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const [listProject, setListProject] = useState([]);
   const [selectedProjectId, setSelectedProject] = useState(projectId || "");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const { data, isLoading, error } = useProjects();
+  const { data: projectDetails } = useProjectDetails(selectedProjectId);
 
   useEffect(() => {
-    const getProjects = async () => {
-      try {
-        const data = await ProjectApi().get();
-        setListProject(data.projects);
-        setLoading(false);
-      } catch (err) {
-        toast.error("Failed to load projects");
-        console.error("Failed to fetch projects:", err);
-        setError("Failed to load projects. Please try again later.");
-        setLoading(false);
-      }
-    };
+    if (projectDetails?.project) {
+      setProject(projectDetails.project);
+    }
+  }, [projectDetails, setProject]);
 
-    getProjects();
-  }, []);
+  useEffect(() => {
+    if (projectId) {
+      setSelectedProject(projectId);
+    } else if (data?.projects?.length > 0) {
+      setSelectedProject(data.projects[0].id);
+    }
+  }, [projectId, data]);
 
-  const handleGetProjectDetail = async (projectId) => {
+  const handleProjectChange = async (value) => {
     try {
-      const data = await ProjectApi().detail(projectId);
-      setProject(data.project);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("projectId", value);
+
+      const selectedProject = data?.projects?.find((p) => p.id === value);
+      if (selectedProject) {
+        params.set("project", selectedProject.title);
+      }
+
+      router.push(`?${params.toString()}`);
     } catch (error) {
-      toast.error("Failed to load project details");
+      toast.error("Failed to change project");
     }
   };
 
-  useEffect(() => {
-    if (selectedProjectId) {
-      handleGetProjectDetail(selectedProjectId);
-    }
-  }, [selectedProjectId, reRender]);
-
-  const handleProjectChange = (value) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("projectId", value);
-    router.push(`?${params.toString()}`);
-
-    setSelectedProject(value);
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-10 w-[400px] border rounded-md px-3">
         <LoadingSpinner size="small" message="Loading projects..." />
@@ -71,7 +60,9 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
   if (error) {
     return (
       <div className="flex justify-center items-center h-10 border rounded-md px-3 w-[400px]">
-        <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>
+        <div className="text-red-500 dark:text-red-400 text-sm">
+          Failed to load projects
+        </div>
       </div>
     );
   }
@@ -81,11 +72,11 @@ export default function ProjectSelector({ reRender, setProject, projectId }) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[400px] h-10">
+            <SelectTrigger className="w-[400px] h-8">
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent className="min-w-[200px] w-auto">
-              {listProject.map((project) => (
+              {data?.projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.title}
                 </SelectItem>

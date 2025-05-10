@@ -183,7 +183,7 @@ export default function TestCaseList({
   };
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:3020/ws");
+    const socket = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
 
     socket.onopen = () => {
       console.log("WebSocket connected");
@@ -255,9 +255,9 @@ export default function TestCaseList({
           </div>
         </div>
 
-        <div className="w-full border rounded-md overflow-hidden bg-background min-h-[300px]">
+        <div className="w-full border rounded-md overflow-hidden bg-card min-h-[300px]">
           <Table className="w-full">
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/30">
               <TableRow>
                 {table.getHeaderGroups().map((headerGroup) =>
                   headerGroup.headers.map((header) => (
@@ -279,7 +279,7 @@ export default function TestCaseList({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-b hover:bg-muted/50">
+                  <TableRow key={row.id} className="border-b hover:bg-muted/40">
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 px-4">
                         {flexRender(
@@ -357,10 +357,14 @@ const RenderActions = ({
         return;
       }
       try {
-        await TestSuiteApi().execute(testSuite.id, {
-          status: "processing",
-          testSuiteStatus: "Running",
-        });
+        await TestSuiteApi().execute(
+          testSuite.id,
+          {
+            status: "processing",
+            testSuiteStatus: "Running",
+          },
+          { projectId: project.id }
+        );
         setReRender({});
         toast.success("Test execution started");
         const isSocketValid = socketRef && socketRef.current;
@@ -385,7 +389,9 @@ const RenderActions = ({
   const handleDeleteTestSuite = async () => {
     try {
       setIsDeleting(true);
-      await TestSuiteApi().delete(testSuite.id);
+      await TestSuiteApi().delete(testSuite.id, {
+        params: { projectId: project.id },
+      });
       if (setReRender) {
         setReRender({});
       }
@@ -420,12 +426,17 @@ const RenderActions = ({
           size="icon"
           className="h-8 w-8 text-foreground/70 hover:bg-muted"
           onClick={() => {
+            const currentUrl = new URL(window.location.href);
+            const params = new URLSearchParams(currentUrl.search);
+            const currentProjectId = params.get("projectId");
+            const currentProjectName = params.get("project");
+
             router.push(
               `/test-management/ur-editor?project=${encodeURIComponent(
-                project.title
-              )}&projectId=${project.id}&testSuiteId=${testSuite.id}&slug=${
-                project?.slug
-              }`
+                currentProjectName || project.title
+              )}&projectId=${currentProjectId || project.id}&testSuiteId=${
+                testSuite.id
+              }&slug=${project?.slug}`
             );
           }}
           disabled={loading || status === "Running"}

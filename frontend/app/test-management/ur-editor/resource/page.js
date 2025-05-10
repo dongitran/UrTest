@@ -26,7 +26,7 @@ export default function NewResourcePage() {
   const { data: resourceDetail } = useQuery({
     queryKey: ["detail-test-resource" + resourceId],
     queryFn: () => {
-      return TestResourceApi().get(resourceId);
+      return TestResourceApi().get(resourceId, { projectId });
     },
     enabled: resourceId ? true : false,
   });
