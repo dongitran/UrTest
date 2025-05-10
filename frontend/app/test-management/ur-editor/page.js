@@ -38,7 +38,7 @@ export default function NewTestCasePage() {
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const defaultScriptContent = `*** Settings ***\n    Resource../common-imports.robot\n    Resource./resources/init.robot\n`;
+  const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
 
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -322,7 +322,7 @@ export default function NewTestCasePage() {
 
   useEffect(() => {
     const calculateHeight = () => {
-      const headerHeight = 80;
+      const headerHeight = 55;
       const safetyMargin = 15;
       const calculatedHeight = window.innerHeight - headerHeight - safetyMargin;
       setContentHeight(`${calculatedHeight}px`);
@@ -378,6 +378,12 @@ export default function NewTestCasePage() {
     };
   }, []);
 
+  const hasResults =
+    !showProgress &&
+    watch("resultRunner")?.reportUrl &&
+    typeof watch("resultRunner")?.results?.passed === "number" &&
+    typeof watch("resultRunner")?.results?.totalTests === "number";
+
   return (
     <div
       ref={mainContainerRef}
@@ -402,7 +408,7 @@ export default function NewTestCasePage() {
                   </div>
                 </div>
               ) : (
-                <div className="h-full">
+                <div className="h-full pt-1">
                   <MonacoEditor
                     language="robotframework"
                     value={scriptContent}
@@ -510,24 +516,21 @@ export default function NewTestCasePage() {
                 </div>
 
                 <div className="flex gap-2">
-                  {!showProgress &&
-                  watch("resultRunner")?.reportUrl &&
-                  typeof watch("resultRunner")?.results?.passed === "number" &&
-                  typeof watch("resultRunner")?.results?.totalTests ===
-                    "number" ? (
-                    <Button
-                      variant="default"
-                      className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white h-7"
-                      size="sm"
-                      onClick={handleOpenResults}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Results ({watch("resultRunner").results.passed}/
-                      {watch("resultRunner").results.totalTests})
-                    </Button>
-                  ) : (
-                    <div className="w-1/2"></div>
-                  )}
+                  <Button
+                    variant="default"
+                    className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white h-7"
+                    size="sm"
+                    onClick={handleOpenResults}
+                    disabled={!hasResults}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Results
+                    {hasResults
+                      ? ` (${watch("resultRunner").results.passed}/${
+                          watch("resultRunner").results.totalTests
+                        })`
+                      : ""}
+                  </Button>
 
                   <Button
                     onClick={handleRunTest}

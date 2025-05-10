@@ -80,7 +80,11 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
       { token: "comment", foreground: "008000" },
       { token: "section", foreground: "8A2BE2", fontStyle: "bold" },
     ],
-    colors: {},
+    colors: {
+      'editor.background': '#f9f9f9',
+      'editor.lineHighlightBackground': '#f9f9f9',
+      'editorGutter.background': '#f9f9f9',
+    },
   });
 
   monaco.languages.setMonarchTokensProvider("robotframework", {
@@ -156,7 +160,7 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
               insertTextRules:
                 item.kind === "Snippet" || insertText.includes("${")
                   ? monaco.languages.CompletionItemInsertTextRule
-                      .InsertAsSnippet
+                    .InsertAsSnippet
                   : undefined,
               documentation: item.documentation,
               range: {
