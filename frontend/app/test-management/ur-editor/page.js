@@ -38,7 +38,7 @@ export default function NewTestCasePage() {
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const defaultScriptContent = `*** Settings ***\nResource../common-imports.robot\nResource./resources/init.robot\n`;
+  const defaultScriptContent = `*** Settings ***\n    Resource../common-imports.robot\n    Resource./resources/init.robot\n`;
 
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
