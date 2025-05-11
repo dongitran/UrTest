@@ -13,6 +13,8 @@ import { useSearchParams } from "next/navigation";
 import { Fragment, useState, useEffect } from "react";
 import ManageStaffModal from "@/components/ManageStaffModal";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 dayjs.extend(advancedFormat);
 
@@ -24,6 +26,7 @@ export default function TestManagement() {
   const projectId = searchParams.get("projectId");
   const [reRender, setReRender] = useState({});
   const [headerContainer, setHeaderContainer] = useState(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const container = document.getElementById("page-header-controls");
@@ -35,6 +38,17 @@ export default function TestManagement() {
       setHeaderContainer(null);
     };
   }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem("test_suite_updated") === "true" && projectId) {
+      localStorage.removeItem("test_suite_updated");
+
+      queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
+      queryClient.invalidateQueries(["test-resource", projectId]);
+
+      setReRender({});
+    }
+  }, [projectId, queryClient]);
 
   return (
     <div className="flex flex-col gap-6">

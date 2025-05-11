@@ -16,7 +16,7 @@ import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatPanel from "@/components/ChatPanel";
 import CommentPanel from "@/components/CommentPanel";
@@ -26,6 +26,7 @@ import {
   clearTestSuiteDraft,
   formatDraftSavedTime,
 } from "@/utils/testSuiteDrafts";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
@@ -33,6 +34,7 @@ export default function NewTestCasePage() {
   const testSuiteId = searchParams.get("testSuiteId");
   const slug = searchParams.get("slug");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
@@ -182,6 +184,14 @@ export default function NewTestCasePage() {
     }
   }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
 
+  const invalidateCaches = async () => {
+    await queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
+    await queryClient.invalidateQueries(["test-resource", projectId]);
+    await queryClient.invalidateQueries(["detail-test-suite"]);
+
+    await queryClient.resetQueries();
+  };
+
   const handleEdit = async () => {
     const data = getValues();
     if (!data.name?.trim()) {
@@ -205,6 +215,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success(`Test script edited successfully`);
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       toast.error(`Error editing test script`);
@@ -236,6 +250,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success("Test case saved successfully");
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
@@ -304,7 +322,7 @@ export default function NewTestCasePage() {
 
   useEffect(() => {
     const calculateHeight = () => {
-      const headerHeight = 80;
+      const headerHeight = 55;
       const safetyMargin = 15;
       const calculatedHeight = window.innerHeight - headerHeight - safetyMargin;
       setContentHeight(`${calculatedHeight}px`);
@@ -360,6 +378,12 @@ export default function NewTestCasePage() {
     };
   }, []);
 
+  const hasResults =
+    !showProgress &&
+    watch("resultRunner")?.reportUrl &&
+    typeof watch("resultRunner")?.results?.passed === "number" &&
+    typeof watch("resultRunner")?.results?.totalTests === "number";
+
   return (
     <div
       ref={mainContainerRef}
@@ -384,7 +408,7 @@ export default function NewTestCasePage() {
                   </div>
                 </div>
               ) : (
-                <div className="h-full">
+                <div className="h-full pt-1">
                   <MonacoEditor
                     language="robotframework"
                     value={scriptContent}
@@ -492,24 +516,21 @@ export default function NewTestCasePage() {
                 </div>
 
                 <div className="flex gap-2">
-                  {!showProgress &&
-                    watch("resultRunner")?.reportUrl &&
-                    typeof watch("resultRunner")?.results?.passed === "number" &&
-                    typeof watch("resultRunner")?.results?.totalTests ===
-                    "number" ? (
-                    <Button
-                      variant="default"
-                      className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white h-7"
-                      size="sm"
-                      onClick={handleOpenResults}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Results ({watch("resultRunner").results.passed}/
-                      {watch("resultRunner").results.totalTests})
-                    </Button>
-                  ) : (
-                    <div className="w-1/2"></div>
-                  )}
+                  <Button
+                    variant="default"
+                    className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white h-7"
+                    size="sm"
+                    onClick={handleOpenResults}
+                    disabled={!hasResults}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Results
+                    {hasResults
+                      ? ` (${watch("resultRunner").results.passed}/${
+                          watch("resultRunner").results.totalTests
+                        })`
+                      : ""}
+                  </Button>
 
                   <Button
                     onClick={handleRunTest}
