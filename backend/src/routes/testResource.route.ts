@@ -1,33 +1,33 @@
-import { zValidator } from "@hono/zod-validator";
-import * as TestResourceSchema from "../lib/Zod/TestResourceSchema";
-import dayjs from "dayjs";
-import db from "db/db";
-import { TestResourceTable } from "db/schema";
-import { eq } from "drizzle-orm";
-import { Hono } from "hono";
-import CreateMultipleFiles from "lib/Github/CreateMultipleFiles";
-import CheckFileFromGithub from "lib/Github/CheckFile";
-import { DeleteFileFromGithub } from "lib/Github/DeleteFile";
-import { ulid } from "ulid";
-import { z } from "zod";
-import CreateOrUpdateFile from "lib/Github/CreateOrUpdateFile";
-import CheckPermission, { ROLES } from "@middlewars/CheckPermission";
-import CheckProjectAccess from "@middlewars/CheckProjectAccess";
+import { zValidator } from '@hono/zod-validator';
+import * as TestResourceSchema from '../lib/Zod/TestResourceSchema';
+import dayjs from 'dayjs';
+import db from 'db/db';
+import { TestResourceTable } from 'db/schema';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import CreateMultipleFiles from 'lib/Github/CreateMultipleFiles';
+import CheckFileFromGithub from 'lib/Github/CheckFile';
+import { DeleteFileFromGithub } from 'lib/Github/DeleteFile';
+import { ulid } from 'ulid';
+import { z } from 'zod';
+import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
+import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
+import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 
 const TestResourceRoute = new Hono();
 
 TestResourceRoute.get(
-  "/",
+  '/',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator(
-    "query",
+    'query',
     z.object({
       projectId: z.string().ulid(),
     })
   ),
   async (ctx) => {
-    const query = ctx.req.valid("query");
+    const query = ctx.req.valid('query');
     const listTestResource = await db.query.TestResourceTable.findMany({
       where: (clm, { and, eq, isNull }) => {
         return and(eq(clm.projectId, query.projectId), isNull(clm.deletedAt));
@@ -39,18 +39,18 @@ TestResourceRoute.get(
 );
 
 TestResourceRoute.get(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    
+    const { id } = ctx.req.valid('param');
+
     const testResource = await db.query.TestResourceTable.findFirst({
       where: (clm, { and, eq, isNull }) => {
         return and(eq(clm.id, id), isNull(clm.deletedAt));
@@ -58,7 +58,7 @@ TestResourceRoute.get(
     });
 
     if (!testResource) {
-      return ctx.json({ message: "Test resource not found" }, 404);
+      return ctx.json({ message: 'Test resource not found' }, 404);
     }
 
     return ctx.json({ testResource });
@@ -66,20 +66,20 @@ TestResourceRoute.get(
 );
 
 TestResourceRoute.post(
-  "/",
+  '/',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
-  zValidator("json", TestResourceSchema.schemaForCreateAndPatch),
+  zValidator('json', TestResourceSchema.schemaForCreateAndPatch),
   async (ctx) => {
-    const body = ctx.req.valid("json");
-    const user = ctx.get("user");
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
 
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, body.projectId),
     });
 
     if (!project) {
-      return ctx.json({ message: "Project not found" }, 404);
+      return ctx.json({ message: 'Project not found' }, 404);
     }
 
     const testResource = await db
@@ -114,17 +114,14 @@ TestResourceRoute.post(
         ];
 
         if (initRobotFile) {
-          let currentContent = Buffer.from(
-            initRobotFile.content,
-            "base64"
-          ).toString("utf-8");
+          let currentContent = Buffer.from(initRobotFile.content, 'base64').toString('utf-8');
 
           const newResourceReference = `Resource    ./${testResource.fileName}.robot`;
           if (!currentContent.includes(newResourceReference)) {
-            if (currentContent && !currentContent.endsWith("\n")) {
-              currentContent += "\n";
+            if (currentContent && !currentContent.endsWith('\n')) {
+              currentContent += '\n';
             }
-            currentContent += newResourceReference + "\n";
+            currentContent += newResourceReference + '\n';
           }
 
           files.push({
@@ -156,50 +153,42 @@ TestResourceRoute.post(
           })
           .where(eq(TestResourceTable.id, testResource.id));
       } catch (error) {
-        console.log(error, "Create resource error");
+        console.log(error, 'Create resource error');
       }
     }
 
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 TestResourceRoute.patch(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
-  zValidator("json", TestResourceSchema.schemaForCreateAndPatch),
+  zValidator('json', TestResourceSchema.schemaForCreateAndPatch),
   async (ctx) => {
-    const body = ctx.req.valid("json");
-    const user = ctx.get("user");
-    const { id } = ctx.req.valid("param");
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
+    const { id } = ctx.req.valid('param');
     const project = await db.query.ProjectTable.findFirst({
-      where: (clm, { eq, isNull, and }) =>
-        and(eq(clm.id, body.projectId), isNull(clm.deletedAt)),
+      where: (clm, { eq, isNull, and }) => and(eq(clm.id, body.projectId), isNull(clm.deletedAt)),
     });
 
     if (!project) {
-      return ctx.json({ message: "Project not found" }, 404);
+      return ctx.json({ message: 'Project not found' }, 404);
     }
     const testResource = await db.query.TestResourceTable.findFirst({
       where: (clm, { eq, and, isNull }) =>
-        and(
-          isNull(clm.deletedAt),
-          eq(clm.id, id),
-          eq(clm.projectId, project.id)
-        ),
+        and(isNull(clm.deletedAt), eq(clm.id, id), eq(clm.projectId, project.id)),
     });
     if (!testResource) {
-      return ctx.json(
-        { message: "Không tìm thấy thông tin của Test Resource" },
-        404
-      );
+      return ctx.json({ message: 'Không tìm thấy thông tin của Test Resource' }, 404);
     }
 
     const isStaff =
@@ -211,8 +200,7 @@ TestResourceRoute.patch(
     if (isStaff && !isCreator) {
       return ctx.json(
         {
-          message:
-            "Forbidden: Staff members can only update test resources they created",
+          message: 'Forbidden: Staff members can only update test resources they created',
         },
         403
       );
@@ -243,30 +231,30 @@ TestResourceRoute.patch(
         sha: testResourceFileFromGithub.sha,
       });
     }
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
 TestResourceRoute.delete(
-  "/:id",
+  '/:id',
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator(
-    "param",
+    'param',
     z.object({
       id: z.string().ulid(),
     })
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid("param");
-    const user = ctx.get("user");
+    const { id } = ctx.req.valid('param');
+    const user = ctx.get('user');
 
     const testResource = await db.query.TestResourceTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
     });
 
     if (!testResource) {
-      return ctx.json({ message: "Test resource not found" }, 404);
+      return ctx.json({ message: 'Test resource not found' }, 404);
     }
 
     const isStaff =
@@ -278,8 +266,7 @@ TestResourceRoute.delete(
     if (isStaff && !isCreator) {
       return ctx.json(
         {
-          message:
-            "Forbidden: Staff members can only delete test resources they created",
+          message: 'Forbidden: Staff members can only delete test resources they created',
         },
         403
       );
@@ -303,20 +290,17 @@ TestResourceRoute.delete(
         });
 
         if (initRobotFile) {
-          let currentContent = Buffer.from(
-            initRobotFile.content,
-            "base64"
-          ).toString("utf-8");
+          let currentContent = Buffer.from(initRobotFile.content, 'base64').toString('utf-8');
 
           const updatedContent = currentContent
-            .split("\n")
+            .split('\n')
             .filter((line) => {
               return !(
                 line.includes(`${testResource.fileName}.robot`) ||
                 line.includes(`./${testResource.fileName}.robot`)
               );
             })
-            .join("\n");
+            .join('\n');
 
           if (updatedContent !== currentContent) {
             await CreateOrUpdateFile({
@@ -328,7 +312,7 @@ TestResourceRoute.delete(
           }
         }
       } catch (error) {
-        console.log(error, "Delete resource error");
+        console.log(error, 'Delete resource error');
       }
     }
 
@@ -340,7 +324,7 @@ TestResourceRoute.delete(
       })
       .where(eq(TestResourceTable.id, id));
 
-    return ctx.json({ message: "ok" });
+    return ctx.json({ message: 'ok' });
   }
 );
 
