@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment, useCallback } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { LoaderCircle } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import { TestResourceApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ChatPanel from "@/components/ChatPanel";
 
 export default function NewResourcePage() {
@@ -18,12 +18,13 @@ export default function NewResourcePage() {
   const resourceId = searchParams.get("resourceId");
   const slug = searchParams.get("slug");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
 
-  const { data: resourceDetail } = useQuery({
+  const { data: resourceDetail, refetch } = useQuery({
     queryKey: ["detail-test-resource" + resourceId],
     queryFn: () => {
       return TestResourceApi().get(resourceId, { projectId });
@@ -34,12 +35,28 @@ export default function NewResourcePage() {
   const { register, getValues, setValue } = useForm();
 
   useEffect(() => {
+    if (localStorage.getItem("resource_updated") === "true" && resourceId) {
+      localStorage.removeItem("resource_updated");
+
+      queryClient.invalidateQueries(["detail-test-resource" + resourceId]);
+      queryClient.invalidateQueries(["test-resource", projectId]);
+
+      refetch();
+    }
+  }, [resourceId, projectId, queryClient, refetch]);
+
+  useEffect(() => {
     if (resourceDetail?.testResource && resourceId) {
       setValue("title", resourceDetail.testResource.title);
       setValue("description", resourceDetail.testResource.description);
       setScriptContent(resourceDetail.testResource.content);
     }
   }, [resourceDetail, resourceId, setValue]);
+
+  const invalidateCaches = async () => {
+    await queryClient.invalidateQueries(["detail-test-resource" + resourceId]);
+    await queryClient.invalidateQueries(["test-resource", projectId]);
+  };
 
   const handleEdit = async () => {
     const data = getValues();
@@ -58,6 +75,9 @@ export default function NewResourcePage() {
         content: scriptContent,
         projectId,
       });
+
+      await invalidateCaches();
+      localStorage.setItem("resource_updated", "true");
 
       toast.success("Resource edited successfully");
       router.push(`/test-management?projectId=${projectId}`);
@@ -89,6 +109,9 @@ export default function NewResourcePage() {
         content: scriptContent,
         projectId,
       });
+
+      await queryClient.invalidateQueries(["test-resource", projectId]);
+      localStorage.setItem("resource_updated", "true");
 
       toast.success("Resource created successfully");
       router.push(`/test-management?projectId=${projectId}`);

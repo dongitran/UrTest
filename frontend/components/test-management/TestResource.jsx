@@ -29,6 +29,8 @@ export default function TestRoute({ project = {} }) {
     queryFn: () => {
       return TestResourceApi().list({ projectId: project.id });
     },
+    refetchOnMount: true,
+    cacheTime: 0,
   });
 
   useEffect(() => {
@@ -38,6 +40,13 @@ export default function TestRoute({ project = {} }) {
       setListTestResource(data.listTestResource.slice(startIndex, endIndex));
     }
   }, [data, page]);
+
+  useEffect(() => {
+    if (localStorage.getItem("resource_updated") === "true" && project.id) {
+      localStorage.removeItem("resource_updated");
+      refetch();
+    }
+  }, [project.id, refetch]);
 
   return (
     <Card className="overflow-hidden border rounded-lg shadow-sm">
