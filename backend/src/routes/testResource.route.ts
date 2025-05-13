@@ -221,6 +221,7 @@ TestResourceRoute.patch(
     const testResourceUpdated = await db
       .update(TestResourceTable)
       .set({
+        title: body.title,
         content: body.content,
         description: body.description,
         updatedAt: dayjs().toISOString(),
