@@ -13,6 +13,7 @@ import { z } from 'zod';
 import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
+import RefreshRepo from 'lib/Runner/RefreshRepo';
 
 const TestResourceRoute = new Hono();
 
@@ -152,6 +153,8 @@ TestResourceRoute.post(
             },
           })
           .where(eq(TestResourceTable.id, testResource.id));
+
+        await RefreshRepo();
       } catch (error) {
         console.log(error, 'Create resource error');
       }
@@ -230,6 +233,8 @@ TestResourceRoute.patch(
         projectSlug: project.slug,
         sha: testResourceFileFromGithub.sha,
       });
+
+      await RefreshRepo();
     }
     return ctx.json({ message: 'ok' });
   }
@@ -311,6 +316,8 @@ TestResourceRoute.delete(
             });
           }
         }
+
+        await RefreshRepo();
       } catch (error) {
         console.log(error, 'Delete resource error');
       }
