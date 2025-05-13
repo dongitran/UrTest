@@ -16,7 +16,8 @@ export const initKeycloak = () => {
 
 function generateRandomString(length) {
   let result = "";
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -102,7 +103,11 @@ export const exchangeCodeForToken = async (code) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`Token exchange failed: ${errorData.error_description || "Unknown error"}`);
+      throw new Error(
+        `Token exchange failed: ${
+          errorData.error_description || "Unknown error"
+        }`
+      );
     }
 
     const tokenResponse = await response.json();
@@ -190,7 +195,9 @@ export const logout = async () => {
     localStorage.removeItem("keycloak_token");
 
     document.cookie.split(";").forEach((c) => {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
 
     window.location.href = window.location.origin;
@@ -261,45 +268,82 @@ export const isTokenExpired = () => {
   return tokenParsed.exp < currentTime;
 };
 
-export const updateToken = async (minValidity = 5) => {
-  try {
-    const storedToken = localStorage.getItem("keycloak_token");
-    if (storedToken) {
-      const parsedToken = JSON.parse(storedToken);
-      const refreshToken = parsedToken.refresh_token;
+export const updateToken = async (
+  minValidity = 5,
+  maxRetries = 3,
+  retryDelay = 1000
+) => {
+  let retries = 0;
 
-      if (refreshToken) {
-        const formData = new URLSearchParams();
-        formData.append("grant_type", "refresh_token");
-        formData.append("client_id", process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID);
-        formData.append("refresh_token", refreshToken);
+  const attemptTokenRefresh = async () => {
+    try {
+      const storedToken = localStorage.getItem("keycloak_token");
+      if (storedToken) {
+        const parsedToken = JSON.parse(storedToken);
+        const refreshToken = parsedToken.refresh_token;
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_KEYCLOAK_URL}/realms/${process.env.NEXT_PUBLIC_KEYCLOAK_REALM}/protocol/openid-connect/token`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: formData,
+        if (refreshToken) {
+          const formData = new URLSearchParams();
+          formData.append("grant_type", "refresh_token");
+          formData.append(
+            "client_id",
+            process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+          );
+          formData.append("refresh_token", refreshToken);
+
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_KEYCLOAK_URL}/realms/${process.env.NEXT_PUBLIC_KEYCLOAK_REALM}/protocol/openid-connect/token`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: formData,
+            }
+          );
+
+          if (response?.ok) {
+            const tokenResponse = await response.json();
+            setToken(tokenResponse);
+            return true;
           }
-        );
-
-        if (response?.ok) {
-          const tokenResponse = await response.json();
-          setToken(tokenResponse);
-          return true;
-        } else {
-          return false;
         }
       }
+      return false;
+    } catch (error) {
+      console.error(`Token refresh attempt ${retries + 1} failed:`, error);
+      throw error;
     }
+  };
 
-    return false;
-  } catch (error) {
-    console.error("Error updating token:", error);
-    return false;
+  while (retries < maxRetries) {
+    try {
+      const result = await attemptTokenRefresh();
+      if (result) return true;
+
+      return false;
+    } catch (error) {
+      if (
+        error.name === "TypeError" &&
+        (error.message.includes("Failed to fetch") ||
+          error.message.includes("NetworkError") ||
+          error.message.includes("Network request failed"))
+      ) {
+        retries++;
+        if (retries < maxRetries) {
+          console.log(
+            `Retrying token refresh (${retries}/${maxRetries}) after ${retryDelay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          retryDelay *= 2;
+        }
+      } else {
+        return false;
+      }
+    }
   }
+
+  return false;
 };
 
 export const getUserInfo = () => {
