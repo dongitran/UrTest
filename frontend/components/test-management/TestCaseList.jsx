@@ -41,6 +41,8 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function TestCaseList({
   project = {},
@@ -50,6 +52,9 @@ export default function TestCaseList({
   const router = useRouter();
   const socketRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [runningTestIds, setRunningTestIds] = useState(new Set());
+  const pollingIntervalRef = useRef(null);
+  const queryClient = useQueryClient();
 
   const columns = useMemo(() => {
     return [
@@ -126,6 +131,7 @@ export default function TestCaseList({
               project={project}
               setReRender={setReRender}
               testSuite={row.original}
+              addRunningTest={addRunningTest}
             />
           );
         },
@@ -181,16 +187,63 @@ export default function TestCaseList({
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800";
       case "Not Run":
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
+      case "Running":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800 animate-pulse";
       default:
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+    }
+  };
+
+  const addRunningTest = (testId) => {
+    setRunningTestIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(testId);
+      return newSet;
+    });
+  };
+
+  const removeRunningTest = (testId) => {
+    setRunningTestIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(testId);
+      return newSet;
+    });
+  };
+
+  const pollTestStatus = async () => {
+    try {
+      if (runningTestIds.size === 0) return;
+
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      await queryClient.invalidateQueries(["test-resource", project.id]);
+      setReRender({});
+
+      const stillRunning = listTestSuite.some(
+        (suite) => suite.status === "Running" && runningTestIds.has(suite.id)
+      );
+
+      if (!stillRunning && runningTestIds.size > 0) {
+        setRunningTestIds(new Set());
+      }
+    } catch (error) {
+      console.error("Error polling test status:", error);
     }
   };
 
   const handleExecuteAllTestSuite = async () => {
     try {
       await TestSuiteApi().executeAll({ projectId: project.id });
+
+      const newRunningTests = new Set(listTestSuite.map((suite) => suite.id));
+      setRunningTestIds(newRunningTests);
+
       setReRender({});
+      localStorage.setItem("test_suite_updated", "true");
       toast.success("Test execution started for all test suites");
+
       if (
         socketRef.current &&
         socketRef.current.readyState === WebSocket.OPEN
@@ -202,12 +255,37 @@ export default function TestCaseList({
           })
         );
       }
+
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      await queryClient.invalidateQueries(["test-resource", project.id]);
     } catch (error) {
       const message =
         get(error, "response.data.message") || "An error occurred";
       toast.error(message);
     }
   };
+
+  useEffect(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    if (runningTestIds.size > 0) {
+      pollTestStatus();
+
+      pollingIntervalRef.current = setInterval(pollTestStatus, 3000);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [runningTestIds, project.id]);
 
   useEffect(() => {
     const socket = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
@@ -217,12 +295,28 @@ export default function TestCaseList({
     };
 
     socket.onmessage = (event) => {
-      handleEventData(event.data, ({ key, testSuiteName }) => {
+      handleEventData(event.data, ({ key, testSuiteName, testSuiteId }) => {
         if (key === "reRenderTestSuiteList") {
+          if (testSuiteId) {
+            removeRunningTest(testSuiteId);
+          }
+
           setReRender({});
+          localStorage.setItem("test_suite_updated", "true");
+
+          queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+          queryClient.invalidateQueries(["test-resource", project.id]);
+
           toast.success(`Test suite ${testSuiteName} execution completed`);
         } else if (key === "reRenderTestSuiteListAll") {
+          setRunningTestIds(new Set());
+
           setReRender({});
+          localStorage.setItem("test_suite_updated", "true");
+
+          queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+          queryClient.invalidateQueries(["test-resource", project.id]);
+
           toast.success(`All test suites execution completed`);
         }
       });
@@ -241,7 +335,7 @@ export default function TestCaseList({
     return () => {
       socket.close();
     };
-  }, []);
+  }, [queryClient, project.id, setReRender]);
 
   return (
     <div className="border rounded-lg bg-card overflow-hidden mt-2">
@@ -374,12 +468,14 @@ const RenderActions = ({
   project = {},
   testSuite = {},
   setReRender,
+  addRunningTest,
 }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const status = testSuite.status;
+  const queryClient = useQueryClient();
 
   const handleExecuteTestSuite = () => {
     return async () => {
@@ -387,6 +483,9 @@ const RenderActions = ({
       if (testSuite.status === "Running") {
         return;
       }
+
+      setLoading(true);
+
       try {
         await TestSuiteApi().execute(
           testSuite.id,
@@ -396,8 +495,19 @@ const RenderActions = ({
           },
           { projectId: project.id }
         );
+
+        addRunningTest(testSuite.id);
+
         setReRender({});
+        localStorage.setItem("test_suite_updated", "true");
         toast.success("Test execution started");
+
+        await queryClient.invalidateQueries([
+          PROJECT_DETAIL_QUERY_KEY,
+          project.id,
+        ]);
+        await queryClient.invalidateQueries(["test-resource", project.id]);
+
         const isSocketValid = socketRef && socketRef.current;
         if (isSocketValid && socketRef.current.readyState === WebSocket.OPEN) {
           socketRef.current.send(
@@ -413,6 +523,8 @@ const RenderActions = ({
           get(error, "response.data.message") ||
           "Error starting test execution";
         toast.error(message);
+      } finally {
+        setLoading(false);
       }
     };
   };
