@@ -56,7 +56,7 @@ export default function SettingsPage() {
   }, [resetSettings]);
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-2">
       <div className="space-y-2 bg-card rounded-lg border shadow-sm">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-semibold">Editor Settings</h2>
