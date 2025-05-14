@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: urtest-documents
+  namespace: urtest
+  labels:
+    app: urtest-documents
+spec:
+  serviceName: urtest-documents
+  replicas: 2
+  selector:
+    matchLabels:
+      app: urtest-documents
+  template:
+    metadata:
+      labels:
+        app: urtest-documents
+    spec:
+      containers:
+        - name: urtest-documents
+          image: ideavn/urtest-documents:{latest}
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+            requests:
+              cpu: 64m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urtest-documents-service
+  namespace: urtest
+spec:
+  selector:
+    app: urtest-documents
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: urtest-documents-ingress
+  namespace: urtest
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: docs.urtest.click
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: urtest-documents-service
+            port:
+              number: 80
