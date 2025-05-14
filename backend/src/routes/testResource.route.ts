@@ -44,7 +44,7 @@ async function handleGitHubCreateInBackground(
       if (initRobotFile) {
         let currentContent = Buffer.from(initRobotFile.content, 'base64').toString('utf-8');
 
-        const newResourceReference = `Resource./${testResource.fileName}.robot`;
+        const newResourceReference = `Resource    ./${testResource.fileName}.robot`;
         if (!currentContent.includes(newResourceReference)) {
           if (currentContent && !currentContent.endsWith('\n')) {
             currentContent += '\n';
