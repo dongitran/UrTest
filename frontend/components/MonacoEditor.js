@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import { registerRobotFrameworkLanguage } from "../utils/robotFrameworkLanguage";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const MonacoEditorLib = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -23,6 +24,7 @@ export default function MonacoEditor({
   const [editorTheme, setEditorTheme] = useState("vs-dark");
   const [monaco, setMonaco] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const { settings, isLoaded } = useSettings();
 
   useEffect(() => {
     setEditorTheme(theme === "dark" ? "vs-dark" : "vs");
@@ -48,34 +50,45 @@ export default function MonacoEditor({
   const options = useMemo(
     () => ({
       readOnly,
-      minimap: { enabled: true },
+      minimap: { enabled: isLoaded ? settings.editor.minimap : true },
       scrollBeyondLastLine: false,
       automaticLayout: true,
-      lineNumbers: "on",
-      tabSize: language === "robotframework" ? 4 : 2,
+      lineNumbers: isLoaded
+        ? settings.editor.lineNumbers
+          ? "on"
+          : "off"
+        : "on",
+      tabSize:
+        language === "robotframework"
+          ? isLoaded
+            ? settings.editor.tabSize
+            : 4
+          : 2,
       insertSpaces: true,
-      wordWrap: "on",
-      fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-      fontSize: 13,
-      padding: { top: 8, bottom: 8 },
+      wordWrap: isLoaded ? (settings.editor.wordWrap ? "on" : "off") : "on",
+      fontFamily: isLoaded
+        ? settings.editor.fontFamily
+        : "Menlo, Monaco, 'Courier New', monospace",
+      fontSize: isLoaded ? settings.editor.fontSize : 13,
+      padding: isLoaded ? settings.editor.padding : { top: 8, bottom: 8 },
       quickSuggestions:
         language === "robotframework"
           ? {
-            other: true,
-            comments: true,
-            strings: true,
-          }
+              other: true,
+              comments: true,
+              strings: true,
+            }
           : undefined,
       suggestOnTriggerCharacters:
         language === "robotframework" ? true : undefined,
       parameterHints:
         language === "robotframework"
           ? {
-            enabled: true,
-          }
+              enabled: true,
+            }
           : undefined,
     }),
-    [language, readOnly]
+    [language, readOnly, settings?.editor, isLoaded]
   );
 
   const handleEditorDidMount = useCallback(
