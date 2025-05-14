@@ -55,8 +55,7 @@ export default function TestCaseList({
   const [searchQuery, setSearchQuery] = useState("");
   const [runningTestIds, setRunningTestIds] = useState(new Set());
   const pollingIntervalRef = useRef(null);
-  const queryClient = useQueryClient();
-
+  
   const columns = useMemo(() => {
     return [
       {
