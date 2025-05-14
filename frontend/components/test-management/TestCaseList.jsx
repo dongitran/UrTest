@@ -40,6 +40,8 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function TestCaseList({
   project = {},
@@ -48,6 +50,7 @@ export default function TestCaseList({
 }) {
   const router = useRouter();
   const socketRef = useRef(null);
+  const queryClient = useQueryClient();
   const columns = useMemo(() => {
     return [
       {
@@ -123,6 +126,7 @@ export default function TestCaseList({
               project={project}
               setReRender={setReRender}
               testSuite={row.original}
+              queryClient={queryClient}
             />
           );
         },
@@ -343,6 +347,7 @@ const RenderActions = ({
   project = {},
   testSuite = {},
   setReRender,
+  queryClient,
 }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -392,9 +397,15 @@ const RenderActions = ({
       await TestSuiteApi().delete(testSuite.id, {
         params: { projectId: project.id },
       });
+
+      queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+
       if (setReRender) {
         setReRender({});
       }
+
+      localStorage.setItem("test_suite_updated", "true");
+
       toast.success(`Test suite ${testSuite.name} deleted successfully`);
       setDeleteDialogOpen(false);
     } catch (error) {
