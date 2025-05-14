@@ -38,6 +38,7 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  getFilteredRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,6 +52,8 @@ export default function TestCaseList({
   const router = useRouter();
   const socketRef = useRef(null);
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+
   const columns = useMemo(() => {
     return [
       {
@@ -66,7 +69,7 @@ export default function TestCaseList({
         cell: ({ row }) => {
           return (
             <div className="flex gap-1">
-              {row.getValue("tags").map((tag) => (
+              {row.getValue("tags")?.map((tag) => (
                 <Badge
                   key={tag}
                   variant="outline"
@@ -139,10 +142,34 @@ export default function TestCaseList({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     initialState: {
       pagination: {
         pageSize: 5,
       },
+    },
+    state: {
+      globalFilter: searchQuery,
+    },
+    onGlobalFilterChange: setSearchQuery,
+    globalFilterFn: (row, c, value) => {
+      const searchValue = String(value).toLowerCase();
+      if (searchValue === "") return true;
+
+      if (String(row.getValue("name")).toLowerCase().includes(searchValue)) {
+        return true;
+      }
+
+      const tags = row.getValue("tags") || [];
+      if (tags.some((tag) => String(tag).toLowerCase().includes(searchValue))) {
+        return true;
+      }
+
+      if (String(row.getValue("status")).toLowerCase().includes(searchValue)) {
+        return true;
+      }
+
+      return false;
     },
   });
 
@@ -221,7 +248,7 @@ export default function TestCaseList({
   }, []);
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden">
+    <div className="border rounded-lg bg-card overflow-hidden mt-2">
       <div className="px-6 py-3">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Test Suites</h2>
@@ -232,6 +259,8 @@ export default function TestCaseList({
               <Input
                 placeholder="Search test cases..."
                 className="pl-8 h-8 w-full text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
@@ -300,7 +329,9 @@ export default function TestCaseList({
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    No results.
+                    {searchQuery
+                      ? "No test suites found matching your search criteria."
+                      : "No results."}
                   </TableCell>
                 </TableRow>
               )}
@@ -324,7 +355,7 @@ export default function TestCaseList({
               size="sm"
               className="h-7 w-7 rounded-md p-0 bg-blue-600 text-xs"
             >
-              1
+              {table.getState().pagination.pageIndex + 1}
             </Button>
             <Button
               variant="outline"

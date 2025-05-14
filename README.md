@@ -1,32 +1,47 @@
-# UrTest
+# 🚀 UrTest - Modern Test Automation Platform
 
-UrTest là một ứng dụng quản lý và kiểm thử tự động, hỗ trợ việc tạo và quản lý các test case, test suite, và workflow kiểm thử thông qua tích hợp với GitHub API.
+An integrated test automation platform for efficient and collaborative testing workflows. UrTest streamlines the testing process with an intuitive UI and powerful automation capabilities.
 
-## Tính năng chính
+## ✨ Features
 
-- **Quản lý dự án**: Tạo và quản lý thông tin dự án, bao gồm các trường như tiêu đề, mô tả, và trạng thái.
-- **Quản lý test suite**: Hiển thị danh sách các test suite, trạng thái, và tiến độ kiểm thử.
-- **Tích hợp GitHub API**: Tự động tạo file test thông qua workflow tích hợp với GitHub.
-- **Thống kê và báo cáo**: Hiển thị tỷ lệ thành công của các test case và các lần chạy gần đây.
-- **Giao diện hiện đại**: Sử dụng React và Next.js để cung cấp trải nghiệm người dùng mượt mà.
+- 🔐 **Secure Authentication**: Robust Keycloak integration with role-based access control
+- 📝 **Advanced Script Editor**: Feature-rich editor with syntax highlighting and auto-completion
+- 🌐 **Project Management**: Organize test suites by project with collaborative access
+- ⚡ **Quick Test Execution**: Run tests with a single click and view results in real-time
+- 🔄 **Automated Workflows**: Schedule and automate test runs with version control integration
+- 💬 **AI Assistant**: Built-in chat assistant to help with test script development
 
-## Cách sử dụng
+## 🏁 Getting Started
 
-Clone repository:
+1. Clone this repository
+2. Set up environment variables for each project
+3. Start the backend, frontend, and runner services
+4. Access the dashboard via your browser
 
-```bash
-git clone https://github.com/dongitran/UrTest.git
-cd UrTest
+## 🔧 Configuration
+
+Each project has its own configuration requirements. See the `.env.sample` files in each directory.
+
+## 💡 Features
+
+- ✨ Modern, responsive UI with dark/light themes
+- 🔐 Secure authentication via Keycloak
+- 📝 Advanced test script editor with syntax highlighting
+- 📊 Test result reporting and visualization
+- 👥 Project-based access control and user management
+- 🔄 Real-time test execution feedback
+- 💬 Integrated chat assistance for test development
+
+## 📦 Project Structure
+
+```
+UrTest Repository
+├── frontend/           # User interface and client application
+├── backend/            # API server and business logic
+├── runner/             # Test execution engine
+└── keyword-extractor/  # Autocompletion enhancement utility
 ```
 
-## Cấu trúc tư mục
+## 🤝 Contributing
 
-```bash
-backend/
-  ├── src/
-  │   ├── db/
-  │   │   ├── schema.ts        # Định nghĩa schema cơ sở dữ liệu
-  │   │   │── relations.ts     # Định nghĩa các relations của cơ sở dữ liệu
-  │   ├── routes/              # Xử lý các api
-  │   │── middlewares          # Các middleware của từng route hoặc tất cả routes
-```
+Contributions welcome! Please follow the existing code style and add tests for new features.
