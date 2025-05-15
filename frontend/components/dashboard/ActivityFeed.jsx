@@ -92,14 +92,6 @@ export default function ActivityFeed({ limit = 5 }) {
     <Card className="overflow-hidden border rounded-lg shadow-sm">
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <h3 className="font-medium">Recent Activities</h3>
-        {activities.length > 0 && (
-          <a
-            href="/activities"
-            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            View All
-          </a>
-        )}
       </div>
       <CardContent className="p-0">
         {isLoading ? (
