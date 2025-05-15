@@ -12,6 +12,7 @@ import TestSuiteRoute from '@route/testsuite.route';
 import TestResourceRoute from '@route/testResource.route';
 import AIChatRoute from '@route/ai-chat.route';
 import CommentRoute from '@route/comment.route';
+import ActivityRoute from '@route/activity.route';
 
 const app = new Hono();
 
@@ -27,6 +28,7 @@ app.route('/api/testsuite', TestSuiteRoute);
 app.route('/api/test-resource', TestResourceRoute);
 app.route('/api/ai', AIChatRoute);
 app.route('/api/comment', CommentRoute);
+app.route('/api/activities', ActivityRoute);
 
 app.onError(ErrorLog);
 
