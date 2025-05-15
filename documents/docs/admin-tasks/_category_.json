@@ -1,0 +1,8 @@
+{
+  "label": "Administrative Tasks",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Managing users and projects in UrTest."
+  }
+}

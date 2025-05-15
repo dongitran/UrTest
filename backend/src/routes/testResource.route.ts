@@ -14,6 +14,7 @@ import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import RefreshRepo from 'lib/Runner/RefreshRepo';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const TestResourceRoute = new Hono();
 
@@ -278,6 +279,15 @@ TestResourceRoute.post(
 
     handleGitHubCreateInBackground(project, testResource);
 
+    await logActivity(
+      ACTIVITY_TYPES.TEST_RESOURCE_CREATED,
+      body.projectId,
+      user.email,
+      `Created test resource "${body.title}"`,
+      testResource.id,
+      'test_resource'
+    );
+
     return ctx.json({
       message: 'ok',
       testResource,
@@ -345,6 +355,19 @@ TestResourceRoute.patch(
 
     handleGitHubUpdateInBackground(project, testResource, testResourceUpdated);
 
+    await logActivity(
+      ACTIVITY_TYPES.TEST_RESOURCE_UPDATED,
+      body.projectId,
+      user.email,
+      `Updated test resource "${body.title}"`,
+      testResource.id,
+      'test_resource',
+      {
+        previousTitle: testResource.title,
+        newTitle: body.title,
+      }
+    );
+
     return ctx.json({
       message: 'ok',
       testResource: testResourceUpdated,
@@ -402,6 +425,15 @@ TestResourceRoute.delete(
       .where(eq(TestResourceTable.id, id));
 
     handleGitHubDeleteInBackground(project, testResource);
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_RESOURCE_DELETED,
+      testResource.projectId,
+      user.email,
+      `Deleted test resource "${testResource.title}"`,
+      testResource.id,
+      'test_resource'
+    );
 
     return ctx.json({ message: 'ok' });
   }
