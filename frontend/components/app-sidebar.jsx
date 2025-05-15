@@ -87,11 +87,6 @@ export function AppSidebar({ ...props }) {
       url: "/settings",
       icon: SettingsIcon,
     },
-    {
-      title: "Search",
-      url: "/search",
-      icon: SearchIcon,
-    },
   ];
 
   return (
