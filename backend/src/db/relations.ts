@@ -5,6 +5,7 @@ import {
   TestResourceTable,
   ProjectAssignmentTable,
   CommentTable,
+  ActivityLogTable,
 } from './schema';
 
 export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
@@ -12,6 +13,7 @@ export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
   listTestResource: many(TestResourceTable),
   assignments: many(ProjectAssignmentTable),
   comments: many(CommentTable),
+  activities: many(ActivityLogTable),
 }));
 
 export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one, many }) => ({
@@ -49,5 +51,12 @@ export const CommentTableRelations = relations(CommentTable, ({ one }) => ({
   resource: one(TestResourceTable, {
     fields: [CommentTable.resourceId],
     references: [TestResourceTable.id],
+  }),
+}));
+
+export const ActivityLogTableRelations = relations(ActivityLogTable, ({ one }) => ({
+  project: one(ProjectTable, {
+    fields: [ActivityLogTable.projectId],
+    references: [ProjectTable.id],
   }),
 }));
