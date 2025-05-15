@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 export default function WorkspacePageV2() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [dataTable, setDataTable] = useState([]);
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["/api/dashboard"],
@@ -20,11 +21,21 @@ export default function WorkspacePageV2() {
       return DashboardApi().get();
     },
   });
+
   useEffect(() => {
     if (data) {
       setDataTable(data.dataTable);
     }
   }, [data]);
+
+  const handleProjectModalClose = (success) => {
+    setProjectModalOpen(false);
+    if (success) {
+      setActivityRefreshKey((prev) => prev + 1);
+      refetch();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -55,11 +66,15 @@ export default function WorkspacePageV2() {
         initDataTable={data.dataTable}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActivityFeed />
+        <ActivityFeed refreshKey={activityRefreshKey} />
         <TestTypeStats />
       </div>
 
-      <ProjectModal open={projectModalOpen} setOpen={setProjectModalOpen} />
+      <ProjectModal
+        open={projectModalOpen}
+        setOpen={setProjectModalOpen}
+        onSuccess={() => handleProjectModalClose(true)}
+      />
     </div>
   );
 }

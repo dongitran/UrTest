@@ -17,13 +17,14 @@ import axios from "axios";
 import { formatTimeAgo } from "@/utils/projectUtils";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-export default function ActivityFeed({ limit = 5 }) {
+export default function ActivityFeed({ limit = 5, refreshKey = 0 }) {
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchActivities = async () => {
       try {
+        setIsLoading(true);
         const token = localStorage.getItem("keycloak_token")
           ? JSON.parse(localStorage.getItem("keycloak_token")).access_token
           : "";
@@ -46,10 +47,9 @@ export default function ActivityFeed({ limit = 5 }) {
     };
 
     fetchActivities();
-  }, [limit]);
+  }, [limit, refreshKey]);
 
   const getActivityIcon = (activityType) => {
-    // Return appropriate icon based on activity type
     switch (activityType) {
       case "PROJECT_CREATED":
         return <Plus className="h-4 w-4 text-green-500" />;
