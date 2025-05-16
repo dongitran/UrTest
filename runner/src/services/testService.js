@@ -112,3 +112,67 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     throw error;
   }
 };
+
+exports.runProjectTests = async (requestId, project) => {
+  try {
+    const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
+    const projectPath = path.join(repoPath, "tests", project);
+
+    if (!(await fs.pathExists(projectPath))) {
+      throw new Error(`Project folder ${project} does not exist`);
+    }
+
+    const files = await fs.readdir(projectPath);
+    const robotFiles = files.filter((file) => file.endsWith(".robot"));
+
+    if (robotFiles.length === 0) {
+      throw new Error(`No robot files found in project ${project}`);
+    }
+
+    const robotCommand = `robot tests/tests/${project}`;
+
+    let stdout, stderr;
+    try {
+      const result = await execPromise(robotCommand);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (error) {
+      stdout = error.stdout;
+      stderr = error.stderr;
+      console.error("Error running project tests:", error);
+    }
+
+    console.log({ stdout, stderr }, "project-tests-output");
+
+    if (stderr) {
+      console.error("Robot project tests stderr:", stderr);
+    }
+
+    const testResults = extractTestResults(stdout);
+
+    const reportFiles = [
+      { name: "report.html", path: path.join(process.cwd(), "report.html") },
+      { name: "log.html", path: path.join(process.cwd(), "log.html") },
+      { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
+    ];
+
+    const minioFolder = `project-running/${requestId}`;
+
+    for (const file of reportFiles) {
+      if (await fs.pathExists(file.path)) {
+        await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
+      }
+    }
+
+    const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
+
+    return {
+      reportUrl,
+      results: testResults,
+      totalFiles: robotFiles.length,
+    };
+  } catch (error) {
+    console.error("Error executing project tests:", error);
+    throw error;
+  }
+};
