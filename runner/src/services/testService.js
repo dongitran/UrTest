@@ -1,11 +1,32 @@
 const path = require("path");
 const fs = require("fs-extra");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 const util = require("util");
 const minioService = require("./minioService");
 const config = require("../config");
 
 const execPromise = util.promisify(exec);
+
+const startXvfb = async () => {
+  try {
+    const checkResult = await execPromise(
+      'ps aux | grep "Xvfb :99" | grep -v grep'
+    );
+    if (checkResult.stdout.trim()) {
+      console.log("Xvfb already running");
+      return true;
+    }
+  } catch (error) {
+    try {
+      await execPromise("Xvfb :99 -screen 0 1280x1024x24 -ac &");
+      console.log("Started Xvfb");
+      return true;
+    } catch (error) {
+      console.error("Failed to start Xvfb:", error);
+      return false;
+    }
+  }
+};
 
 function extractTestResults(stdout) {
   try {
@@ -36,6 +57,14 @@ function extractTestResults(stdout) {
   }
 }
 
+function containsUITest(content) {
+  return (
+    content.includes("SeleniumLibrary") ||
+    content.includes("Open Browser") ||
+    content.includes("Browser Library")
+  );
+}
+
 exports.runTest = async (requestId, project, content, testResultTitle) => {
   try {
     let decodedContent;
@@ -54,17 +83,63 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     const formattedContent = decodedContent.replace(/\n/g, "\n");
     await fs.writeFile(testFilePath, formattedContent);
 
-    const robotCommand = `robot tests/tests/${project}/${testResultTitle}.robot`;
+    const isUITest = containsUITest(formattedContent);
 
-    let stdout, stderr;
+    if (isUITest) {
+      console.log("Detected UI test, ensuring Xvfb is running");
+      await startXvfb();
+    }
+
+    const robotEnv = {
+      ...process.env,
+      DISPLAY: ":99",
+      PYTHONPATH: process.cwd(),
+    };
+
+    let robotOptions = [];
+
+    if (isUITest) {
+      robotOptions.push("--variable");
+      robotOptions.push("BROWSER:headlesschrome");
+    }
+
+    robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
+
+    console.log(`Running robot command: robot ${robotOptions.join(" ")}`);
+
+    let stdout = "",
+      stderr = "";
+
     try {
-      const result = await execPromise(robotCommand);
-      stdout = result.stdout;
-      stderr = result.stderr;
+      const robotProcess = spawn("robot", robotOptions, { env: robotEnv });
+
+      robotProcess.stdout.on("data", (data) => {
+        const chunk = data.toString();
+        stdout += chunk;
+        console.log(chunk);
+      });
+
+      robotProcess.stderr.on("data", (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+        console.error(chunk);
+      });
+
+      await new Promise((resolve, reject) => {
+        robotProcess.on("close", (code) => {
+          console.log(`Robot process exited with code ${code}`);
+          resolve();
+        });
+
+        robotProcess.on("error", (err) => {
+          console.error(`Failed to start robot process: ${err}`);
+          reject(err);
+        });
+      });
     } catch (error) {
-      stdout = error.stdout;
-      stderr = error.stderr;
-      console.error("Error running test:", error);
+      console.error("Error running robot command:", error);
+      stdout = error.stdout || "";
+      stderr = error.stderr || "";
     }
     console.log({ stdout, stderr }, "output");
 
@@ -78,6 +153,10 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
       { name: "log.html", path: path.join(process.cwd(), "log.html") },
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
+      {
+        name: "selenium-screenshot-1.png",
+        path: path.join(process.cwd(), "selenium-screenshot-1.png"),
+      },
     ];
 
     const minioFolder = `manual-running/${requestId}`;
@@ -93,6 +172,7 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     return {
       reportUrl,
       results: testResults,
+      isUITest,
     };
   } catch (error) {
     console.error("Error executing test:", error);
