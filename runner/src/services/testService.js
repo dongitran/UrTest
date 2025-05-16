@@ -1,11 +1,44 @@
 const path = require("path");
 const fs = require("fs-extra");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 const util = require("util");
 const minioService = require("./minioService");
 const config = require("../config");
 
 const execPromise = util.promisify(exec);
+
+const startXvfb = async () => {
+  try {
+    const checkResult = await execPromise(
+      'ps aux | grep "Xvfb :99" | grep -v grep'
+    );
+    if (checkResult.stdout.trim()) {
+      return true;
+    }
+  } catch (error) {
+    try {
+      await execPromise("Xvfb :99 -screen 0 1280x1024x24 -ac &");
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+};
+
+const checkWebDriver = async () => {
+  try {
+    await execPromise("chromedriver --version");
+    await execPromise("chmod +x $(which chromedriver)");
+    return true;
+  } catch (error) {
+    try {
+      await execPromise("webdrivermanager chrome --linkpath /usr/local/bin");
+      return true;
+    } catch (installError) {
+      return false;
+    }
+  }
+};
 
 function extractTestResults(stdout) {
   try {
@@ -27,13 +60,20 @@ function extractTestResults(stdout) {
       failed: 0,
     };
   } catch (error) {
-    console.error("Error extracting test results:", error);
     return {
       totalTests: 0,
       passed: 0,
       failed: 0,
     };
   }
+}
+
+function containsUITest(content) {
+  return (
+    content.includes("SeleniumLibrary") ||
+    content.includes("Open Browser") ||
+    content.includes("Browser Library")
+  );
 }
 
 exports.runTest = async (requestId, project, content, testResultTitle) => {
@@ -54,19 +94,89 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     const formattedContent = decodedContent.replace(/\n/g, "\n");
     await fs.writeFile(testFilePath, formattedContent);
 
-    const robotCommand = `robot tests/tests/${project}/${testResultTitle}.robot`;
+    const isUITest = containsUITest(formattedContent);
 
-    let stdout, stderr;
-    try {
-      const result = await execPromise(robotCommand);
-      stdout = result.stdout;
-      stderr = result.stderr;
-    } catch (error) {
-      stdout = error.stdout;
-      stderr = error.stderr;
-      console.error("Error running test:", error);
+    if (isUITest) {
+      await startXvfb();
+      await checkWebDriver();
+
+      try {
+        const chromeVersion = await execPromise("chromium-browser --version");
+        const driverVersion = await execPromise("chromedriver --version");
+        const driverPath = await execPromise("which chromedriver");
+        await execPromise(`chmod +x ${driverPath.stdout.trim()}`);
+      } catch (error) {}
     }
-    console.log({ stdout, stderr }, "output");
+
+    const robotEnv = {
+      ...process.env,
+      DISPLAY: ":99",
+      PYTHONPATH: process.cwd(),
+      PATH: `${process.env.PATH}:/usr/local/bin:/usr/bin`,
+      SELENIUM_DRIVER_PATH: "/usr/bin/chromedriver",
+    };
+
+    let robotOptions = [];
+
+    if (isUITest) {
+      robotOptions.push("--variable");
+      robotOptions.push("BROWSER:headlesschrome");
+
+      const setupFile = path.join(
+        projectPath,
+        `${testResultTitle}_setup.robot`
+      );
+      await fs.writeFile(
+        setupFile,
+        `
+*** Settings ***
+Library    SeleniumLibrary
+
+*** Variables ***
+\${SELENIUM_DRIVER_PATH}    /usr/bin/chromedriver
+\${BROWSER_OPTIONS}    add_argument("--no-sandbox");add_argument("--disable-dev-shm-usage");add_argument("--disable-gpu")
+
+*** Keywords ***
+Setup ChromeDriver
+    Set Environment Variable    webdriver.chrome.driver    \${SELENIUM_DRIVER_PATH}
+`
+      );
+
+      robotOptions.push("--prerunmodifier");
+      robotOptions.push(`${projectPath}/${testResultTitle}_setup.robot`);
+    }
+
+    robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
+
+    let stdout = "",
+      stderr = "";
+
+    try {
+      const robotProcess = spawn("robot", robotOptions, { env: robotEnv });
+
+      robotProcess.stdout.on("data", (data) => {
+        const chunk = data.toString();
+        stdout += chunk;
+      });
+
+      robotProcess.stderr.on("data", (data) => {
+        const chunk = data.toString();
+        stderr += chunk;
+      });
+
+      await new Promise((resolve, reject) => {
+        robotProcess.on("close", (code) => {
+          resolve();
+        });
+
+        robotProcess.on("error", (err) => {
+          reject(err);
+        });
+      });
+    } catch (error) {
+      stdout = error.stdout || "";
+      stderr = error.stderr || "";
+    }
 
     if (stderr) {
       console.error("Robot test stderr:", stderr);
@@ -78,6 +188,10 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
       { name: "log.html", path: path.join(process.cwd(), "log.html") },
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
+      {
+        name: "selenium-screenshot-1.png",
+        path: path.join(process.cwd(), "selenium-screenshot-1.png"),
+      },
     ];
 
     const minioFolder = `manual-running/${requestId}`;
@@ -93,9 +207,9 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     return {
       reportUrl,
       results: testResults,
+      isUITest,
     };
   } catch (error) {
-    console.error("Error executing test:", error);
     throw error;
   }
 };
