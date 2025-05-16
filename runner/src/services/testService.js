@@ -77,6 +77,8 @@ function containsUITest(content) {
 }
 
 exports.runTest = async (requestId, project, content, testResultTitle) => {
+  const tempFilesToCleanup = [];
+
   try {
     let decodedContent;
     try {
@@ -87,7 +89,12 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, "tests", project);
-    const testFilePath = path.join(projectPath, `${testResultTitle}.robot`);
+    const testFilePath = path.join(
+      projectPath,
+      `${testResultTitle || "test"}.robot`
+    );
+
+    tempFilesToCleanup.push(testFilePath);
 
     await fs.ensureDir(projectPath);
 
@@ -124,8 +131,11 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
       const setupFile = path.join(
         projectPath,
-        `${testResultTitle}_setup.robot`
+        `${testResultTitle || "test"}_setup.robot`
       );
+
+      tempFilesToCleanup.push(setupFile);
+
       await fs.writeFile(
         setupFile,
         `
@@ -143,10 +153,14 @@ Setup ChromeDriver
       );
 
       robotOptions.push("--prerunmodifier");
-      robotOptions.push(`${projectPath}/${testResultTitle}_setup.robot`);
+      robotOptions.push(
+        `${projectPath}/${testResultTitle || "test"}_setup.robot`
+      );
     }
 
-    robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
+    robotOptions.push(
+      `tests/tests/${project}/${testResultTitle || "test"}.robot`
+    );
 
     let stdout = "",
       stderr = "";
@@ -211,6 +225,17 @@ Setup ChromeDriver
     };
   } catch (error) {
     throw error;
+  } finally {
+    for (const filePath of tempFilesToCleanup) {
+      try {
+        if (await fs.pathExists(filePath)) {
+          await fs.remove(filePath);
+          console.log(`Temporary file cleaned up: ${filePath}`);
+        }
+      } catch (cleanupError) {
+        console.error(`Error cleaning up file ${filePath}:`, cleanupError);
+      }
+    }
   }
 };
 
