@@ -12,24 +12,47 @@ FROM node:18-alpine
 
 RUN apk add --no-cache git openssh python3 py3-pip postgresql-dev gcc python3-dev musl-dev
 
-RUN apk add --no-cache chromium chromium-chromedriver xvfb
+RUN apk add --no-cache chromium chromium-chromedriver xvfb curl unzip
+
+RUN mkdir -p /opt/selenium /opt/selenium/chromedriver
+
+RUN CHROME_MAJOR_VERSION=$(chromium-browser --version | sed 's/Chromium //g' | sed 's/\.[0-9]*\.[0-9]*\.[0-9]* //g') && \
+    echo "Chrome version: $CHROME_MAJOR_VERSION" && \
+    CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION") && \
+    echo "ChromeDriver version: $CHROMEDRIVER_VERSION" && \
+    wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" -O /tmp/chromedriver.zip && \
+    unzip /tmp/chromedriver.zip -d /opt/selenium/chromedriver/ && \
+    rm /tmp/chromedriver.zip && \
+    chmod +x /opt/selenium/chromedriver/chromedriver && \
+    ln -fs /opt/selenium/chromedriver/chromedriver /usr/local/bin/chromedriver
 
 ENV CHROME_BIN=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/lib/chromium/ \
-    CHROMEDRIVER_PATH=/usr/bin/chromedriver \
-    DISPLAY=:99
+    CHROMEDRIVER_PATH=/usr/local/bin/chromedriver \
+    DISPLAY=:99 \
+    PATH="/usr/local/bin:${PATH}"
 
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+RUN pip3 install selenium==4.10.0
+
 RUN pip3 install --no-cache-dir \
-    robotframework \
+    robotframework==6.1.1 \
     robotframework-requests \
-    robotframework-seleniumlibrary \
+    robotframework-seleniumlibrary==6.1.0 \
     robotframework-databaselibrary \
     psycopg2-binary \
     jsonschema \
-    robotframework-faker
+    robotframework-faker \
+    webdrivermanager
+
+RUN webdrivermanager chrome --linkpath /usr/local/bin
+
+RUN chromium-browser --version && \
+    chromedriver --version && \
+    ls -la /usr/local/bin/chromedriver && \
+    ls -la /opt/selenium/chromedriver/chromedriver
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
@@ -42,11 +65,12 @@ COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
 
-RUN chmod +x /usr/bin/chromedriver && \
-    chmod 755 /usr/bin/chromium-browser
-
-COPY ./src/scripts/start_xvfb.sh /app/
+COPY ./start_xvfb.sh /app/
 RUN chmod +x /app/start_xvfb.sh
+
+RUN ls -la /usr/bin/chromium-browser && \
+    chmod 755 /usr/bin/chromium-browser && \
+    chmod +x /usr/local/bin/chromedriver
 
 ENV NODE_ENV=production \
     PORT=3000 \

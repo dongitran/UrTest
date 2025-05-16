@@ -13,16 +13,28 @@ const startXvfb = async () => {
       'ps aux | grep "Xvfb :99" | grep -v grep'
     );
     if (checkResult.stdout.trim()) {
-      console.log("Xvfb already running");
       return true;
     }
   } catch (error) {
     try {
       await execPromise("Xvfb :99 -screen 0 1280x1024x24 -ac &");
-      console.log("Started Xvfb");
       return true;
     } catch (error) {
-      console.error("Failed to start Xvfb:", error);
+      return false;
+    }
+  }
+};
+
+const checkWebDriver = async () => {
+  try {
+    await execPromise("chromedriver --version");
+    await execPromise("chmod +x $(which chromedriver)");
+    return true;
+  } catch (error) {
+    try {
+      await execPromise("webdrivermanager chrome --linkpath /usr/local/bin");
+      return true;
+    } catch (installError) {
       return false;
     }
   }
@@ -48,7 +60,6 @@ function extractTestResults(stdout) {
       failed: 0,
     };
   } catch (error) {
-    console.error("Error extracting test results:", error);
     return {
       totalTests: 0,
       passed: 0,
@@ -86,14 +97,23 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     const isUITest = containsUITest(formattedContent);
 
     if (isUITest) {
-      console.log("Detected UI test, ensuring Xvfb is running");
       await startXvfb();
+      await checkWebDriver();
+
+      try {
+        const chromeVersion = await execPromise("chromium-browser --version");
+        const driverVersion = await execPromise("chromedriver --version");
+        const driverPath = await execPromise("which chromedriver");
+        await execPromise(`chmod +x ${driverPath.stdout.trim()}`);
+      } catch (error) {}
     }
 
     const robotEnv = {
       ...process.env,
       DISPLAY: ":99",
       PYTHONPATH: process.cwd(),
+      PATH: `${process.env.PATH}:/usr/local/bin:/usr/bin`,
+      SELENIUM_DRIVER_PATH: "/usr/local/bin/chromedriver",
     };
 
     let robotOptions = [];
@@ -101,11 +121,32 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     if (isUITest) {
       robotOptions.push("--variable");
       robotOptions.push("BROWSER:headlesschrome");
+
+      const setupFile = path.join(
+        projectPath,
+        `${testResultTitle}_setup.robot`
+      );
+      await fs.writeFile(
+        setupFile,
+        `
+*** Settings ***
+Library    SeleniumLibrary
+
+*** Variables ***
+${SELENIUM_DRIVER_PATH}    /usr/local/bin/chromedriver
+${BROWSER_OPTIONS}    add_argument("--no-sandbox");add_argument("--disable-dev-shm-usage");add_argument("--disable-gpu")
+
+*** Keywords ***
+Setup ChromeDriver
+    Set Environment Variable    webdriver.chrome.driver    ${SELENIUM_DRIVER_PATH}
+`
+      );
+
+      robotOptions.push("--prerunmodifier");
+      robotOptions.push(`${projectPath}/${testResultTitle}_setup.robot`);
     }
 
     robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
-
-    console.log(`Running robot command: robot ${robotOptions.join(" ")}`);
 
     let stdout = "",
       stderr = "";
@@ -116,32 +157,26 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       robotProcess.stdout.on("data", (data) => {
         const chunk = data.toString();
         stdout += chunk;
-        console.log(chunk);
       });
 
       robotProcess.stderr.on("data", (data) => {
         const chunk = data.toString();
         stderr += chunk;
-        console.error(chunk);
       });
 
       await new Promise((resolve, reject) => {
         robotProcess.on("close", (code) => {
-          console.log(`Robot process exited with code ${code}`);
           resolve();
         });
 
         robotProcess.on("error", (err) => {
-          console.error(`Failed to start robot process: ${err}`);
           reject(err);
         });
       });
     } catch (error) {
-      console.error("Error running robot command:", error);
       stdout = error.stdout || "";
       stderr = error.stderr || "";
     }
-    console.log({ stdout, stderr }, "output");
 
     if (stderr) {
       console.error("Robot test stderr:", stderr);
@@ -175,7 +210,6 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       isUITest,
     };
   } catch (error) {
-    console.error("Error executing test:", error);
     throw error;
   }
 };
