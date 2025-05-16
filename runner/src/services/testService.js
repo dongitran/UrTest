@@ -37,6 +37,7 @@ function extractTestResults(stdout) {
 }
 
 exports.runTest = async (requestId, project, content, testResultTitle) => {
+  let testFilePath = "";
   try {
     let decodedContent;
     try {
@@ -47,14 +48,15 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, "tests", project);
-    const testFilePath = path.join(projectPath, `${testResultTitle}.robot`);
+    const fileName = testResultTitle || `test_${Date.now()}`;
+    testFilePath = path.join(projectPath, `${fileName}.robot`);
 
     await fs.ensureDir(projectPath);
 
     const formattedContent = decodedContent.replace(/\n/g, "\n");
     await fs.writeFile(testFilePath, formattedContent);
 
-    const robotCommand = `robot tests/tests/${project}/${testResultTitle}.robot`;
+    const robotCommand = `robot tests/tests/${project}/${fileName}.robot`;
 
     let stdout, stderr;
     try {
@@ -88,6 +90,10 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       }
     }
 
+    if (await fs.pathExists(testFilePath)) {
+      await fs.remove(testFilePath);
+    }
+
     const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
 
     return {
@@ -96,6 +102,13 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
     };
   } catch (error) {
     console.error("Error executing test:", error);
+    if (testFilePath && (await fs.pathExists(testFilePath))) {
+      try {
+        await fs.remove(testFilePath);
+      } catch (cleanupError) {
+        console.error("Error cleaning up test file:", cleanupError);
+      }
+    }
     throw error;
   }
 };
