@@ -24,7 +24,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip3 install --no-cache-dir \
-    selenium==4.10.0 \
+    selenium==4.8.3 \
     robotframework==6.1.1 \
     robotframework-requests \
     robotframework-seleniumlibrary==6.1.0 \
