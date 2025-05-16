@@ -65,7 +65,7 @@ COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
 
-COPY ./start_xvfb.sh /app/
+COPY ./scripts/start_xvfb.sh /app/
 RUN chmod +x /app/start_xvfb.sh
 
 RUN ls -la /usr/bin/chromium-browser && \
