@@ -113,7 +113,7 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
       DISPLAY: ":99",
       PYTHONPATH: process.cwd(),
       PATH: `${process.env.PATH}:/usr/local/bin:/usr/bin`,
-      SELENIUM_DRIVER_PATH: "/usr/local/bin/chromedriver",
+      SELENIUM_DRIVER_PATH: "/usr/bin/chromedriver",
     };
 
     let robotOptions = [];
@@ -133,12 +133,12 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 Library    SeleniumLibrary
 
 *** Variables ***
-${SELENIUM_DRIVER_PATH}    /usr/local/bin/chromedriver
-${BROWSER_OPTIONS}    add_argument("--no-sandbox");add_argument("--disable-dev-shm-usage");add_argument("--disable-gpu")
+\${SELENIUM_DRIVER_PATH}    /usr/bin/chromedriver
+\${BROWSER_OPTIONS}    add_argument("--no-sandbox");add_argument("--disable-dev-shm-usage");add_argument("--disable-gpu")
 
 *** Keywords ***
 Setup ChromeDriver
-    Set Environment Variable    webdriver.chrome.driver    ${SELENIUM_DRIVER_PATH}
+    Set Environment Variable    webdriver.chrome.driver    \${SELENIUM_DRIVER_PATH}
 `
       );
 
