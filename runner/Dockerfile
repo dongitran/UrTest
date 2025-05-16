@@ -65,8 +65,24 @@ COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
 
-COPY ./scripts/start_xvfb.sh /app/
-RUN chmod +x /app/start_xvfb.sh
+RUN echo '#!/bin/sh\n\
+if ! pgrep -x "Xvfb" > /dev/null; then\n\
+    Xvfb :99 -screen 0 1280x1024x24 -ac &\n\
+    sleep 2\n\
+else\n\
+    echo "Xvfb is already running"\n\
+fi\n\
+\n\
+export DISPLAY=:99\n\
+\n\
+chromium-browser --version\n\
+chromedriver --version\n\
+which chromedriver\n\
+which chromium-browser\n\
+\n\
+chmod +x $(which chromedriver)\n\
+chmod +x $(which chromium-browser)' > /app/start_xvfb.sh && \
+    chmod +x /app/start_xvfb.sh
 
 RUN ls -la /usr/bin/chromium-browser && \
     chmod 755 /usr/bin/chromium-browser && \
