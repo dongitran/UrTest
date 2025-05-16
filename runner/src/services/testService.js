@@ -77,6 +77,8 @@ function containsUITest(content) {
 }
 
 exports.runTest = async (requestId, project, content, testResultTitle) => {
+  const tempFilesToCleanup = [];
+
   try {
     let decodedContent;
     try {
@@ -87,7 +89,12 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, "tests", project);
-    const testFilePath = path.join(projectPath, `${testResultTitle}.robot`);
+    const testFilePath = path.join(
+      projectPath,
+      `${testResultTitle || "test"}.robot`
+    );
+
+    tempFilesToCleanup.push(testFilePath);
 
     await fs.ensureDir(projectPath);
 
@@ -124,8 +131,11 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
       const setupFile = path.join(
         projectPath,
-        `${testResultTitle}_setup.robot`
+        `${testResultTitle || "test"}_setup.robot`
       );
+
+      tempFilesToCleanup.push(setupFile);
+
       await fs.writeFile(
         setupFile,
         `
@@ -143,10 +153,14 @@ Setup ChromeDriver
       );
 
       robotOptions.push("--prerunmodifier");
-      robotOptions.push(`${projectPath}/${testResultTitle}_setup.robot`);
+      robotOptions.push(
+        `${projectPath}/${testResultTitle || "test"}_setup.robot`
+      );
     }
 
-    robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
+    robotOptions.push(
+      `tests/tests/${project}/${testResultTitle || "test"}.robot`
+    );
 
     let stdout = "",
       stderr = "";
@@ -210,6 +224,81 @@ Setup ChromeDriver
       isUITest,
     };
   } catch (error) {
+    throw error;
+  } finally {
+    for (const filePath of tempFilesToCleanup) {
+      try {
+        if (await fs.pathExists(filePath)) {
+          await fs.remove(filePath);
+          console.log(`Temporary file cleaned up: ${filePath}`);
+        }
+      } catch (cleanupError) {
+        console.error(`Error cleaning up file ${filePath}:`, cleanupError);
+      }
+    }
+  }
+};
+
+exports.runProjectTests = async (requestId, project) => {
+  try {
+    const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
+    const projectPath = path.join(repoPath, "tests", project);
+
+    if (!(await fs.pathExists(projectPath))) {
+      throw new Error(`Project folder ${project} does not exist`);
+    }
+
+    const files = await fs.readdir(projectPath);
+    const robotFiles = files.filter((file) => file.endsWith(".robot"));
+
+    if (robotFiles.length === 0) {
+      throw new Error(`No robot files found in project ${project}`);
+    }
+
+    const robotCommand = `robot tests/tests/${project}`;
+
+    let stdout, stderr;
+    try {
+      const result = await execPromise(robotCommand);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (error) {
+      stdout = error.stdout;
+      stderr = error.stderr;
+      console.error("Error running project tests:", error);
+    }
+
+    console.log({ stdout, stderr }, "project-tests-output");
+
+    if (stderr) {
+      console.error("Robot project tests stderr:", stderr);
+    }
+
+    const testResults = extractTestResults(stdout);
+
+    const reportFiles = [
+      { name: "report.html", path: path.join(process.cwd(), "report.html") },
+      { name: "log.html", path: path.join(process.cwd(), "log.html") },
+      { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
+    ];
+
+    const minioFolder = `project-running/${requestId}`;
+
+    for (const file of reportFiles) {
+      if (await fs.pathExists(file.path)) {
+        await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
+      }
+    }
+
+    const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
+
+    return {
+      reportUrl,
+      results: testResults,
+      totalFiles: robotFiles.length,
+    };
+  } catch (error) {
+    console.error("Error executing project tests:", error);
     throw error;
   }
 };
