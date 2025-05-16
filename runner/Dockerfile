@@ -48,25 +48,6 @@ COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
 
-RUN echo '#!/bin/sh\n\
-if ! pgrep -x "Xvfb" > /dev/null; then\n\
-    Xvfb :99 -screen 0 1280x1024x24 -ac &\n\
-    sleep 2\n\
-else\n\
-    echo "Xvfb is already running"\n\
-fi\n\
-\n\
-export DISPLAY=:99\n\
-\n\
-chromium-browser --version\n\
-chromedriver --version\n\
-which chromedriver\n\
-which chromium-browser\n\
-\n\
-chmod +x $(which chromedriver)\n\
-chmod +x $(which chromium-browser)' > /app/start_xvfb.sh && \
-    chmod +x /app/start_xvfb.sh
-
 RUN chmod 755 /usr/bin/chromium-browser && \
     chmod +x /usr/bin/chromedriver
 
@@ -78,4 +59,11 @@ USER root
 
 EXPOSE 3000
 
-CMD ["/bin/sh", "-c", "/app/start_xvfb.sh && node app.js"]
+CMD Xvfb :99 -screen 0 1280x1024x24 -ac & \
+    export DISPLAY=:99 && \
+    sleep 2 && \
+    echo "Chrome version: $(chromium-browser --version)" && \
+    echo "ChromeDriver version: $(chromedriver --version)" && \
+    chmod +x $(which chromedriver) && \
+    chmod +x $(which chromium-browser) && \
+    node app.js
