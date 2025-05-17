@@ -46,7 +46,8 @@ export const enumTestSuiteExecuteStatus = pgEnum('enum_testsuite_execute_status'
   'failed',
 ]);
 export const TestSuiteExecuteTable = pgTable('tbl_testsuite_execute', {
-  testSuiteId: varchar('testsuite_id', { length: 255 }).notNull(),
+  testSuiteId: varchar('testsuite_id', { length: 255 }),
+  projectId: varchar('project_id', { length: 255 }),
   status: enumTestSuiteExecuteStatus(),
   ...commonTable,
 });

@@ -83,6 +83,15 @@ async function handleGitHubCreateInBackground(
         .where(eq(TestResourceTable.id, testResource.id));
 
       await RefreshRepo();
+
+      await logActivity(
+        ACTIVITY_TYPES.TEST_SUITE_CREATED,
+        project.id,
+        testResource.createdBy || '',
+        `Created test suite "${testResource.title}"`,
+        testResource.id,
+        'test_suite'
+      );
     } catch (error: any) {
       console.log(error, 'Create resource error');
       await db
@@ -131,6 +140,19 @@ async function handleGitHubUpdateInBackground(
             },
           })
           .where(eq(TestResourceTable.id, testResourceUpdated.id));
+
+        await logActivity(
+          ACTIVITY_TYPES.TEST_RESOURCE_UPDATED,
+          project.id,
+          testResourceUpdated.updatedBy || testResourceUpdated.createdBy || '',
+          `Updated test resource "${testResourceUpdated.title}"`,
+          testResource.id,
+          'test_resource',
+          {
+            previousTitle: testResource.title,
+            newTitle: testResourceUpdated.title,
+          }
+        );
       } else {
         console.log('GitHub file not found for update, might need to create it instead');
       }
@@ -152,7 +174,8 @@ async function handleGitHubUpdateInBackground(
 
 async function handleGitHubDeleteInBackground(
   project: Project | null | undefined,
-  testResource: TestResource
+  testResource: TestResource,
+  deletedBy: string
 ): Promise<void> {
   if (project?.slug && testResource.fileName) {
     try {
@@ -191,6 +214,15 @@ async function handleGitHubDeleteInBackground(
       }
 
       await RefreshRepo();
+
+      await logActivity(
+        ACTIVITY_TYPES.TEST_RESOURCE_DELETED,
+        testResource.projectId,
+        deletedBy,
+        `Deleted test resource "${testResource.title}"`,
+        testResource.id,
+        'test_resource'
+      );
     } catch (error: any) {
       console.log(error, 'Delete resource error');
     }
@@ -279,15 +311,6 @@ TestResourceRoute.post(
 
     handleGitHubCreateInBackground(project, testResource);
 
-    await logActivity(
-      ACTIVITY_TYPES.TEST_RESOURCE_CREATED,
-      body.projectId,
-      user.email,
-      `Created test resource "${body.title}"`,
-      testResource.id,
-      'test_resource'
-    );
-
     return ctx.json({
       message: 'ok',
       testResource,
@@ -355,19 +378,6 @@ TestResourceRoute.patch(
 
     handleGitHubUpdateInBackground(project, testResource, testResourceUpdated);
 
-    await logActivity(
-      ACTIVITY_TYPES.TEST_RESOURCE_UPDATED,
-      body.projectId,
-      user.email,
-      `Updated test resource "${body.title}"`,
-      testResource.id,
-      'test_resource',
-      {
-        previousTitle: testResource.title,
-        newTitle: body.title,
-      }
-    );
-
     return ctx.json({
       message: 'ok',
       testResource: testResourceUpdated,
@@ -424,16 +434,7 @@ TestResourceRoute.delete(
       })
       .where(eq(TestResourceTable.id, id));
 
-    handleGitHubDeleteInBackground(project, testResource);
-
-    await logActivity(
-      ACTIVITY_TYPES.TEST_RESOURCE_DELETED,
-      testResource.projectId,
-      user.email,
-      `Deleted test resource "${testResource.title}"`,
-      testResource.id,
-      'test_resource'
-    );
+    handleGitHubDeleteInBackground(project, testResource, user.email);
 
     return ctx.json({ message: 'ok' });
   }

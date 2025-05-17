@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-const ProjectModal = ({ open, setOpen }) => {
+const ProjectModal = ({ open, setOpen, onSuccess }) => {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -37,7 +37,8 @@ const ProjectModal = ({ open, setOpen }) => {
           headers: {
             Authorization: `Bearer ${
               localStorage.getItem("keycloak_token")
-                ? JSON.parse(localStorage.getItem("keycloak_token")).access_token
+                ? JSON.parse(localStorage.getItem("keycloak_token"))
+                    .access_token
                 : ""
             }`,
           },
@@ -47,8 +48,15 @@ const ProjectModal = ({ open, setOpen }) => {
       setDescription("");
       setName("");
       toast.success("Project created successfully");
-      if (setOpen) setOpen(false);
+
+      if (onSuccess) {
+        onSuccess();
+      } else if (setOpen) {
+        setOpen(false);
+      }
+
       queryClient.invalidateQueries(["/api/project"]);
+      queryClient.invalidateQueries(["/api/dashboard"]);
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error("Failed to create project");
@@ -63,7 +71,9 @@ const ProjectModal = ({ open, setOpen }) => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create Project</DialogTitle>
-            <DialogDescription>Create a new project to manage your test cases.</DialogDescription>
+            <DialogDescription>
+              Create a new project to manage your test cases.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 items-center gap-4">
@@ -104,8 +114,14 @@ const ProjectModal = ({ open, setOpen }) => {
             >
               Cancel
             </Button>
-            <Button disabled={loading} onClick={onCreateProject} className="bg-blue-700 hover:bg-blue-800 text-white">
-              {loading && <LoaderCircle className="animate-spin mr-2 h-4 w-4" />}
+            <Button
+              disabled={loading}
+              onClick={onCreateProject}
+              className="bg-blue-700 hover:bg-blue-800 text-white"
+            >
+              {loading && (
+                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
+              )}
               Create
             </Button>
           </DialogFooter>
