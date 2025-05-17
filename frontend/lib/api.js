@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken, updateToken, logout } from "./keycloak";
+import { getToken, updateToken, logout, isTokenExpired } from "./keycloak";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -8,16 +8,23 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const tokenUpdated = await updateToken(60);
+      const tokenUpdated = await updateToken(60, 3, 1000);
 
       if (!tokenUpdated) {
-        await logout();
-        return Promise.reject(new Error("Token refresh failed"));
+        if (isTokenExpired()) {
+          await logout();
+          return Promise.reject(new Error("Token expired and refresh failed"));
+        }
       }
     } catch (error) {
       console.error("Token update error:", error);
-      await logout();
-      return Promise.reject(error);
+      if (error.name !== 'TypeError' ||
+        (!error.message.includes('Failed to fetch') &&
+          !error.message.includes('NetworkError') &&
+          !error.message.includes('Network request failed'))) {
+        await logout();
+        return Promise.reject(error);
+      }
     }
 
     const token = getToken();

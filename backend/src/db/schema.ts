@@ -82,3 +82,20 @@ export const CommentTable = pgTable('tbl_comments', {
   message: text().notNull(),
   ...commonTable,
 });
+
+export const ActivityLogTable = pgTable('tbl_activity_logs', {
+  id: varchar({ length: 255 }).primaryKey().notNull(),
+  activityType: varchar('activity_type', { length: 50 }).notNull(),
+  projectId: varchar('project_id', { length: 255 }).notNull().references(() => ProjectTable.id),
+  targetId: varchar('target_id', { length: 255 }),
+  targetType: varchar('target_type', { length: 50 }),
+  userEmail: varchar('user_email', { length: 255 }).notNull(),
+  description: text().notNull(),
+  metadata: jsonb(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+  createdBy: varchar('created_by', { length: 255 }),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }),
+  updatedBy: varchar('updated_by', { length: 255 }),
+  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
+  deletedBy: varchar('deleted_by', { length: 255 }),
+});

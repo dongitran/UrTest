@@ -13,6 +13,7 @@ import { DeleteProjectDirectory } from '../lib/Github/DeleteProjectDirectory';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import { fetchStaffUsersFromKeycloak } from '../lib/Keycloak/admin-api';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const ProjectRoute = new Hono();
 
@@ -164,6 +165,15 @@ ProjectRoute.post(
       }
     }
 
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_CREATED,
+      project.id,
+      user.email,
+      `Created project "${project.title}"`,
+      project.id,
+      'project'
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -188,6 +198,7 @@ ProjectRoute.patch(
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
+    const user = ctx.get('user');
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
     });
@@ -207,6 +218,22 @@ ProjectRoute.patch(
         description: body.description,
       })
       .where(eq(ProjectTable.id, project.id));
+
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_UPDATED,
+      project.id,
+      user.email,
+      `Updated project "${body.title}"`,
+      project.id,
+      'project',
+      {
+        previousTitle: project.title,
+        newTitle: body.title,
+        previousDescription: project.description,
+        newDescription: body.description,
+      }
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -249,6 +276,15 @@ ProjectRoute.delete(
       })
       .where(eq(ProjectTable.id, id))
       .returning();
+
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_DELETED,
+      id,
+      user.email,
+      `Deleted project "${project.title}"`,
+      id,
+      'project'
+    );
 
     return ctx.json({ message: 'ok' });
   }
@@ -299,6 +335,16 @@ ProjectRoute.post(
       createdBy: user.email,
     });
 
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_STAFF_ADDED,
+      project.id,
+      user.email,
+      `Assigned user ${userEmail} to project "${project.title}"`,
+      project.id,
+      'project',
+      { assignedUser: userEmail }
+    );
+
     return ctx.json({ message: 'User assigned to project successfully' });
   }
 );
@@ -326,6 +372,14 @@ ProjectRoute.delete(
       return ctx.json({ message: 'Assignment not found' }, 404);
     }
 
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+    });
+
+    if (!project) {
+      return ctx.json({ message: 'Project not found' }, 404);
+    }
+
     await db
       .update(ProjectAssignmentTable)
       .set({
@@ -333,6 +387,16 @@ ProjectRoute.delete(
         deletedBy: user.email,
       })
       .where(eq(ProjectAssignmentTable.id, assignment.id));
+
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_STAFF_REMOVED,
+      id,
+      user.email,
+      `Removed user ${userEmail} from project "${project.title}"`,
+      id,
+      'project',
+      { removedUser: userEmail }
+    );
 
     return ctx.json({ message: 'User assignment removed successfully' });
   }
