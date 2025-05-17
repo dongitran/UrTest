@@ -24,11 +24,14 @@ import {
   ChevronRight,
   ChevronLeft,
   Users,
+  Filter,
+  Plus,
 } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAdminOrManager } from "@/utils/authUtils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +63,7 @@ export default function ProjectTable({
   refetch,
   dataTable = [],
   setProjectModalOpen,
+  canCreateProject,
 }) {
   const router = useRouter();
   const [sorting, setSorting] = React.useState();
@@ -72,23 +76,46 @@ export default function ProjectTable({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [manageStaffModalOpen, setManageStaffModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const isAdminOrManager = () => {
-    const tokenInfo = localStorage.getItem("keycloak_token")
-      ? JSON.parse(localStorage.getItem("keycloak_token"))
-      : null;
+  const { user } = useAuth();
+  const hasAdminManagerAccess = isAdminOrManager(user);
 
-    if (!tokenInfo) return false;
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsSearchOpen(false);
+      }
+    };
 
-    try {
-      const tokenData = JSON.parse(atob(tokenInfo.access_token.split(".")[1]));
-      const roles = tokenData.realm_access?.roles || [];
-      return roles.includes("ADMIN") || roles.includes("MANAGER");
-    } catch (error) {
-      console.error("Error parsing token:", error);
-      return false;
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setColumnVisibility({
+        title: true,
+        status: true,
+        actions: true,
+        totalTestSuite: false,
+        totalTestSuiteExecute: false,
+        createdBy: false,
+      });
+    } else {
+      setColumnVisibility({
+        title: true,
+        status: true,
+        actions: true,
+        totalTestSuite: true,
+        totalTestSuiteExecute: true,
+        createdBy: true,
+      });
     }
-  };
+  }, [isMobile]);
 
   const navigateToProject = (projectId) => {
     router.push(`/test-management?projectId=${projectId}`);
@@ -101,8 +128,8 @@ export default function ProjectTable({
         header: "Project Name",
         cell: ({ row }) => {
           return (
-            <div className="col-span-2 flex items-center">
-              <div className="hidden sm:visible mr-3 sm:flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+            <div className="flex items-center">
+              <div className="hidden sm:flex mr-3 h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -118,15 +145,43 @@ export default function ProjectTable({
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 </svg>
               </div>
-              <div className="min-w-[200px] flex-1 pr-4">
+              <div className="flex-1 pr-4 min-w-0">
                 <div
-                  className="font-semibold text-base cursor-pointer hover:text-blue-600 transition-colors"
+                  className="font-semibold text-base cursor-pointer hover:text-blue-600 transition-colors truncate"
                   onClick={() => navigateToProject(row.original["id"])}
                 >
                   {row.getValue("title")}
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {row.original["description"]}
+                <div className="text-xs text-muted-foreground truncate max-w-full">
+                  {isMobile && (
+                    <div className="flex flex-col gap-1 mt-1">
+                      <div className="flex items-center">
+                        <span className="text-xs text-muted-foreground mr-2">
+                          Test Suite:
+                        </span>
+                        <span className="text-xs">
+                          {row.original["totalTestSuite"]}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs text-muted-foreground mr-2">
+                          Executions:
+                        </span>
+                        <span className="text-xs">
+                          {row.original["totalTestSuiteExecute"]}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs text-muted-foreground mr-2">
+                          Creator:
+                        </span>
+                        <span className="text-xs">
+                          {row.original["createdBy"]}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {!isMobile && row.original["description"]}
                 </div>
               </div>
             </div>
@@ -198,6 +253,7 @@ export default function ProjectTable({
               <DropdownMenuContent>
                 <DropdownMenuItem
                   onClick={() => navigateToProject(row.original["id"])}
+                  disabled={!hasAdminManagerAccess}
                 >
                   Edit
                   <DropdownMenuShortcut>
@@ -205,22 +261,21 @@ export default function ProjectTable({
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
 
-                {isAdminOrManager() && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSelectedProject(row.original);
-                      setManageStaffModalOpen(true);
-                    }}
-                  >
-                    Manage Staff
-                    <DropdownMenuShortcut>
-                      <Users className="size-4" />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedProject(row.original);
+                    setManageStaffModalOpen(true);
+                  }}
+                >
+                  Manage Staff
+                  <DropdownMenuShortcut>
+                    <Users className="size-4" />
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
 
                 <DropdownMenuItem
                   onClick={() => handleDeleteClick(row.original)}
+                  disabled={!hasAdminManagerAccess}
                 >
                   Delete
                   <DropdownMenuShortcut>
@@ -233,7 +288,7 @@ export default function ProjectTable({
         ),
       },
     ];
-  }, []);
+  }, [hasAdminManagerAccess, isMobile]);
 
   const table = useReactTable({
     data: dataTable,
@@ -291,94 +346,148 @@ export default function ProjectTable({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <CardTitle>Projects List</CardTitle>
 
           <div className="ml-auto"></div>
-          <div className="relative w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={projectNameFilter}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setProjectNameFilter(newValue);
-                handleFilterDataTable(newValue);
+
+          {isMobile && !isSearchOpen && (
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsSearchOpen(true)}
+                className="ml-auto"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button
+                className="rounded-sm px-2"
+                onClick={() => {
+                  if (setProjectModalOpen) {
+                    setProjectModalOpen(true);
+                  }
+                }}
+                disabled={!canCreateProject}
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-1" /> New
+              </Button>
+            </div>
+          )}
+
+          {(!isMobile || isSearchOpen) && (
+            <div
+              className={`${
+                isMobile
+                  ? "flex w-full items-center"
+                  : "relative w-full sm:w-80"
+              }`}
+            >
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={projectNameFilter}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setProjectNameFilter(newValue);
+                  handleFilterDataTable(newValue);
+                }}
+                placeholder="Search projects..."
+                className="pl-8 w-full"
+              />
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsSearchOpen(false)}
+                  className="ml-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!isMobile && !isSearchOpen && (
+            <Button
+              className="rounded-sm"
+              onClick={() => {
+                if (setProjectModalOpen) {
+                  setProjectModalOpen(true);
+                }
               }}
-              placeholder="Search projects..."
-              className="pl-8"
-            />
-          </div>
-          <Button
-            className="rounded-sm"
-            onClick={() => {
-              if (setProjectModalOpen) {
-                setProjectModalOpen(true);
-              }
-            }}
-          >
-            Create Project
-          </Button>
+              disabled={!canCreateProject}
+            >
+              Create Project
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
-          <Table className="table-fixed">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className={
-                          header.id.includes("title")
-                            ? "w-1/4"
-                            : header.id.includes("progress")
-                            ? "w-1/6"
-                            : ""
-                        }
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+        <div className="rounded-md border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table className="w-full">
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={
+                            header.id.includes("title")
+                              ? "w-1/2 md:w-1/4"
+                              : header.id.includes("status")
+                              ? "w-1/4 md:w-1/6"
+                              : ""
+                          }
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={
+                        Object.keys(columnVisibility).filter(
+                          (key) => columnVisibility[key]
+                        ).length
+                      }
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
         <div className="flex items-center justify-end space-x-2 py-4">
           <div className="space-x-2">
@@ -388,7 +497,7 @@ export default function ProjectTable({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              <ChevronLeft />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
@@ -396,7 +505,7 @@ export default function ProjectTable({
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              <ChevronRight />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -452,6 +561,7 @@ export default function ProjectTable({
           open={manageStaffModalOpen}
           setOpen={setManageStaffModalOpen}
           project={selectedProject}
+          hasAdminManagerAccess={hasAdminManagerAccess}
         />
       </CardContent>
     </Card>
