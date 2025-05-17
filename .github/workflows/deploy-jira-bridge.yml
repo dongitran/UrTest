@@ -1,9 +1,9 @@
-name: Deploy Backend Service
+name: Deploy Jira Bridge Service
 
 on:
   push:
     branches:
-      - deploy-backend
+      - deploy-jira-bridge
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
         run: |
           docker buildx create --name builder --use
           docker buildx inspect builder --bootstrap
-          docker buildx build -t ideavn/urtest-backend:${{ github.run_number }} --push ./backend/.
+          docker buildx build -t ideavn/urtest-jira-bridge:${{ github.run_number }} --push ./jira-bridge/.
 
   deploy:
     needs: build
@@ -44,7 +44,7 @@ jobs:
 
       - name: Apply Kubernetes deployment
         run: |
-          kubectl apply -f ./backend/deployment/namespace.yaml
-          kubectl apply -f ./backend/deployment/service-account.yaml
-          sed -i 's/{latest}/${{ github.run_number }}/g' ./backend/deployment/main.yaml
-          kubectl apply -f ./backend/deployment/main.yaml --validate=false
+          kubectl apply -f ./jira-bridge/deployment/namespace.yaml
+          kubectl apply -f ./jira-bridge/deployment/service-account.yaml
+          sed -i 's/{latest}/${{ github.run_number }}/g' ./jira-bridge/deployment/main.yaml
+          kubectl apply -f ./jira-bridge/deployment/main.yaml --validate=false

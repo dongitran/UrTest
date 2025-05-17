@@ -32,7 +32,7 @@ spec:
         - name: urtest-jira-bridge
           image: ideavn/urtest-jira-bridge:{latest}
           ports:
-            - containerPort: 3020
+            - containerPort: 3000
           resources:
             limits:
               cpu: 1000m
