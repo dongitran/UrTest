@@ -90,7 +90,7 @@ export default function ProjectTable({
         cell: ({ row }) => {
           return (
             <div className="col-span-2 flex items-center">
-              <div className="hidden sm:visible mr-3 sm:flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+              <div className="hidden sm:flex mr-3 h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
