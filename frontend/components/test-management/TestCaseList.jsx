@@ -311,6 +311,7 @@ export default function TestCaseList({
         } else if (key === "reRenderTestSuiteListAll") {
           setRunningTestIds(new Set());
 
+          localStorage.setItem("test_suite_updated", "true");
           setReRender({});
           localStorage.setItem("test_suite_updated", "true");
 
