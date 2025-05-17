@@ -40,14 +40,19 @@ export const AuthProvider = ({ children }) => {
 
               intervalId = setInterval(async () => {
                 try {
-                  const tokenUpdated = await updateToken(60);
+                  const tokenUpdated = await updateToken(60, 3, 1000);
 
-                  if (!tokenUpdated || isTokenExpired()) {
+                  if (!tokenUpdated && isTokenExpired()) {
                     await handleLogout();
                   }
                 } catch (refreshError) {
                   console.error("Token refresh error:", refreshError);
-                  await handleLogout();
+                  if (refreshError.name !== 'TypeError' ||
+                    (!refreshError.message.includes('Failed to fetch') &&
+                      !refreshError.message.includes('NetworkError') &&
+                      !refreshError.message.includes('Network request failed'))) {
+                    await handleLogout();
+                  }
                 }
               }, 60_000);
             }
