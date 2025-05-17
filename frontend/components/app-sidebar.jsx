@@ -1,8 +1,6 @@
-// frontend/components/app-sidebar.jsx
 import {
   BarChart3Icon,
   BookOpenIcon,
-  HelpCircleIcon,
   LayoutDashboardIcon,
   SearchIcon,
   SettingsIcon,
@@ -81,18 +79,13 @@ export function AppSidebar({ ...props }) {
   const navSecondaryItems = [
     {
       title: "Documentation",
-      url: "/documentation",
+      url: "https://docs.urtest.click",
       icon: BookOpenIcon,
     },
     {
       title: "Settings",
       url: "/settings",
       icon: SettingsIcon,
-    },
-    {
-      title: "Help",
-      url: "/help",
-      icon: HelpCircleIcon,
     },
     {
       title: "Search",

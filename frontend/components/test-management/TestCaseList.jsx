@@ -132,6 +132,7 @@ export default function TestCaseList({
               setReRender={setReRender}
               testSuite={row.original}
               addRunningTest={addRunningTest}
+              queryClient={queryClient}
             />
           );
         },
@@ -469,6 +470,7 @@ const RenderActions = ({
   testSuite = {},
   setReRender,
   addRunningTest,
+  queryClient,
 }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -535,9 +537,15 @@ const RenderActions = ({
       await TestSuiteApi().delete(testSuite.id, {
         params: { projectId: project.id },
       });
+
+      queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+
       if (setReRender) {
         setReRender({});
       }
+
+      localStorage.setItem("test_suite_updated", "true");
+
       toast.success(`Test suite ${testSuite.name} deleted successfully`);
       setDeleteDialogOpen(false);
     } catch (error) {
