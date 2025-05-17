@@ -68,6 +68,86 @@ function extractTestResults(stdout) {
   }
 }
 
+function extractProjectTestResults(stdout, project) {
+  try {
+    const formattedProject = project
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join("-");
+
+    const overallResultPattern = new RegExp(
+      `${formattedProject}\\s+\\| PASS \\|\\s*\\n(\\d+) tests?, (\\d+) passed, (\\d+) failed`
+    );
+
+    const overallResultMatch = stdout.match(overallResultPattern);
+
+    if (!overallResultMatch) {
+      return extractTestResults(stdout);
+    }
+
+    const overallResults = {
+      totalTests: parseInt(overallResultMatch[1], 10),
+      passed: parseInt(overallResultMatch[2], 10),
+      failed: parseInt(overallResultMatch[3], 10),
+    };
+
+    const suitePattern = new RegExp(
+      `${formattedProject}\\.(\\S+)\\s+\\| PASS \\|\\s*\\n(\\d+) tests?, (\\d+) passed, (\\d+) failed`,
+      "g"
+    );
+
+    const testSuites = [];
+    let match;
+
+    while ((match = suitePattern.exec(stdout)) !== null) {
+      const suiteId = match[1];
+      const totalTests = parseInt(match[2], 10);
+      const passed = parseInt(match[3], 10);
+      const failed = parseInt(match[4], 10);
+
+      const suiteHeaderPattern = new RegExp(
+        `==+\\s*\\n${formattedProject}\\.${suiteId}[^\\n]*\\s*\\n==+`,
+        "m"
+      );
+
+      const headerMatch = stdout.match(suiteHeaderPattern);
+
+      let title = suiteId;
+
+      if (headerMatch) {
+        const headerPos = stdout.indexOf(headerMatch[0]);
+        const headerEnd = headerPos + headerMatch[0].length;
+
+        const nextLines = stdout.substring(headerEnd).split("\n");
+        for (const line of nextLines) {
+          if (line.includes("| PASS |") || line.includes("| FAIL |")) {
+            title = line.split("|")[0].trim();
+            break;
+          }
+        }
+      }
+
+      testSuites.push({
+        title,
+        totalTests,
+        passed,
+        failed,
+      });
+    }
+
+    return {
+      ...overallResults,
+      projectDetail: {
+        totalTestSuites: testSuites.length,
+        details: testSuites,
+      },
+    };
+  } catch (error) {
+    console.error("Error extracting project test results:", error);
+    return extractTestResults(stdout);
+  }
+}
+
 function containsUITest(content) {
   return (
     content.includes("SeleniumLibrary") ||
@@ -77,6 +157,8 @@ function containsUITest(content) {
 }
 
 exports.runTest = async (requestId, project, content, testResultTitle) => {
+  const tempFilesToCleanup = [];
+
   try {
     let decodedContent;
     try {
@@ -87,7 +169,12 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
     const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
     const projectPath = path.join(repoPath, "tests", project);
-    const testFilePath = path.join(projectPath, `${testResultTitle}.robot`);
+    const testFilePath = path.join(
+      projectPath,
+      `${testResultTitle || "test"}.robot`
+    );
+
+    tempFilesToCleanup.push(testFilePath);
 
     await fs.ensureDir(projectPath);
 
@@ -124,8 +211,11 @@ exports.runTest = async (requestId, project, content, testResultTitle) => {
 
       const setupFile = path.join(
         projectPath,
-        `${testResultTitle}_setup.robot`
+        `${testResultTitle || "test"}_setup.robot`
       );
+
+      tempFilesToCleanup.push(setupFile);
+
       await fs.writeFile(
         setupFile,
         `
@@ -143,10 +233,14 @@ Setup ChromeDriver
       );
 
       robotOptions.push("--prerunmodifier");
-      robotOptions.push(`${projectPath}/${testResultTitle}_setup.robot`);
+      robotOptions.push(
+        `${projectPath}/${testResultTitle || "test"}_setup.robot`
+      );
     }
 
-    robotOptions.push(`tests/tests/${project}/${testResultTitle}.robot`);
+    robotOptions.push(
+      `tests/tests/${project}/${testResultTitle || "test"}.robot`
+    );
 
     let stdout = "",
       stderr = "";
@@ -188,10 +282,6 @@ Setup ChromeDriver
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
       { name: "log.html", path: path.join(process.cwd(), "log.html") },
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
-      {
-        name: "selenium-screenshot-1.png",
-        path: path.join(process.cwd(), "selenium-screenshot-1.png"),
-      },
     ];
 
     const minioFolder = `manual-running/${requestId}`;
@@ -202,6 +292,30 @@ Setup ChromeDriver
       }
     }
 
+    try {
+      const files = await fs.readdir(process.cwd());
+      const screenshotFiles = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshotFile of screenshotFiles) {
+        const screenshotPath = path.join(process.cwd(), screenshotFile);
+        if (await fs.pathExists(screenshotPath)) {
+          await minioService.uploadFile(
+            screenshotPath,
+            `${minioFolder}/${screenshotFile}`
+          );
+          console.log(`Uploaded screenshot: ${screenshotFile}`);
+
+          await fs.remove(screenshotPath);
+          console.log(`Deleted screenshot: ${screenshotFile}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error uploading screenshots:", err);
+    }
+
     const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
 
     return {
@@ -210,6 +324,137 @@ Setup ChromeDriver
       isUITest,
     };
   } catch (error) {
+    throw error;
+  } finally {
+    for (const filePath of tempFilesToCleanup) {
+      try {
+        if (await fs.pathExists(filePath)) {
+          await fs.remove(filePath);
+          console.log(`Temporary file cleaned up: ${filePath}`);
+        }
+      } catch (cleanupError) {
+        console.error(`Error cleaning up file ${filePath}:`, cleanupError);
+      }
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const remainingScreenshots = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshot of remainingScreenshots) {
+        const screenshotPath = path.join(process.cwd(), screenshot);
+        await fs.remove(screenshotPath);
+        console.log(`Cleaned up remaining screenshot: ${screenshot}`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up remaining screenshots:", error);
+    }
+  }
+};
+
+exports.runProjectTests = async (requestId, project) => {
+  try {
+    const repoPath = path.join(process.cwd(), config.REPO_FOLDER);
+    const projectPath = path.join(repoPath, "tests", project);
+
+    if (!(await fs.pathExists(projectPath))) {
+      throw new Error(`Project folder ${project} does not exist`);
+    }
+
+    const files = await fs.readdir(projectPath);
+    const robotFiles = files.filter((file) => file.endsWith(".robot"));
+
+    if (robotFiles.length === 0) {
+      throw new Error(`No robot files found in project ${project}`);
+    }
+
+    const robotCommand = `robot tests/tests/${project}`;
+
+    let stdout, stderr;
+    try {
+      const result = await execPromise(robotCommand);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (error) {
+      stdout = error.stdout;
+      stderr = error.stderr;
+      console.error("Error running project tests:", error);
+    }
+
+    if (stderr) {
+      console.error("Robot project tests stderr:", stderr);
+    }
+
+    const testResults = extractProjectTestResults(stdout, project);
+
+    const reportFiles = [
+      { name: "report.html", path: path.join(process.cwd(), "report.html") },
+      { name: "log.html", path: path.join(process.cwd(), "log.html") },
+      { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
+    ];
+
+    const minioFolder = `project-running/${requestId}`;
+
+    for (const file of reportFiles) {
+      if (await fs.pathExists(file.path)) {
+        await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
+      }
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const screenshotFiles = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshotFile of screenshotFiles) {
+        const screenshotPath = path.join(process.cwd(), screenshotFile);
+        if (await fs.pathExists(screenshotPath)) {
+          await minioService.uploadFile(
+            screenshotPath,
+            `${minioFolder}/${screenshotFile}`
+          );
+          console.log(`Uploaded screenshot: ${screenshotFile}`);
+
+          await fs.remove(screenshotPath);
+          console.log(`Deleted screenshot: ${screenshotFile}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error uploading screenshots:", err);
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const remainingScreenshots = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshot of remainingScreenshots) {
+        const screenshotPath = path.join(process.cwd(), screenshot);
+        await fs.remove(screenshotPath);
+        console.log(`Cleaned up remaining screenshot: ${screenshot}`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up remaining screenshots:", error);
+    }
+
+    const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
+
+    return {
+      reportUrl,
+      results: testResults.totalTests
+        ? testResults
+        : { totalTests: 0, passed: 0, failed: 0 },
+      projectDetail: testResults.projectDetail,
+    };
+  } catch (error) {
+    console.error("Error executing project tests:", error);
     throw error;
   }
 };

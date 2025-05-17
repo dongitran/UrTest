@@ -310,10 +310,10 @@ export default function TestCaseList({
 
           toast.success(`Test suite ${testSuiteName} execution completed`);
         } else if (key === "reRenderTestSuiteListAll") {
+          localStorage.setItem("test_suite_updated", "true");
           setRunningTestIds(new Set());
 
           setReRender({});
-          localStorage.setItem("test_suite_updated", "true");
 
           queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
           queryClient.invalidateQueries(["test-resource", project.id]);
@@ -477,7 +477,6 @@ const RenderActions = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const status = testSuite.status;
-  const queryClient = useQueryClient();
 
   const handleExecuteTestSuite = () => {
     return async () => {
