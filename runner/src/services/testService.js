@@ -68,11 +68,18 @@ function extractTestResults(stdout) {
   }
 }
 
-function extractProjectTestResults(stdout) {
+function extractProjectTestResults(stdout, project) {
   try {
-    const overallResultMatch = stdout.match(
-      /Urcard-Dev\s+\| PASS \|\n(\d+) tests, (\d+) passed, (\d+) failed/
+    const formattedProject = project
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join("-");
+
+    const overallResultPattern = new RegExp(
+      `${formattedProject}\\s+\\| PASS \\|\\s*\\n(\\d+) tests?, (\\d+) passed, (\\d+) failed`
     );
+
+    const overallResultMatch = stdout.match(overallResultPattern);
 
     if (!overallResultMatch) {
       return extractTestResults(stdout);
@@ -84,28 +91,41 @@ function extractProjectTestResults(stdout) {
       failed: parseInt(overallResultMatch[3], 10),
     };
 
-    const suitePattern =
-      /(Urcard-Dev\.\S+)-([^-\n]+)[\s\S]*?(\d+) tests, (\d+) passed, (\d+) failed/g;
+    const suitePattern = new RegExp(
+      `${formattedProject}\\.(\\S+)\\s+\\| PASS \\|\\s*\\n(\\d+) tests?, (\\d+) passed, (\\d+) failed`,
+      "g"
+    );
+
     const testSuites = [];
     let match;
 
     while ((match = suitePattern.exec(stdout)) !== null) {
-      const suiteText = match[0];
-      const testCaseLines = suiteText
-        .split("\n")
-        .filter(
-          (line) => line.includes("| PASS |") || line.includes("| FAIL |")
-        );
+      const suiteId = match[1];
+      const totalTests = parseInt(match[2], 10);
+      const passed = parseInt(match[3], 10);
+      const failed = parseInt(match[4], 10);
 
-      let title = match[2].trim();
-      if (testCaseLines.length > 0) {
-        const firstTestTitle = testCaseLines[0].split("|")[0].trim();
-        title = firstTestTitle.replace("Create", "Get").replace(" By ", " By ");
+      const suiteHeaderPattern = new RegExp(
+        `==+\\s*\\n${formattedProject}\\.${suiteId}[^\\n]*\\s*\\n==+`,
+        "m"
+      );
+
+      const headerMatch = stdout.match(suiteHeaderPattern);
+
+      let title = suiteId;
+
+      if (headerMatch) {
+        const headerPos = stdout.indexOf(headerMatch[0]);
+        const headerEnd = headerPos + headerMatch[0].length;
+
+        const nextLines = stdout.substring(headerEnd).split("\n");
+        for (const line of nextLines) {
+          if (line.includes("| PASS |") || line.includes("| FAIL |")) {
+            title = line.split("|")[0].trim();
+            break;
+          }
+        }
       }
-
-      const totalTests = parseInt(match[3], 10);
-      const passed = parseInt(match[4], 10);
-      const failed = parseInt(match[5], 10);
 
       testSuites.push({
         title,
@@ -262,10 +282,6 @@ Setup ChromeDriver
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
       { name: "log.html", path: path.join(process.cwd(), "log.html") },
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
-      {
-        name: "selenium-screenshot-1.png",
-        path: path.join(process.cwd(), "selenium-screenshot-1.png"),
-      },
     ];
 
     const minioFolder = `manual-running/${requestId}`;
@@ -274,6 +290,30 @@ Setup ChromeDriver
       if (await fs.pathExists(file.path)) {
         await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
       }
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const screenshotFiles = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshotFile of screenshotFiles) {
+        const screenshotPath = path.join(process.cwd(), screenshotFile);
+        if (await fs.pathExists(screenshotPath)) {
+          await minioService.uploadFile(
+            screenshotPath,
+            `${minioFolder}/${screenshotFile}`
+          );
+          console.log(`Uploaded screenshot: ${screenshotFile}`);
+
+          await fs.remove(screenshotPath);
+          console.log(`Deleted screenshot: ${screenshotFile}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error uploading screenshots:", err);
     }
 
     const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
@@ -295,6 +335,22 @@ Setup ChromeDriver
       } catch (cleanupError) {
         console.error(`Error cleaning up file ${filePath}:`, cleanupError);
       }
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const remainingScreenshots = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshot of remainingScreenshots) {
+        const screenshotPath = path.join(process.cwd(), screenshot);
+        await fs.remove(screenshotPath);
+        console.log(`Cleaned up remaining screenshot: ${screenshot}`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up remaining screenshots:", error);
     }
   }
 };
@@ -332,7 +388,7 @@ exports.runProjectTests = async (requestId, project) => {
       console.error("Robot project tests stderr:", stderr);
     }
 
-    const testResults = extractProjectTestResults(stdout);
+    const testResults = extractProjectTestResults(stdout, project);
 
     const reportFiles = [
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
@@ -346,6 +402,46 @@ exports.runProjectTests = async (requestId, project) => {
       if (await fs.pathExists(file.path)) {
         await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
       }
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const screenshotFiles = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshotFile of screenshotFiles) {
+        const screenshotPath = path.join(process.cwd(), screenshotFile);
+        if (await fs.pathExists(screenshotPath)) {
+          await minioService.uploadFile(
+            screenshotPath,
+            `${minioFolder}/${screenshotFile}`
+          );
+          console.log(`Uploaded screenshot: ${screenshotFile}`);
+
+          await fs.remove(screenshotPath);
+          console.log(`Deleted screenshot: ${screenshotFile}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error uploading screenshots:", err);
+    }
+
+    try {
+      const files = await fs.readdir(process.cwd());
+      const remainingScreenshots = files.filter(
+        (file) =>
+          file.startsWith("selenium-screenshot-") && file.endsWith(".png")
+      );
+
+      for (const screenshot of remainingScreenshots) {
+        const screenshotPath = path.join(process.cwd(), screenshot);
+        await fs.remove(screenshotPath);
+        console.log(`Cleaned up remaining screenshot: ${screenshot}`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up remaining screenshots:", error);
     }
 
     const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
