@@ -15,6 +15,8 @@ import ManageStaffModal from "@/components/ManageStaffModal";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAdminOrManager } from "@/utils/authUtils";
 
 dayjs.extend(advancedFormat);
 
@@ -27,6 +29,9 @@ export default function TestManagement() {
   const [reRender, setReRender] = useState({});
   const [headerContainer, setHeaderContainer] = useState(null);
   const queryClient = useQueryClient();
+
+  const { user } = useAuth();
+  const hasAdminManagerAccess = isAdminOrManager(user);
 
   useEffect(() => {
     const container = document.getElementById("page-header-controls");
@@ -76,6 +81,7 @@ export default function TestManagement() {
                   size="sm"
                   onClick={() => setOpenEditModal(true)}
                   className="flex gap-2 items-center"
+                  disabled={!hasAdminManagerAccess}
                 >
                   <Edit className="h-4 w-4" />
                   Edit Project
@@ -117,6 +123,7 @@ export default function TestManagement() {
             open={openManageStaffModal}
             setOpen={setOpenManageStaffModal}
             project={project}
+            hasAdminManagerAccess={hasAdminManagerAccess}
           />
         </Fragment>
       )}

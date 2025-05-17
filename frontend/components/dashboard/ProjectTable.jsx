@@ -25,10 +25,11 @@ import {
   ChevronLeft,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { isAdminOrManager } from "@/utils/authUtils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ export default function ProjectTable({
   refetch,
   dataTable = [],
   setProjectModalOpen,
+  canCreateProject,
 }) {
   const router = useRouter();
   const [sorting, setSorting] = React.useState();
@@ -73,22 +75,8 @@ export default function ProjectTable({
   const [manageStaffModalOpen, setManageStaffModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  const isAdminOrManager = () => {
-    const tokenInfo = localStorage.getItem("keycloak_token")
-      ? JSON.parse(localStorage.getItem("keycloak_token"))
-      : null;
-
-    if (!tokenInfo) return false;
-
-    try {
-      const tokenData = JSON.parse(atob(tokenInfo.access_token.split(".")[1]));
-      const roles = tokenData.realm_access?.roles || [];
-      return roles.includes("ADMIN") || roles.includes("MANAGER");
-    } catch (error) {
-      console.error("Error parsing token:", error);
-      return false;
-    }
-  };
+  const { user } = useAuth();
+  const hasAdminManagerAccess = isAdminOrManager(user);
 
   const navigateToProject = (projectId) => {
     router.push(`/test-management?projectId=${projectId}`);
@@ -198,6 +186,7 @@ export default function ProjectTable({
               <DropdownMenuContent>
                 <DropdownMenuItem
                   onClick={() => navigateToProject(row.original["id"])}
+                  disabled={!hasAdminManagerAccess}
                 >
                   Edit
                   <DropdownMenuShortcut>
@@ -205,22 +194,21 @@ export default function ProjectTable({
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
 
-                {isAdminOrManager() && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSelectedProject(row.original);
-                      setManageStaffModalOpen(true);
-                    }}
-                  >
-                    Manage Staff
-                    <DropdownMenuShortcut>
-                      <Users className="size-4" />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedProject(row.original);
+                    setManageStaffModalOpen(true);
+                  }}
+                >
+                  Manage Staff
+                  <DropdownMenuShortcut>
+                    <Users className="size-4" />
+                  </DropdownMenuShortcut>
+                </DropdownMenuItem>
 
                 <DropdownMenuItem
                   onClick={() => handleDeleteClick(row.original)}
+                  disabled={!hasAdminManagerAccess}
                 >
                   Delete
                   <DropdownMenuShortcut>
@@ -233,7 +221,7 @@ export default function ProjectTable({
         ),
       },
     ];
-  }, []);
+  }, [hasAdminManagerAccess]);
 
   const table = useReactTable({
     data: dataTable,
@@ -315,6 +303,7 @@ export default function ProjectTable({
                 setProjectModalOpen(true);
               }
             }}
+            disabled={!canCreateProject}
           >
             Create Project
           </Button>
@@ -452,6 +441,7 @@ export default function ProjectTable({
           open={manageStaffModalOpen}
           setOpen={setManageStaffModalOpen}
           project={selectedProject}
+          hasAdminManagerAccess={hasAdminManagerAccess}
         />
       </CardContent>
     </Card>

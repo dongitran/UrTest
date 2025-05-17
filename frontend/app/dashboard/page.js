@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import ProjectTable from "@/components/dashboard/ProjectTable";
@@ -7,10 +8,14 @@ import TestTypeStats from "@/components/dashboard/TestTypeStats";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ProjectModal from "@/components/ProjectModal";
 import { DashboardApi } from "@/lib/api";
+import { isAdminOrManager } from "@/utils/authUtils";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 export default function WorkspacePageV2() {
+  const { user } = useAuth();
+  const canCreateProject = isAdminOrManager(user);
+
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [dataTable, setDataTable] = useState([]);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
@@ -33,6 +38,12 @@ export default function WorkspacePageV2() {
     if (success) {
       setActivityRefreshKey((prev) => prev + 1);
       refetch();
+    }
+  };
+
+  const handleSetProjectModalOpen = (value) => {
+    if (canCreateProject) {
+      setProjectModalOpen(value);
     }
   };
 
@@ -62,8 +73,9 @@ export default function WorkspacePageV2() {
         dataTable={dataTable}
         setDataTable={setDataTable}
         refetch={refetch}
-        setProjectModalOpen={setProjectModalOpen}
+        setProjectModalOpen={handleSetProjectModalOpen}
         initDataTable={data.dataTable}
+        canCreateProject={canCreateProject}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActivityFeed refreshKey={activityRefreshKey} />
