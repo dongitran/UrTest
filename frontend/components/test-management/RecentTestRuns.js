@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoaderCircle, Eye } from "lucide-react";
 import dayjs from "dayjs";
@@ -90,9 +90,18 @@ export default function RecentTestRuns({ recentTestRun = [] }) {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {item.testSuiteName}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm text-foreground truncate">
+                        {item.testSuiteName}
+                      </p>
+                      {item.results &&
+                        typeof item.results.passed === "number" &&
+                        typeof item.results.totalTests === "number" && (
+                          <span className="px-1.5 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-md whitespace-nowrap">
+                            {item.results.passed}/{item.results.totalTests}
+                          </span>
+                        )}
+                    </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {dayjs(item.createdAt).fromNow()} • {item.createdBy}
                     </p>
