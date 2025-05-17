@@ -293,7 +293,7 @@ ProjectRoute.delete(
 
 ProjectRoute.post(
   '/:id/assignments',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({
@@ -425,7 +425,7 @@ ProjectRoute.get(
 
 ProjectRoute.get(
   '/:id/available-staff',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({
