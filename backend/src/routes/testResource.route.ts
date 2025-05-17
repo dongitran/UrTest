@@ -14,6 +14,7 @@ import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import RefreshRepo from 'lib/Runner/RefreshRepo';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const TestResourceRoute = new Hono();
 
@@ -82,6 +83,15 @@ async function handleGitHubCreateInBackground(
         .where(eq(TestResourceTable.id, testResource.id));
 
       await RefreshRepo();
+
+      await logActivity(
+        ACTIVITY_TYPES.TEST_SUITE_CREATED,
+        project.id,
+        testResource.createdBy || '',
+        `Created test suite "${testResource.title}"`,
+        testResource.id,
+        'test_suite'
+      );
     } catch (error: any) {
       console.log(error, 'Create resource error');
       await db
@@ -130,6 +140,19 @@ async function handleGitHubUpdateInBackground(
             },
           })
           .where(eq(TestResourceTable.id, testResourceUpdated.id));
+
+        await logActivity(
+          ACTIVITY_TYPES.TEST_RESOURCE_UPDATED,
+          project.id,
+          testResourceUpdated.updatedBy || testResourceUpdated.createdBy || '',
+          `Updated test resource "${testResourceUpdated.title}"`,
+          testResource.id,
+          'test_resource',
+          {
+            previousTitle: testResource.title,
+            newTitle: testResourceUpdated.title,
+          }
+        );
       } else {
         console.log('GitHub file not found for update, might need to create it instead');
       }
@@ -151,7 +174,8 @@ async function handleGitHubUpdateInBackground(
 
 async function handleGitHubDeleteInBackground(
   project: Project | null | undefined,
-  testResource: TestResource
+  testResource: TestResource,
+  deletedBy: string
 ): Promise<void> {
   if (project?.slug && testResource.fileName) {
     try {
@@ -190,6 +214,15 @@ async function handleGitHubDeleteInBackground(
       }
 
       await RefreshRepo();
+
+      await logActivity(
+        ACTIVITY_TYPES.TEST_RESOURCE_DELETED,
+        testResource.projectId,
+        deletedBy,
+        `Deleted test resource "${testResource.title}"`,
+        testResource.id,
+        'test_resource'
+      );
     } catch (error: any) {
       console.log(error, 'Delete resource error');
     }
@@ -401,7 +434,7 @@ TestResourceRoute.delete(
       })
       .where(eq(TestResourceTable.id, id));
 
-    handleGitHubDeleteInBackground(project, testResource);
+    handleGitHubDeleteInBackground(project, testResource, user.email);
 
     return ctx.json({ message: 'ok' });
   }

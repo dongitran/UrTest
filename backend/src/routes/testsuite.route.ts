@@ -16,6 +16,7 @@ import * as TestSuiteSchema from 'lib/Zod/TestSuiteSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import CheckFileFromGithub from 'lib/Github/CheckFile';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const TestSuiteRoute = new Hono();
 
@@ -75,7 +76,6 @@ TestSuiteRoute.post(
       .returning()
       .then((res) => res[0]);
 
-    //* Gọi tới Github API để tạo file bên UrTest Workflow
     if (project.slug && testSuite.content) {
       CreateOrUpdateFile(
         {
@@ -98,6 +98,16 @@ TestSuiteRoute.post(
         }
       );
     }
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_CREATED,
+      body.projectId,
+      user.email,
+      `Created test suite "${body.name}"`,
+      testSuite.id,
+      'test_suite'
+    );
+
     return ctx.json({ message: 'ok' });
   }
 )
@@ -591,6 +601,20 @@ TestSuiteRoute.patch(
         }
       );
     }
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_UPDATED,
+      body.projectId,
+      user.email,
+      `Updated test suite "${body.name}"`,
+      testSuite.id,
+      'test_suite',
+      {
+        previousName: testSuite.name,
+        newName: body.name,
+      }
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -644,6 +668,15 @@ TestSuiteRoute.delete(
         deletedBy: user.email,
       })
       .where(eq(TestSuiteTable.id, id));
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_DELETED,
+      testSuite.projectId,
+      user.email,
+      `Deleted test suite "${testSuite.name}"`,
+      testSuite.id,
+      'test_suite'
+    );
 
     return ctx.json({ message: 'ok' });
   }
