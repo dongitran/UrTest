@@ -1,0 +1,44 @@
+name: Init Vault Jira Bridge
+
+on:
+  push:
+    branches:
+      - init-vault-jira-bridge
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+          version: "latest"
+
+      - name: Apply Kubernetes deployment
+        run: |
+          kubectl exec -n vault -i vault-0 -- vault kv put \
+            kv/urtest-jira-bridge-dev \
+            JIRA_BRIDGE_ATLASSIAN_CLIENT_ID="${{ secrets.JIRA_BRIDGE_ATLASSIAN_CLIENT_ID }}" \
+            JIRA_BRIDGE_ATLASSIAN_CLIENT_SECRET="${{ secrets.JIRA_BRIDGE_ATLASSIAN_CLIENT_SECRET }}" \
+            JIRA_BRIDGE_REDIRECT_URI="${{ secrets.JIRA_BRIDGE_REDIRECT_URI }}" \
+            JIRA_BRIDGE_PORT="${{ secrets.JIRA_BRIDGE_PORT }}" \
+            JIRA_BRIDGE_SESSION_SECRET="${{ secrets.JIRA_BRIDGE_SESSION_SECRET }}" \
+            JIRA_BRIDGE_NODE_ENV="${{ secrets.JIRA_BRIDGE_NODE_ENV }}" \
+            JIRA_BRIDGE_PG_DATABASE_URL="${{ secrets.JIRA_BRIDGE_PG_DATABASE_URL }}" \
+            JIRA_BRIDGE_KEYCLOAK_URL="${{ secrets.JIRA_BRIDGE_KEYCLOAK_URL }}" \
+            JIRA_BRIDGE_KEYCLOAK_REALM="${{ secrets.JIRA_BRIDGE_KEYCLOAK_REALM }}" \
+            JIRA_BRIDGE_KEYCLOAK_CLIENT_ID="${{ secrets.JIRA_BRIDGE_KEYCLOAK_CLIENT_ID }}" \
+            JIRA_BRIDGE_API_KEY="${{ secrets.JIRA_BRIDGE_API_KEY }}"
+
+          kubectl exec -n vault -i vault-0 -- vault policy write urtest-jira-bridge-svc-policy - <<EOH
+          path "kv/data/urtest-jira-bridge-dev" {
+            capabilities = ["read"]
+          }
+          EOH
+
+          kubectl exec -n vault -i vault-0 -- vault write auth/kubernetes/role/urtest-jira-bridge-dev \
+            bound_service_account_names=urtest-jira-bridge-dev-auth \
+            bound_service_account_namespaces=urtest \
+            policies=urtest-jira-bridge-svc-policy \
+            ttl=72h
