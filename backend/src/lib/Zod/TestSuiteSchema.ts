@@ -1,17 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const shemaForCreateAndPatch = z.object({
   projectId: z.string().ulid(),
   name: z.string(),
-  description: z.string(),
+  description: z.string().optional(),
   content: z.string(),
   tags: z.array(z.string()).optional(),
-  resultRuner: z
+  resultRunner: z
     .object({
-      reportUrl: z.string(),
-      project: z.string(),
-      requestId: z.string().ulid(),
-      success: z.boolean(),
+      reportUrl: z.string().optional(),
+      project: z.string().optional(),
+      requestId: z.string().ulid().optional(),
+      success: z.boolean().optional(),
+      error: z.boolean().optional(),
+      message: z.string().optional(),
     })
     .optional(),
   duration: z.number().optional(),

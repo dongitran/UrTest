@@ -1,15 +1,15 @@
-import websocket from "./src/lib/Websocket";
-import app from "./src";
+import websocket from './src/lib/Websocket';
+import app from './src';
 
 const serve = Bun.serve({
   routes: {
-    "/health": () => new Response("OK"),
+    '/health': () => new Response('OK'),
   },
-  port: Bun.env.PORT,
+  port: Bun.env.BACKEND_PORT,
   fetch: (req) => {
     const url = new URL(req.url);
 
-    if (url.pathname === "/ws" && serve.upgrade) {
+    if (url.pathname === '/ws' && serve.upgrade) {
       serve.upgrade(req);
     }
     return app.fetch(req);
