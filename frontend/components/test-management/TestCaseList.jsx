@@ -477,7 +477,6 @@ const RenderActions = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const status = testSuite.status;
-  const queryClient = useQueryClient();
 
   const handleExecuteTestSuite = () => {
     return async () => {
