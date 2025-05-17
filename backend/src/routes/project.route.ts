@@ -112,6 +112,7 @@ ProjectRoute.get(
               status: item.status,
               createdAt: item.createdAt,
               createdBy: item.createdBy,
+              results: get(item?.params, 'resultRunner.results'),
             };
           }),
         },
