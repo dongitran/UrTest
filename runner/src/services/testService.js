@@ -68,6 +68,66 @@ function extractTestResults(stdout) {
   }
 }
 
+function extractProjectTestResults(stdout) {
+  try {
+    const overallResultMatch = stdout.match(
+      /Urcard-Dev\s+\| PASS \|\n(\d+) tests, (\d+) passed, (\d+) failed/
+    );
+
+    if (!overallResultMatch) {
+      return extractTestResults(stdout);
+    }
+
+    const overallResults = {
+      totalTests: parseInt(overallResultMatch[1], 10),
+      passed: parseInt(overallResultMatch[2], 10),
+      failed: parseInt(overallResultMatch[3], 10),
+    };
+
+    const suitePattern =
+      /(Urcard-Dev\.\S+)-([^-\n]+)[\s\S]*?(\d+) tests, (\d+) passed, (\d+) failed/g;
+    const testSuites = [];
+    let match;
+
+    while ((match = suitePattern.exec(stdout)) !== null) {
+      const suiteText = match[0];
+      const testCaseLines = suiteText
+        .split("\n")
+        .filter(
+          (line) => line.includes("| PASS |") || line.includes("| FAIL |")
+        );
+
+      let title = match[2].trim();
+      if (testCaseLines.length > 0) {
+        const firstTestTitle = testCaseLines[0].split("|")[0].trim();
+        title = firstTestTitle.replace("Create", "Get").replace(" By ", " By ");
+      }
+
+      const totalTests = parseInt(match[3], 10);
+      const passed = parseInt(match[4], 10);
+      const failed = parseInt(match[5], 10);
+
+      testSuites.push({
+        title,
+        totalTests,
+        passed,
+        failed,
+      });
+    }
+
+    return {
+      ...overallResults,
+      projectDetail: {
+        totalTestSuites: testSuites.length,
+        details: testSuites,
+      },
+    };
+  } catch (error) {
+    console.error("Error extracting project test results:", error);
+    return extractTestResults(stdout);
+  }
+}
+
 function containsUITest(content) {
   return (
     content.includes("SeleniumLibrary") ||
@@ -268,13 +328,11 @@ exports.runProjectTests = async (requestId, project) => {
       console.error("Error running project tests:", error);
     }
 
-    console.log({ stdout, stderr }, "project-tests-output");
-
     if (stderr) {
       console.error("Robot project tests stderr:", stderr);
     }
 
-    const testResults = extractTestResults(stdout);
+    const testResults = extractProjectTestResults(stdout);
 
     const reportFiles = [
       { name: "report.html", path: path.join(process.cwd(), "report.html") },
@@ -294,8 +352,10 @@ exports.runProjectTests = async (requestId, project) => {
 
     return {
       reportUrl,
-      results: testResults,
-      totalFiles: robotFiles.length,
+      results: testResults.totalTests
+        ? testResults
+        : { totalTests: 0, passed: 0, failed: 0 },
+      projectDetail: testResults.projectDetail,
     };
   } catch (error) {
     console.error("Error executing project tests:", error);

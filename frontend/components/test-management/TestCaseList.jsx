@@ -199,6 +199,7 @@ export default function TestCaseList({
           setReRender({});
           toast.success(`Test suite ${testSuiteName} execution completed`);
         } else if (key === "reRenderTestSuiteListAll") {
+          localStorage.setItem("test_suite_updated", "true");
           setReRender({});
           toast.success(`All test suites execution completed`);
         }
