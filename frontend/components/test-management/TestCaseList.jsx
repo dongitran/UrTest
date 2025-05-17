@@ -51,11 +51,11 @@ export default function TestCaseList({
 }) {
   const router = useRouter();
   const socketRef = useRef(null);
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [runningTestIds, setRunningTestIds] = useState(new Set());
   const pollingIntervalRef = useRef(null);
-  
+  const queryClient = useQueryClient();
+
   const columns = useMemo(() => {
     return [
       {
@@ -132,6 +132,7 @@ export default function TestCaseList({
               setReRender={setReRender}
               testSuite={row.original}
               addRunningTest={addRunningTest}
+              queryClient={queryClient}
             />
           );
         },
@@ -470,6 +471,7 @@ const RenderActions = ({
   testSuite = {},
   setReRender,
   addRunningTest,
+  queryClient,
 }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
