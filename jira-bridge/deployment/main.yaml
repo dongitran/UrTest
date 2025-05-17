@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: urtest-jira-bridge
+  namespace: urtest
+  labels:
+    app: urtest-jira-bridge
+spec:
+  serviceName: urtest-jira-bridge
+  replicas: 2
+  selector:
+    matchLabels:
+      app: urtest-jira-bridge
+  template:
+    metadata:
+      labels:
+        app: urtest-jira-bridge
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'urtest-jira-bridge-dev'
+        vault.hashicorp.com/agent-pre-populate-only: 'true'
+        vault.hashicorp.com/agent-inject-secret-env-config: 'kv/urtest-jira-bridge-dev'
+        vault.hashicorp.com/agent-inject-template-env-config: |
+            {{ with secret "kv/urtest-jira-bridge-dev" -}}
+              {{- range $key, $value := .Data.data }}
+                export {{ $key }}="{{ $value }}"
+              {{- end }}
+            {{- end }}
+    spec:
+      serviceAccountName: urtest-jira-bridge-dev-auth
+      containers:
+        - name: urtest-jira-bridge
+          image: ideavn/urtest-jira-bridge:{latest}
+          ports:
+            - containerPort: 3020
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+            requests:
+              cpu: 64m
+              memory: 64m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: urtest-jira-bridge-service
+  namespace: urtest
+spec:
+  selector:
+    app: urtest-jira-bridge
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: urtest-jira-bridge-ingress
+  namespace: urtest
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+spec:
+  rules:
+  - host: jira-bridge.urtest.click
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: urtest-jira-bridge-service
+            port:
+              number: 3000
