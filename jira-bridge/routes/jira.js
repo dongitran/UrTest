@@ -2,54 +2,70 @@ const express = require("express");
 const axios = require("axios");
 const router = express.Router();
 const tokenService = require("../services/tokenService");
+const oauthStateService = require("../services/oauthStateService");
 
-function generateRandomState() {
-  return (
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15)
-  );
-}
+router.get("/jira", async (req, res) => {
+  try {
+    const scopes = [
+      "read:jira-user",
+      "read:jira-work",
+      "write:jira-work",
+      "offline_access",
+      "read:issue.remote-link:jira",
+      "write:issue.remote-link:jira",
+      "delete:issue.remote-link:jira",
+      "read:remote-link-info:jira",
+      "write:remote-link-info:jira",
+      "delete:remote-link-info:jira",
+    ];
 
-router.get("/jira", (req, res) => {
-  const scopes = [
-    "read:jira-user",
-    "read:jira-work",
-    "write:jira-work",
-    "offline_access",
-    "read:issue.remote-link:jira",
-    "write:issue.remote-link:jira",
-    "delete:issue.remote-link:jira",
-    "read:remote-link-info:jira",
-    "write:remote-link-info:jira",
-    "delete:remote-link-info:jira",
-  ];
+    const state = oauthStateService.generateState();
 
-  const state = generateRandomState();
+    const stateData = {
+      state,
+      email: req.session.email,
+      callback_url: req.session.callback_url,
+      keycloak_access_token: req.session.keycloak_access_token,
+      user_id: req.user_id || null,
+    };
 
-  const authorizeUrl =
-    `https://auth.atlassian.com/authorize?` +
-    `audience=api.atlassian.com&` +
-    `client_id=${process.env.JIRA_BRIDGE_ATLASSIAN_CLIENT_ID}&` +
-    `scope=${encodeURIComponent(scopes.join(" "))}&` +
-    `redirect_uri=${encodeURIComponent(process.env.JIRA_BRIDGE_REDIRECT_URI)}&` +
-    `state=${state}&` +
-    `response_type=code&` +
-    `prompt=consent`;
+    await oauthStateService.saveState(stateData, 15);
 
-  req.session.auth_state = state;
-  res.redirect(authorizeUrl);
+    const authorizeUrl =
+      `https://auth.atlassian.com/authorize?` +
+      `audience=api.atlassian.com&` +
+      `client_id=${process.env.JIRA_BRIDGE_ATLASSIAN_CLIENT_ID}&` +
+      `scope=${encodeURIComponent(scopes.join(" "))}&` +
+      `redirect_uri=${encodeURIComponent(
+        process.env.JIRA_BRIDGE_REDIRECT_URI
+      )}&` +
+      `state=${state}&` +
+      `response_type=code&` +
+      `prompt=consent`;
+
+    res.redirect(authorizeUrl);
+  } catch (error) {
+    console.error("Error in /auth/jira route:", error);
+    res.status(500).render("error", {
+      message: "Error initiating Jira authentication: " + error.message,
+    });
+  }
 });
 
 router.get("/callback", async (req, res) => {
   const { code, state } = req.query;
 
-  if (state !== req.session.auth_state) {
-    return res.status(403).render("error", {
-      message: "State mismatch.",
-    });
-  }
-
   try {
+    const stateData = await oauthStateService.getAndValidateState(state);
+
+    if (!stateData) {
+      return res.status(403).render("error", {
+        message: "State mismatch or expired. Please try again.",
+      });
+    }
+
+    const { email, callback_url, keycloak_access_token, user_id } = stateData;
+
     const tokenResponse = await axios.post(
       "https://auth.atlassian.com/oauth/token",
       {
@@ -100,38 +116,38 @@ router.get("/callback", async (req, res) => {
       };
     }
 
-    if (!req.cookies.user_id) {
-      req.user_id =
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
-      res.cookie("user_id", req.user_id, {
-        maxAge: 365 * 24 * 60 * 60 * 1000,
-        httpOnly: true,
-        secure: process.env.JIRA_BRIDGE_NODE_ENV === "production",
-      });
-    } else {
-      req.user_id = req.cookies.user_id;
+    let finalUserId = user_id;
+    if (!finalUserId) {
+      if (!req.cookies.user_id) {
+        finalUserId =
+          Math.random().toString(36).substring(2, 15) +
+          Math.random().toString(36).substring(2, 15);
+        res.cookie("user_id", finalUserId, {
+          maxAge: 365 * 24 * 60 * 60 * 1000,
+          httpOnly: true,
+          secure: process.env.JIRA_BRIDGE_NODE_ENV === "production",
+        });
+      } else {
+        finalUserId = req.cookies.user_id;
+      }
     }
 
     await tokenService.saveToken({
-      user_id: req.user_id,
+      user_id: finalUserId,
       ...userData,
       access_token,
       refresh_token,
       token_expires_at,
       ...resourceData,
-      email: req.session.email,
+      email: email,
     });
 
-    if (req.session.callback_url) {
-      const callbackUrl = req.session.callback_url;
-      const email = req.session.email || "";
-
-      delete req.session.callback_url;
-      delete req.session.keycloak_access_token;
-
+    if (callback_url) {
+      const redirectEmail = email || "";
       return res.redirect(
-        `${callbackUrl}?status=success&email=${encodeURIComponent(email)}`
+        `${callback_url}?status=success&email=${encodeURIComponent(
+          redirectEmail
+        )}`
       );
     }
 
@@ -139,14 +155,15 @@ router.get("/callback", async (req, res) => {
   } catch (error) {
     console.error("OAuth Error:", error.response?.data || error.message);
 
-    if (req.session.callback_url) {
-      const callbackUrl = req.session.callback_url;
-
+    let callback_url = null;
+    if (req.session && req.session.callback_url) {
+      callback_url = req.session.callback_url;
       delete req.session.callback_url;
-      delete req.session.keycloak_access_token;
+    }
 
+    if (callback_url) {
       return res.redirect(
-        `${callbackUrl}?status=error&message=${encodeURIComponent(
+        `${callback_url}?status=error&message=${encodeURIComponent(
           "Authentication failed with Jira: " + error.message
         )}`
       );
