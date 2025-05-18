@@ -16,7 +16,7 @@ export default function NewResourcePage() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const resourceId = searchParams.get("resourceId");
-  const slug = searchParams.get("slug");
+  const projectName = decodeURIComponent(searchParams.get("project") || "");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -171,7 +171,7 @@ export default function NewResourcePage() {
                   language="robotframework"
                   value={scriptContent}
                   onChange={setScriptContent}
-                  slug={slug}
+                  projectName={projectName}
                 />
               </div>
             </div>
