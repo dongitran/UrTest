@@ -28,6 +28,7 @@ const commonTable = {
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
   deletedBy: varchar('deleted_by', { length: 255 }),
 };
+
 export const TestResourceTable = pgTable('tbl_test_resource', {
   title: varchar({ length: 255 }).notNull(),
   description: text(),

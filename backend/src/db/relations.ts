@@ -23,7 +23,7 @@ export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one, many })
     references: [ProjectTable.id],
   }),
   comments: many(CommentTable),
-  remoteLinkLocks: many(RemoteLinkLocksTable),
+  remoteLinks: many(RemoteLinkLocksTable),
 }));
 
 export const TestResourceTableRelations = relations(TestResourceTable, ({ one, many }) => ({

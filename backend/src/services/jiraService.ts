@@ -23,6 +23,24 @@ export interface GetAssignedTasksOptions {
   startAt?: number;
 }
 
+export interface JiraRemoteLink {
+  id: number;
+  self: string;
+  object: {
+    url: string;
+    title: string;
+    summary?: string;
+    icon?: {
+      url16x16?: string;
+      title?: string;
+    };
+  };
+  application: {
+    name: string;
+    type: string;
+  };
+}
+
 class JiraService {
   async getTokenByEmail(email: string) {
     try {
@@ -97,6 +115,96 @@ class JiraService {
       accessToken,
       cloudId: tokenData.cloudId,
     };
+  }
+
+  async getRemoteLinks(email: string, issueKey: string): Promise<JiraRemoteLink[]> {
+    try {
+      const { accessToken, cloudId } = await this.getValidToken(email);
+
+      const apiUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${issueKey}/remotelink`;
+
+      const response = await axios.get(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Error getting remote links:', error);
+      throw error;
+    }
+  }
+
+  async createRemoteLink(
+    email: string,
+    issueKey: string,
+    object: {
+      url: string;
+      title: string;
+      summary?: string;
+      icon?: {
+        url16x16?: string;
+        title?: string;
+      };
+    },
+    application: {
+      name: string;
+      type: string;
+    }
+  ) {
+    try {
+      const { accessToken, cloudId } = await this.getValidToken(email);
+
+      const apiUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${issueKey}/remotelink`;
+
+      const requestBody = {
+        application: {
+          name: application.name,
+          type: application.type,
+        },
+        object: {
+          url: object.url,
+          title: object.title,
+          summary: object.summary,
+          icon: object.icon,
+        },
+      };
+
+      const response = await axios.post(apiUrl, requestBody, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error creating remote link:', error);
+      throw error;
+    }
+  }
+
+  async deleteRemoteLink(email: string, issueKey: string, remoteLinkId: number) {
+    try {
+      const { accessToken, cloudId } = await this.getValidToken(email);
+
+      const apiUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${issueKey}/remotelink/${remoteLinkId}`;
+
+      await axios.delete(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting remote link:', error);
+      throw error;
+    }
   }
 
   async getAssignedTasks(
