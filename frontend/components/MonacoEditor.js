@@ -17,7 +17,7 @@ export default function MonacoEditor({
   value = "",
   onChange,
   readOnly = false,
-  slug = null,
+  projectName = null,
 }) {
   const editorRef = useRef(null);
   const { theme } = useTheme();
@@ -35,7 +35,7 @@ export default function MonacoEditor({
       if (monaco && language === "robotframework" && !isRegistering) {
         try {
           setIsRegistering(true);
-          await registerRobotFrameworkLanguage(monaco, slug);
+          await registerRobotFrameworkLanguage(monaco, projectName);
         } catch (error) {
           console.error("Failed to register Robot Framework language:", error);
         } finally {
@@ -45,7 +45,7 @@ export default function MonacoEditor({
     }
 
     setupRobotFramework();
-  }, [monaco, language, isRegistering, slug]);
+  }, [monaco, language, isRegistering, projectName]);
 
   const options = useMemo(
     () => ({

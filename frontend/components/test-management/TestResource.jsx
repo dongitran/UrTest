@@ -143,9 +143,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
               router.push(
                 `/test-management/ur-editor/resource?project=${encodeURIComponent(
                   project.title
-                )}&projectId=${project.id}&resourceId=${item.id}&slug=${
-                  project?.slug
-                }`
+                )}&projectId=${project.id}&resourceId=${item.id}`
               );
             }}
             className="h-7 w-7 p-0"
