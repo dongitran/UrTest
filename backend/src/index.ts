@@ -14,6 +14,7 @@ import AIChatRoute from '@route/ai-chat.route';
 import CommentRoute from '@route/comment.route';
 import ActivityRoute from '@route/activity.route';
 import JiraOAuthRoute from '@route/jiraOauth.route';
+import JiraRoute from '@route/jira.route';
 
 const app = new Hono();
 
@@ -31,6 +32,7 @@ app.route('/api/ai', AIChatRoute);
 app.route('/api/comment', CommentRoute);
 app.route('/api/activities', ActivityRoute);
 app.route('/api/jira-oauth', JiraOAuthRoute);
+app.route('/api/jira', JiraRoute);
 
 app.onError(ErrorLog);
 
