@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
+import JiraLinkButton from "@/components/JiraLinkButton";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,14 +52,17 @@ export default function NewTestCasePage() {
   const userInteractedRef = useRef(false);
   const mainContainerRef = useRef(null);
 
-  const { data: testSuiteDetail, isLoading: testSuiteContentLoading } =
-    useQuery({
-      queryKey: ["detail-test-suite" + testSuiteId],
-      queryFn: () => {
-        return TestSuiteApi().detail(testSuiteId, { projectId });
-      },
-      enabled: testSuiteId ? true : false,
-    });
+  const {
+    data: testSuiteDetail,
+    isLoading: testSuiteContentLoading,
+    refetch: refetchTestSuite,
+  } = useQuery({
+    queryKey: ["detail-test-suite" + testSuiteId],
+    queryFn: () => {
+      return TestSuiteApi().detail(testSuiteId, { projectId });
+    },
+    enabled: testSuiteId ? true : false,
+  });
 
   const editorContentLoading = testSuiteId
     ? testSuiteContentLoading || !draftChecked
@@ -445,7 +449,7 @@ export default function NewTestCasePage() {
           </div>
 
           <div className="w-[30%] flex flex-col overflow-hidden">
-            <div className="border rounded-lg bg-card p-2 flex flex-col gap-2 mb-2">
+            <div className="border rounded-lg bg-card p-2 flex flex-col gap-2 mt-2">
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap font-medium w-[80px]">
                   Test Suite:
@@ -546,6 +550,17 @@ export default function NewTestCasePage() {
                     Run Test
                   </Button>
                 </div>
+
+                {testSuiteDetail && (
+                  <JiraLinkButton
+                    jiraConnection={testSuiteDetail.jiraConnection}
+                    testSuiteId={testSuiteId}
+                    testSuiteName={testSuiteDetail.name}
+                    onRefresh={refetchTestSuite}
+                    size="sm"
+                    className="w-full h-7"
+                  />
+                )}
               </div>
             </div>
 
