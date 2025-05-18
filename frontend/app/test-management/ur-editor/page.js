@@ -32,7 +32,7 @@ export default function NewTestCasePage() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const testSuiteId = searchParams.get("testSuiteId");
-  const slug = searchParams.get("slug");
+  const projectName = decodeURIComponent(searchParams.get("project") || "");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -413,7 +413,7 @@ export default function NewTestCasePage() {
                     language="robotframework"
                     value={scriptContent}
                     onChange={handleScriptContentChange}
-                    slug={slug}
+                    projectName={projectName}
                   />
                 </div>
               )}

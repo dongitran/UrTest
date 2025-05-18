@@ -586,7 +586,7 @@ const RenderActions = ({
                 currentProjectName || project.title
               )}&projectId=${currentProjectId || project.id}&testSuiteId=${
                 testSuite.id
-              }&slug=${project?.slug}`
+              }`
             );
           }}
           disabled={loading || status === "Running"}
