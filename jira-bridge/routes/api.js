@@ -36,13 +36,13 @@ router.get("/check-email-linked", async (req, res) => {
 
 router.post("/register-remote-link", async (req, res) => {
   try {
-    const { email, issueKey, object, application } = req.body;
+    const { email, issueKey, object, application, testSuiteId } = req.body;
 
-    if (!email || !issueKey || !object || !application) {
+    if (!email || !issueKey || !object || !application || !testSuiteId) {
       return res.status(400).json({
         status: "error",
         message:
-          "Missing required fields: email, issueKey, object, or application",
+          "Missing required fields: email, issueKey, object, application, or testSuiteId",
       });
     }
 
@@ -60,11 +60,9 @@ router.post("/register-remote-link", async (req, res) => {
       });
     }
 
-    const testSuiteUrl = object.url;
-
     const linkResult = await linkService.checkAndCreateLink(
       issueKey,
-      testSuiteUrl,
+      testSuiteId,
       application.type,
       application.name,
       email
@@ -73,7 +71,7 @@ router.post("/register-remote-link", async (req, res) => {
     if (!linkResult.isNew) {
       const existingLinks = await jiraService.getRemoteLinks(email, issueKey);
       const duplicateLink = existingLinks.find(
-        (link) => link.object && link.object.url === testSuiteUrl
+        (link) => link.object && link.object.url === object.url
       );
 
       if (duplicateLink) {
@@ -113,16 +111,16 @@ router.post("/register-remote-link", async (req, res) => {
 
 router.delete("/remove-remote-link", async (req, res) => {
   try {
-    const { email, issueKey, testSuiteUrl } = req.body;
+    const { email, issueKey, testSuiteId } = req.body;
 
-    if (!email || !issueKey || !testSuiteUrl) {
+    if (!email || !issueKey || !testSuiteId) {
       return res.status(400).json({
         status: "error",
-        message: "Missing required fields: email, issueKey, or testSuiteUrl",
+        message: "Missing required fields: email, issueKey, or testSuiteId",
       });
     }
 
-    await linkService.deleteLink(issueKey, testSuiteUrl, email);
+    await linkService.deleteLink(issueKey, testSuiteId, email);
 
     return res.json({
       status: "success",
@@ -134,6 +132,64 @@ router.delete("/remove-remote-link", async (req, res) => {
     return res.status(500).json({
       status: "error",
       message: error.message || "An error occurred while removing remote link",
+    });
+  }
+});
+
+router.get("/my-assigned-tasks", async (req, res) => {
+  try {
+    const { email, status, project, maxResults, startAt, excludeStatuses } =
+      req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email parameter is required",
+      });
+    }
+
+    const token = await tokenService.getTokenByEmail(email);
+    if (!token) {
+      return res.status(401).json({
+        status: "error",
+        message:
+          "No valid Jira token found for this email. Please link your Jira account first.",
+      });
+    }
+
+    let excludeStatusesArray = [];
+    if (excludeStatuses) {
+      if (typeof excludeStatuses === "string") {
+        excludeStatusesArray = excludeStatuses
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s);
+      } else if (Array.isArray(excludeStatuses)) {
+        excludeStatusesArray = excludeStatuses;
+      }
+    }
+
+    const options = {
+      status,
+      project,
+      excludeStatuses: excludeStatusesArray,
+      maxResults: maxResults ? parseInt(maxResults) : 50,
+      startAt: startAt ? parseInt(startAt) : 0,
+    };
+
+    const result = await jiraService.getAssignedTasks(email, options);
+
+    return res.json({
+      status: "success",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error getting assigned tasks:", error);
+
+    return res.status(500).json({
+      status: "error",
+      message:
+        error.message || "An error occurred while fetching assigned tasks",
     });
   }
 });

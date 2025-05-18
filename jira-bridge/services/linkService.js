@@ -4,7 +4,7 @@ const jiraService = require("./jiraService");
 const linkService = {
   async checkAndCreateLink(
     issueKey,
-    testSuiteUrl,
+    testSuiteId,
     applicationType,
     applicationName,
     email
@@ -12,8 +12,8 @@ const linkService = {
     try {
       return await db.tx(async (t) => {
         const existingLink = await t.oneOrNone(
-          "SELECT * FROM remote_link_locks WHERE issue_key = $1 AND test_suite_url = $2 AND deleted_at IS NULL",
-          [issueKey, testSuiteUrl]
+          "SELECT * FROM remote_link_locks WHERE issue_key = $1 AND test_suite_id = $2 AND deleted_at IS NULL",
+          [issueKey, testSuiteId]
         );
 
         if (existingLink) {
@@ -25,12 +25,12 @@ const linkService = {
 
         const newLink = await t.one(
           `INSERT INTO remote_link_locks(
-            issue_key, test_suite_url, application_type, application_name, 
+            issue_key, test_suite_id, application_type, application_name, 
             email, created_at, updated_at, deleted_at
           ) VALUES(
             $1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL
           ) RETURNING *`,
-          [issueKey, testSuiteUrl, applicationType, applicationName, email]
+          [issueKey, testSuiteId, applicationType, applicationName, email]
         );
 
         return {
@@ -44,12 +44,12 @@ const linkService = {
     }
   },
 
-  async deleteLink(issueKey, testSuiteUrl, email) {
+  async deleteLink(issueKey, testSuiteId, email) {
     try {
       const remoteLinks = await jiraService.getRemoteLinks(email, issueKey);
 
       const linkToDelete = remoteLinks.find(
-        (link) => link.object && link.object.url === testSuiteUrl
+        (link) => link.object && link.object.url === testSuiteId
       );
 
       if (linkToDelete && linkToDelete.id) {
@@ -57,8 +57,8 @@ const linkService = {
       }
 
       await db.none(
-        "UPDATE remote_link_locks SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE issue_key = $1 AND test_suite_url = $2 AND deleted_at IS NULL",
-        [issueKey, testSuiteUrl]
+        "UPDATE remote_link_locks SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE issue_key = $1 AND test_suite_id = $2 AND deleted_at IS NULL",
+        [issueKey, testSuiteId]
       );
 
       return true;
