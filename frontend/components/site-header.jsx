@@ -64,6 +64,7 @@ export function SiteHeader() {
       return { title: "Test Execution" };
     if (pathname.startsWith("/reports")) return { title: "Reports" };
     if (pathname.startsWith("/dashboard")) return { title: "Dashboard" };
+    if (pathname.startsWith("/settings")) return { title: "Settings" };
     return { title: "" };
   }, [pathname, searchParams]);
 

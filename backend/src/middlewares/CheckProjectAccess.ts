@@ -1,16 +1,12 @@
-import type { MiddlewareHandler } from "hono";
-import db from "../db/db";
-import { ROLES } from "./CheckPermission";
+import type { MiddlewareHandler } from 'hono';
+import db from '../db/db';
+import { ROLES } from './CheckPermission';
 
 const CheckProjectAccess = (): MiddlewareHandler => {
   return async (ctx, next) => {
-    const user = ctx.get("user");
+    const user = ctx.get('user');
 
-    let projectId = ctx.req.param("id");
-
-    if (!projectId) {
-      projectId = ctx.req.query("projectId");
-    }
+    let projectId = ctx.req.query('projectId') || ctx.req.param('id');
 
     if (!projectId) {
       try {
@@ -24,8 +20,7 @@ const CheckProjectAccess = (): MiddlewareHandler => {
       return;
     }
 
-    const isAdminOrManager =
-      user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
+    const isAdminOrManager = user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
 
     if (isAdminOrManager) {
       await next();
@@ -35,11 +30,7 @@ const CheckProjectAccess = (): MiddlewareHandler => {
     if (user.roles.includes(ROLES.STAFF)) {
       const assignment = await db.query.ProjectAssignmentTable.findFirst({
         where: (clm, { eq, and, isNull }) =>
-          and(
-            eq(clm.projectId, projectId),
-            eq(clm.userEmail, user.email),
-            isNull(clm.deletedAt)
-          ),
+          and(eq(clm.projectId, projectId), eq(clm.userEmail, user.email), isNull(clm.deletedAt)),
       });
 
       if (!assignment) {

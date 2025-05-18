@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken, updateToken, logout } from "./keycloak";
+import { getToken, updateToken, logout, isTokenExpired } from "./keycloak";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -8,16 +8,23 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const tokenUpdated = await updateToken(60);
+      const tokenUpdated = await updateToken(60, 3, 1000);
 
       if (!tokenUpdated) {
-        await logout();
-        return Promise.reject(new Error("Token refresh failed"));
+        if (isTokenExpired()) {
+          await logout();
+          return Promise.reject(new Error("Token expired and refresh failed"));
+        }
       }
     } catch (error) {
       console.error("Token update error:", error);
-      await logout();
-      return Promise.reject(error);
+      if (error.name !== 'TypeError' ||
+        (!error.message.includes('Failed to fetch') &&
+          !error.message.includes('NetworkError') &&
+          !error.message.includes('Network request failed'))) {
+        await logout();
+        return Promise.reject(error);
+      }
     }
 
     const token = getToken();
@@ -62,16 +69,16 @@ export const TestResourceApi = (path = "/api/test-resource") => {
     const res = await apiClient.post(path, data);
     return res;
   };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, params);
     return res;
   };
   const patch = async (id, data) => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  const get = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
+  const get = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, params);
     return res.data;
   };
   return { patch, create, list, delete: _delete, get };
@@ -90,20 +97,20 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(path, data);
     return res;
   };
-  const detail = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
+  const detail = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, { params });
     return res.data;
   };
   const patch = async (id, data) => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, { params });
     return res;
   };
-  const execute = async (id, data) => {
-    const res = await apiClient.post(`${path}/${id}/execute`, data);
+  const execute = async (id, data, params = {}) => {
+    const res = await apiClient.post(`${path}/${id}/execute`, data, { params });
     return res;
   };
   const executeAll = async (data) => {

@@ -2,17 +2,18 @@ import { zValidator } from '@hono/zod-validator';
 import fp from 'lodash/fp';
 import dayjs from 'dayjs';
 import db from 'db/db';
-import { ProjectTable, ProjectAssignmentTable } from 'db/schema';
+import { ProjectTable, ProjectAssignmentTable, TestSuiteExecuteTable } from 'db/schema';
 import { Hono } from 'hono';
 import { get } from 'lodash';
 import { ulid } from 'ulid';
 import { z } from 'zod';
-import { eq, isNull, and, desc, inArray } from 'drizzle-orm';
+import { eq, isNull, and, desc, inArray, or } from 'drizzle-orm';
 import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
 import { DeleteProjectDirectory } from '../lib/Github/DeleteProjectDirectory';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import { fetchStaffUsersFromKeycloak } from '../lib/Keycloak/admin-api';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const ProjectRoute = new Hono();
 
@@ -85,7 +86,14 @@ ProjectRoute.get(
       }
       const listTestSuiteId = project.listTestSuite.map((i) => i.id);
       const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
-        where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
+        where: (clm, { inArray, eq, or, and, isNull }) =>
+          and(
+            isNull(clm.deletedAt),
+            or(
+              inArray(clm.testSuiteId, listTestSuiteId),
+              and(eq(clm.projectId, project.id), isNull(clm.testSuiteId))
+            )
+          ),
         orderBy: (clm, { desc }) => desc(clm.id),
         limit: 24,
       });
@@ -94,14 +102,17 @@ ProjectRoute.get(
         project: {
           ...project,
           recentTestRun: listTestSuiteExecute.map((item) => {
-            const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
+            const testSuite = item.testSuiteId
+              ? project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }))
+              : null;
             return {
               id: item.id,
               reportUrl: get(item?.params, 'resultRunner.reportUrl'),
-              testSuiteName: testSuite?.name,
+              testSuiteName: testSuite?.name || 'Project Execution',
               status: item.status,
               createdAt: item.createdAt,
               createdBy: item.createdBy,
+              results: get(item?.params, 'resultRunner.results'),
             };
           }),
         },
@@ -155,6 +166,15 @@ ProjectRoute.post(
       }
     }
 
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_CREATED,
+      project.id,
+      user.email,
+      `Created project "${project.title}"`,
+      project.id,
+      'project'
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -179,6 +199,7 @@ ProjectRoute.patch(
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
+    const user = ctx.get('user');
     const project = await db.query.ProjectTable.findFirst({
       where: (clm, { eq }) => eq(clm.id, id),
     });
@@ -198,6 +219,22 @@ ProjectRoute.patch(
         description: body.description,
       })
       .where(eq(ProjectTable.id, project.id));
+
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_UPDATED,
+      project.id,
+      user.email,
+      `Updated project "${body.title}"`,
+      project.id,
+      'project',
+      {
+        previousTitle: project.title,
+        newTitle: body.title,
+        previousDescription: project.description,
+        newDescription: body.description,
+      }
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -240,6 +277,15 @@ ProjectRoute.delete(
       })
       .where(eq(ProjectTable.id, id))
       .returning();
+
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_DELETED,
+      id,
+      user.email,
+      `Deleted project "${project.title}"`,
+      id,
+      'project'
+    );
 
     return ctx.json({ message: 'ok' });
   }
@@ -290,6 +336,16 @@ ProjectRoute.post(
       createdBy: user.email,
     });
 
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_STAFF_ADDED,
+      project.id,
+      user.email,
+      `Assigned user ${userEmail} to project "${project.title}"`,
+      project.id,
+      'project',
+      { assignedUser: userEmail }
+    );
+
     return ctx.json({ message: 'User assigned to project successfully' });
   }
 );
@@ -317,6 +373,14 @@ ProjectRoute.delete(
       return ctx.json({ message: 'Assignment not found' }, 404);
     }
 
+    const project = await db.query.ProjectTable.findFirst({
+      where: (clm, { eq }) => eq(clm.id, id),
+    });
+
+    if (!project) {
+      return ctx.json({ message: 'Project not found' }, 404);
+    }
+
     await db
       .update(ProjectAssignmentTable)
       .set({
@@ -325,13 +389,23 @@ ProjectRoute.delete(
       })
       .where(eq(ProjectAssignmentTable.id, assignment.id));
 
+    await logActivity(
+      ACTIVITY_TYPES.PROJECT_STAFF_REMOVED,
+      id,
+      user.email,
+      `Removed user ${userEmail} from project "${project.title}"`,
+      id,
+      'project',
+      { removedUser: userEmail }
+    );
+
     return ctx.json({ message: 'User assignment removed successfully' });
   }
 );
 
 ProjectRoute.get(
   '/:id/assignments',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({
@@ -351,7 +425,7 @@ ProjectRoute.get(
 
 ProjectRoute.get(
   '/:id/available-staff',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({

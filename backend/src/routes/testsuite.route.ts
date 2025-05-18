@@ -11,10 +11,12 @@ import { ulid } from 'ulid';
 import { z } from 'zod';
 import { DeleteFileFromGithub } from 'lib/Github/DeleteFile';
 import RunTest from 'lib/Runner/RunTest';
+import RunProjectTests from 'lib/Runner/RunProjectTests';
 import * as TestSuiteSchema from 'lib/Zod/TestSuiteSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import CheckFileFromGithub from 'lib/Github/CheckFile';
+import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
 
 const TestSuiteRoute = new Hono();
 
@@ -74,7 +76,6 @@ TestSuiteRoute.post(
       .returning()
       .then((res) => res[0]);
 
-    //* Gọi tới Github API để tạo file bên UrTest Workflow
     if (project.slug && testSuite.content) {
       CreateOrUpdateFile(
         {
@@ -97,6 +98,16 @@ TestSuiteRoute.post(
         }
       );
     }
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_CREATED,
+      body.projectId,
+      user.email,
+      `Created test suite "${body.name}"`,
+      testSuite.id,
+      'test_suite'
+    );
+
     return ctx.json({ message: 'ok' });
   }
 )
@@ -370,46 +381,57 @@ TestSuiteRoute.post(
           and(eq(clm.projectId, projectId), isNull(clm.deletedAt), ne(clm.status, 'Running')),
       });
       const testSuiteIds = listTestSuite.map((i) => i.id);
-      const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
-        where: (clm, { inArray, and, eq }) =>
-          and(inArray(clm.testSuiteId, testSuiteIds), eq(clm.status, 'processing')),
+
+      const runningExecutes = await db.query.TestSuiteExecuteTable.findMany({
+        where: (clm, { eq, and }) =>
+          and(eq(clm.projectId, projectId), eq(clm.status, 'processing')),
       });
-      if (listTestSuiteExecute.length > 0) {
+
+      if (runningExecutes.length > 0) {
         return ctx.json(
           {
             message:
-              'Đang có 1 tiến trình thực hiện kịch bản test nên không thể thực thi toàn bộ kịch bản test',
+              'Đang có 1 tiến trình thực hiện cho project này. Vui lòng đợi kết thúc rồi thực hiện lại',
           },
           400
         );
       }
-      await db
-        .update(TestSuiteTable)
-        .set({ status: 'Running' })
-        .where(inArray(TestSuiteTable.id, testSuiteIds));
-      const insertTextSuiteExecute: (typeof TestSuiteExecuteTable.$inferInsert)[] =
-        listTestSuite.map((item) => ({
+
+      const projectExecuteId = ulid();
+      const projectExecute = await db
+        .insert(TestSuiteExecuteTable)
+        .values({
           createdAt: dayjs().toISOString(),
           createdBy: user.email,
-          id: ulid(),
-          testSuiteId: item.id,
+          id: projectExecuteId,
+          projectId: projectId,
           status: 'processing',
-        }));
-      const listTextSuiteJustCreated = await db
-        .insert(TestSuiteExecuteTable)
-        .values(insertTextSuiteExecute)
-        .returning();
-      const RunAllTest = async (listTestSuite: (typeof TestSuiteTable.$inferSelect)[]) => {
-        for (const testSuite of listTestSuite) {
-          const startRun = dayjs();
-          const testExecute = listTextSuiteJustCreated.find(
-            fp.isMatch({ testSuiteId: testSuite.id })
-          );
-          const resultRunner = await RunTest({
-            content: testSuite.content,
-            projectName: project.slug,
-          });
+          params: {
+            testSuiteIds: testSuiteIds,
+            totalTests: testSuiteIds.length,
+          },
+        })
+        .returning()
+        .then((res) => res[0]);
+
+      await db
+        .update(TestSuiteTable)
+        .set({
+          status: 'Running',
+          params: (table) => ({
+            ...table.params,
+            projectExecuteId: projectExecuteId,
+          }),
+        })
+        .where(inArray(TestSuiteTable.id, testSuiteIds));
+
+      const startRun = dayjs();
+      RunProjectTests({ projectName: project.slug })
+        .then(async (result) => {
+          console.log(result, 'resultresult');
           const endRun = dayjs();
+          const duration = endRun.diff(startRun, 'second');
+
           await db
             .update(TestSuiteTable)
             .set({
@@ -417,30 +439,64 @@ TestSuiteRoute.post(
               updatedBy: user.email,
               lastRunDate: dayjs().toISOString(),
               status: 'Completed',
-              params: {
-                ...(testSuite.params || {}),
-                resultRunner,
-                duration: endRun.diff(startRun, 'second'),
-              },
+              params: (table) => ({
+                ...table.params,
+                resultRunner: result,
+                duration: duration,
+              }),
             })
-            .where(eq(TestSuiteTable.id, testSuite.id));
-          if (testExecute) {
-            await db
-              .update(TestSuiteExecuteTable)
-              .set({
-                status: 'success',
-                params: {
-                  ...(testExecute.params || {}),
-                  resultRunner,
-                },
-                updatedAt: dayjs().toISOString(),
-                updatedBy: user.email,
-              })
-              .where(eq(TestSuiteExecuteTable.id, testExecute.id));
-          }
-        }
-      };
-      RunAllTest(listTestSuite);
+            .where(inArray(TestSuiteTable.id, testSuiteIds));
+
+          await db
+            .update(TestSuiteExecuteTable)
+            .set({
+              status: 'success',
+              params: {
+                ...projectExecute.params,
+                resultRunner: result,
+                duration: duration,
+                completedTestSuites: testSuiteIds.length,
+              },
+              updatedAt: dayjs().toISOString(),
+              updatedBy: user.email,
+            })
+            .where(eq(TestSuiteExecuteTable.id, projectExecuteId));
+        })
+        .catch(async (error) => {
+          console.error('Error running project tests:', error);
+          const endRun = dayjs();
+          const duration = endRun.diff(startRun, 'second');
+
+          await db
+            .update(TestSuiteTable)
+            .set({
+              updatedAt: dayjs().toISOString(),
+              updatedBy: user.email,
+              lastRunDate: dayjs().toISOString(),
+              status: 'Failed',
+              params: (table) => ({
+                ...table.params,
+                resultRunner: null,
+                duration: duration,
+              }),
+            })
+            .where(inArray(TestSuiteTable.id, testSuiteIds));
+
+          await db
+            .update(TestSuiteExecuteTable)
+            .set({
+              status: 'failed',
+              params: {
+                ...projectExecute.params,
+                error: String(error),
+                duration: duration,
+              },
+              updatedAt: dayjs().toISOString(),
+              updatedBy: user.email,
+            })
+            .where(eq(TestSuiteExecuteTable.id, projectExecuteId));
+        });
+
       return ctx.json({ message: 'ok' });
     }
   );
@@ -545,6 +601,20 @@ TestSuiteRoute.patch(
         }
       );
     }
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_UPDATED,
+      body.projectId,
+      user.email,
+      `Updated test suite "${body.name}"`,
+      testSuite.id,
+      'test_suite',
+      {
+        previousName: testSuite.name,
+        newName: body.name,
+      }
+    );
+
     return ctx.json({ message: 'ok' });
   }
 );
@@ -598,6 +668,15 @@ TestSuiteRoute.delete(
         deletedBy: user.email,
       })
       .where(eq(TestSuiteTable.id, id));
+
+    await logActivity(
+      ACTIVITY_TYPES.TEST_SUITE_DELETED,
+      testSuite.projectId,
+      user.email,
+      `Deleted test suite "${testSuite.name}"`,
+      testSuite.id,
+      'test_suite'
+    );
 
     return ctx.json({ message: 'ok' });
   }

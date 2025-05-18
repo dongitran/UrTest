@@ -38,8 +38,11 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  getFilteredRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function TestCaseList({
   project = {},
@@ -48,6 +51,11 @@ export default function TestCaseList({
 }) {
   const router = useRouter();
   const socketRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [runningTestIds, setRunningTestIds] = useState(new Set());
+  const pollingIntervalRef = useRef(null);
+  const queryClient = useQueryClient();
+
   const columns = useMemo(() => {
     return [
       {
@@ -63,7 +71,7 @@ export default function TestCaseList({
         cell: ({ row }) => {
           return (
             <div className="flex gap-1">
-              {row.getValue("tags").map((tag) => (
+              {row.getValue("tags")?.map((tag) => (
                 <Badge
                   key={tag}
                   variant="outline"
@@ -123,6 +131,8 @@ export default function TestCaseList({
               project={project}
               setReRender={setReRender}
               testSuite={row.original}
+              addRunningTest={addRunningTest}
+              queryClient={queryClient}
             />
           );
         },
@@ -135,10 +145,34 @@ export default function TestCaseList({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     initialState: {
       pagination: {
         pageSize: 5,
       },
+    },
+    state: {
+      globalFilter: searchQuery,
+    },
+    onGlobalFilterChange: setSearchQuery,
+    globalFilterFn: (row, c, value) => {
+      const searchValue = String(value).toLowerCase();
+      if (searchValue === "") return true;
+
+      if (String(row.getValue("name")).toLowerCase().includes(searchValue)) {
+        return true;
+      }
+
+      const tags = row.getValue("tags") || [];
+      if (tags.some((tag) => String(tag).toLowerCase().includes(searchValue))) {
+        return true;
+      }
+
+      if (String(row.getValue("status")).toLowerCase().includes(searchValue)) {
+        return true;
+      }
+
+      return false;
     },
   });
 
@@ -154,16 +188,63 @@ export default function TestCaseList({
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800";
       case "Not Run":
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
+      case "Running":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800 animate-pulse";
       default:
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+    }
+  };
+
+  const addRunningTest = (testId) => {
+    setRunningTestIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(testId);
+      return newSet;
+    });
+  };
+
+  const removeRunningTest = (testId) => {
+    setRunningTestIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(testId);
+      return newSet;
+    });
+  };
+
+  const pollTestStatus = async () => {
+    try {
+      if (runningTestIds.size === 0) return;
+
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      await queryClient.invalidateQueries(["test-resource", project.id]);
+      setReRender({});
+
+      const stillRunning = listTestSuite.some(
+        (suite) => suite.status === "Running" && runningTestIds.has(suite.id)
+      );
+
+      if (!stillRunning && runningTestIds.size > 0) {
+        setRunningTestIds(new Set());
+      }
+    } catch (error) {
+      console.error("Error polling test status:", error);
     }
   };
 
   const handleExecuteAllTestSuite = async () => {
     try {
       await TestSuiteApi().executeAll({ projectId: project.id });
+
+      const newRunningTests = new Set(listTestSuite.map((suite) => suite.id));
+      setRunningTestIds(newRunningTests);
+
       setReRender({});
+      localStorage.setItem("test_suite_updated", "true");
       toast.success("Test execution started for all test suites");
+
       if (
         socketRef.current &&
         socketRef.current.readyState === WebSocket.OPEN
@@ -175,6 +256,12 @@ export default function TestCaseList({
           })
         );
       }
+
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      await queryClient.invalidateQueries(["test-resource", project.id]);
     } catch (error) {
       const message =
         get(error, "response.data.message") || "An error occurred";
@@ -183,19 +270,54 @@ export default function TestCaseList({
   };
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:3020/ws");
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    if (runningTestIds.size > 0) {
+      pollTestStatus();
+
+      pollingIntervalRef.current = setInterval(pollTestStatus, 3000);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [runningTestIds, project.id]);
+
+  useEffect(() => {
+    const socket = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
 
     socket.onopen = () => {
       console.log("WebSocket connected");
     };
 
     socket.onmessage = (event) => {
-      handleEventData(event.data, ({ key, testSuiteName }) => {
+      handleEventData(event.data, ({ key, testSuiteName, testSuiteId }) => {
         if (key === "reRenderTestSuiteList") {
+          if (testSuiteId) {
+            removeRunningTest(testSuiteId);
+          }
+
           setReRender({});
+          localStorage.setItem("test_suite_updated", "true");
+
+          queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+          queryClient.invalidateQueries(["test-resource", project.id]);
+
           toast.success(`Test suite ${testSuiteName} execution completed`);
         } else if (key === "reRenderTestSuiteListAll") {
+          localStorage.setItem("test_suite_updated", "true");
+          setRunningTestIds(new Set());
+
           setReRender({});
+
+          queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+          queryClient.invalidateQueries(["test-resource", project.id]);
+
           toast.success(`All test suites execution completed`);
         }
       });
@@ -214,10 +336,10 @@ export default function TestCaseList({
     return () => {
       socket.close();
     };
-  }, []);
+  }, [queryClient, project.id, setReRender]);
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden">
+    <div className="border rounded-lg bg-card overflow-hidden mt-2">
       <div className="px-6 py-3">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-medium">Test Suites</h2>
@@ -228,6 +350,8 @@ export default function TestCaseList({
               <Input
                 placeholder="Search test cases..."
                 className="pl-8 h-8 w-full text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
@@ -255,9 +379,9 @@ export default function TestCaseList({
           </div>
         </div>
 
-        <div className="w-full border rounded-md overflow-hidden bg-background min-h-[300px]">
+        <div className="w-full border rounded-md overflow-hidden bg-card min-h-[300px]">
           <Table className="w-full">
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/30">
               <TableRow>
                 {table.getHeaderGroups().map((headerGroup) =>
                   headerGroup.headers.map((header) => (
@@ -279,7 +403,7 @@ export default function TestCaseList({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-b hover:bg-muted/50">
+                  <TableRow key={row.id} className="border-b hover:bg-muted/40">
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 px-4">
                         {flexRender(
@@ -296,7 +420,9 @@ export default function TestCaseList({
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    No results.
+                    {searchQuery
+                      ? "No test suites found matching your search criteria."
+                      : "No results."}
                   </TableCell>
                 </TableRow>
               )}
@@ -320,7 +446,7 @@ export default function TestCaseList({
               size="sm"
               className="h-7 w-7 rounded-md p-0 bg-blue-600 text-xs"
             >
-              1
+              {table.getState().pagination.pageIndex + 1}
             </Button>
             <Button
               variant="outline"
@@ -343,6 +469,8 @@ const RenderActions = ({
   project = {},
   testSuite = {},
   setReRender,
+  addRunningTest,
+  queryClient,
 }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -356,13 +484,31 @@ const RenderActions = ({
       if (testSuite.status === "Running") {
         return;
       }
+
+      setLoading(true);
+
       try {
-        await TestSuiteApi().execute(testSuite.id, {
-          status: "processing",
-          testSuiteStatus: "Running",
-        });
+        await TestSuiteApi().execute(
+          testSuite.id,
+          {
+            status: "processing",
+            testSuiteStatus: "Running",
+          },
+          { projectId: project.id }
+        );
+
+        addRunningTest(testSuite.id);
+
         setReRender({});
+        localStorage.setItem("test_suite_updated", "true");
         toast.success("Test execution started");
+
+        await queryClient.invalidateQueries([
+          PROJECT_DETAIL_QUERY_KEY,
+          project.id,
+        ]);
+        await queryClient.invalidateQueries(["test-resource", project.id]);
+
         const isSocketValid = socketRef && socketRef.current;
         if (isSocketValid && socketRef.current.readyState === WebSocket.OPEN) {
           socketRef.current.send(
@@ -378,6 +524,8 @@ const RenderActions = ({
           get(error, "response.data.message") ||
           "Error starting test execution";
         toast.error(message);
+      } finally {
+        setLoading(false);
       }
     };
   };
@@ -385,10 +533,18 @@ const RenderActions = ({
   const handleDeleteTestSuite = async () => {
     try {
       setIsDeleting(true);
-      await TestSuiteApi().delete(testSuite.id);
+      await TestSuiteApi().delete(testSuite.id, {
+        params: { projectId: project.id },
+      });
+
+      queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, project.id]);
+
       if (setReRender) {
         setReRender({});
       }
+
+      localStorage.setItem("test_suite_updated", "true");
+
       toast.success(`Test suite ${testSuite.name} deleted successfully`);
       setDeleteDialogOpen(false);
     } catch (error) {
@@ -420,11 +576,16 @@ const RenderActions = ({
           size="icon"
           className="h-8 w-8 text-foreground/70 hover:bg-muted"
           onClick={() => {
+            const currentUrl = new URL(window.location.href);
+            const params = new URLSearchParams(currentUrl.search);
+            const currentProjectId = params.get("projectId");
+            const currentProjectName = params.get("project");
+
             router.push(
               `/test-management/ur-editor?project=${encodeURIComponent(
-                project.title
-              )}&projectId=${project.id}&testSuiteId=${testSuite.id}&slug=${
-                project?.slug
+                currentProjectName || project.title
+              )}&projectId=${currentProjectId || project.id}&testSuiteId=${
+                testSuite.id
               }`
             );
           }}

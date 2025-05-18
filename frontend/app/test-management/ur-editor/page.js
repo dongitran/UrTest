@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,15 @@ import { toast } from "sonner";
 import {
   LoaderCircle,
   Play,
-  RefreshCw,
   History,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import MonacoEditor from "@/components/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatPanel from "@/components/ChatPanel";
 import CommentPanel from "@/components/CommentPanel";
@@ -26,34 +26,43 @@ import {
   clearTestSuiteDraft,
   formatDraftSavedTime,
 } from "@/utils/testSuiteDrafts";
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const testSuiteId = searchParams.get("testSuiteId");
-  const slug = searchParams.get("slug");
+  const projectName = decodeURIComponent(searchParams.get("project") || "");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
   const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
-  const [scriptContent, setScriptContent] = useState(defaultScriptContent);
+
+  const [scriptContent, setScriptContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [editorHeight, setEditorHeight] = useState("calc(100vh - 260px)");
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false); // Start with auto-save disabled
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [draftChecked, setDraftChecked] = useState(false);
+  const [contentHeight, setContentHeight] = useState("calc(100vh - 95px)");
 
   const userInteractedRef = useRef(false);
+  const mainContainerRef = useRef(null);
 
-  const { data: testSuiteDetail } = useQuery({
-    queryKey: ["detail-test-suite" + testSuiteId],
-    queryFn: () => {
-      return TestSuiteApi().detail(testSuiteId);
-    },
-    enabled: testSuiteId ? true : false,
-  });
+  const { data: testSuiteDetail, isLoading: testSuiteContentLoading } =
+    useQuery({
+      queryKey: ["detail-test-suite" + testSuiteId],
+      queryFn: () => {
+        return TestSuiteApi().detail(testSuiteId, { projectId });
+      },
+      enabled: testSuiteId ? true : false,
+    });
+
+  const editorContentLoading = testSuiteId
+    ? testSuiteContentLoading || !draftChecked
+    : !draftChecked;
 
   const { register, getValues, setValue, watch } = useForm();
 
@@ -153,6 +162,9 @@ export default function NewTestCasePage() {
       setAutoSaveEnabled(false);
     } else {
       setHasDraft(false);
+      if (!testSuiteId) {
+        setScriptContent(defaultScriptContent);
+      }
     }
 
     setDraftChecked(true);
@@ -171,6 +183,14 @@ export default function NewTestCasePage() {
       setAutoSaveEnabled(false);
     }
   }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
+
+  const invalidateCaches = async () => {
+    await queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
+    await queryClient.invalidateQueries(["test-resource", projectId]);
+    await queryClient.invalidateQueries(["detail-test-suite"]);
+
+    await queryClient.resetQueries();
+  };
 
   const handleEdit = async () => {
     const data = getValues();
@@ -195,6 +215,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success(`Test script edited successfully`);
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       toast.error(`Error editing test script`);
@@ -226,6 +250,10 @@ export default function NewTestCasePage() {
       setHasDraft(false);
 
       toast.success("Test case saved successfully");
+
+      await invalidateCaches();
+      localStorage.setItem("test_suite_updated", "true");
+
       router.push(`/test-management?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
@@ -293,54 +321,120 @@ export default function NewTestCasePage() {
   };
 
   useEffect(() => {
-    const updateEditorHeight = () => {
-      setEditorHeight("calc(100vh - 260px)");
+    const calculateHeight = () => {
+      const headerHeight = 55;
+      const safetyMargin = 15;
+      const calculatedHeight = window.innerHeight - headerHeight - safetyMargin;
+      setContentHeight(`${calculatedHeight}px`);
+
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+
+      document.documentElement.style.setProperty(
+        "--ur-editor-height",
+        `${calculatedHeight}px`
+      );
     };
-    updateEditorHeight();
-    window.addEventListener("resize", updateEditorHeight);
-    return () => window.removeEventListener("resize", updateEditorHeight);
+
+    const addScrollLockStyles = () => {
+      const styleEl = document.createElement("style");
+      styleEl.id = "scroll-lock-styles";
+      styleEl.textContent = `
+        body, html {
+          overflow: hidden !important;
+          height: 100% !important;
+          position: relative !important;
+        }
+        .ur-editor-page {
+          height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+          max-height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+          overflow: hidden !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    };
+
+    calculateHeight();
+    addScrollLockStyles();
+    window.addEventListener("resize", calculateHeight);
+
+    const preventDefault = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("wheel", preventDefault, { passive: false });
+
+    return () => {
+      window.removeEventListener("resize", calculateHeight);
+      document.removeEventListener("wheel", preventDefault);
+
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+
+      const styleEl = document.getElementById("scroll-lock-styles");
+      if (styleEl) {
+        styleEl.remove();
+      }
+    };
   }, []);
 
-  return (
-    <div className="flex flex-col gap-6 w-full">
-      <div className="grid gap-6">
-        <div className="flex gap-6 h-[calc(100vh-120px)]">
-          <div className="w-[70%] gap-4 p-6 border rounded-lg bg-card">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 flex items-center gap-2">
-                <span className="whitespace-nowrap font-medium">
-                  Test Suite:
-                </span>
-                <Input
-                  id="test-name"
-                  {...register("name")}
-                  placeholder="Enter test case name"
-                  className="w-full"
-                  onChange={handleNameChange}
-                />
-              </div>
-              <div className="flex-1 flex items-center gap-2">
-                <span className="whitespace-nowrap font-medium">Tags:</span>
-                <TagInput
-                  value={tags}
-                  onChange={handleTagsChange}
-                  placeholder="Press Enter to add tags"
-                />
-              </div>
-            </div>
+  const hasResults =
+    !showProgress &&
+    watch("resultRunner")?.reportUrl &&
+    typeof watch("resultRunner")?.results?.passed === "number" &&
+    typeof watch("resultRunner")?.results?.totalTests === "number";
 
-            <div className="grid gap-2 mt-4 relative">
-              <div
-                className="border rounded-sm bg-card overflow-hidden"
-                style={{ height: editorHeight }}
-              >
-                <MonacoEditor
-                  language="robotframework"
-                  value={scriptContent}
-                  onChange={handleScriptContentChange}
-                  slug={slug}
-                />
-              </div>
+  return (
+    <div
+      ref={mainContainerRef}
+      className="ur-editor-page flex flex-col w-full"
+      style={{
+        height: contentHeight,
+        maxHeight: contentHeight,
+        overflow: "hidden",
+      }}
+    >
+      <div className="grid h-full">
+        <div className="flex gap-2 h-full overflow-hidden">
+          <div className="w-[70%] overflow-hidden relative">
+            <div className="overflow-hidden h-full">
+              {editorContentLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
+                  <div className="flex flex-col items-center">
+                    <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                    <span className="mt-2 text-sm text-muted-foreground">
+                      Loading test suite content...
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full pt-1">
+                  <MonacoEditor
+                    language="robotframework"
+                    value={scriptContent}
+                    onChange={handleScriptContentChange}
+                    projectName={projectName}
+                  />
+                </div>
+              )}
+
+              {hasDraft && (
+                <div className="absolute bottom-1 right-4 z-10 flex items-center gap-2 bg-background/70 dark:bg-background/70 backdrop-blur-sm border border-border px-3 py-1.5 rounded-md shadow-sm">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <History className="h-3 w-3" />
+                    <span>Auto-saved {formatDraftSavedTime(lastSaved)}</span>
+                  </div>
+                  <Button
+                    onClick={handleResetToOriginal}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 py-0 text-xs text-muted-foreground hover:text-red-500 hover:bg-background/80"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete draft
+                  </Button>
+                </div>
+              )}
 
               {showProgress && (
                 <div className="absolute bottom-0 left-0 w-full bg-blue-700 rounded-full h-2 overflow-hidden z-50">
@@ -348,28 +442,57 @@ export default function NewTestCasePage() {
                 </div>
               )}
             </div>
+          </div>
 
-            <div className="flex items-center pt-4">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  router.push(`/test-management?projectId=${projectId}`)
-                }
-                size="sm"
-                className="mr-2 w-24"
-              >
-                {isLoading && <LoaderCircle className="animate-spin mr-2" />}
-                Cancel
-              </Button>
+          <div className="w-[30%] flex flex-col overflow-hidden">
+            <div className="border rounded-lg bg-card p-2 flex flex-col gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap font-medium w-[80px]">
+                  Test Suite:
+                </span>
+                <Input
+                  id="test-name"
+                  {...register("name")}
+                  placeholder="Enter test case name"
+                  className="flex-1 h-7"
+                  onChange={handleNameChange}
+                />
+              </div>
 
-              {projectId && (
-                <Fragment>
-                  {testSuiteId ? (
-                    <Fragment>
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap font-medium w-[80px]">
+                  Tags:
+                </span>
+                <TagInput
+                  value={tags}
+                  onChange={handleTagsChange}
+                  placeholder="Enter tags"
+                  className="flex-1 h-7"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/test-management?projectId=${projectId}`)
+                    }
+                    size="sm"
+                    className="w-1/2 h-7"
+                  >
+                    {isLoading && (
+                      <LoaderCircle className="animate-spin mr-2" />
+                    )}
+                    Cancel
+                  </Button>
+
+                  {projectId &&
+                    (testSuiteId ? (
                       <Button
                         onClick={handleEdit}
                         disabled={isLoading}
-                        className="w-24 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white h-7"
                         size="sm"
                       >
                         {isLoading && (
@@ -377,13 +500,11 @@ export default function NewTestCasePage() {
                         )}
                         Save
                       </Button>
-                    </Fragment>
-                  ) : (
-                    <Fragment>
+                    ) : (
                       <Button
                         onClick={handleSave}
                         disabled={isLoading}
-                        className="w-24 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white h-7"
                         size="sm"
                       >
                         {isLoading && (
@@ -391,33 +512,30 @@ export default function NewTestCasePage() {
                         )}
                         Create
                       </Button>
-                    </Fragment>
-                  )}
-                </Fragment>
-              )}
+                    ))}
+                </div>
 
-              <div className="ml-auto flex items-center gap-3">
-                {hasDraft && (
-                  <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                    <History className="h-3 w-3" />
-                    <span>Auto-saved {formatDraftSavedTime(lastSaved)}</span>
-                    <Button
-                      onClick={handleResetToOriginal}
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 py-0 text-xs"
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      {testSuiteId ? "Restore original" : "Delete draft"}
-                    </Button>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white h-7"
+                    size="sm"
+                    onClick={handleOpenResults}
+                    disabled={!hasResults}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Results
+                    {hasResults
+                      ? ` (${watch("resultRunner").results.passed}/${
+                          watch("resultRunner").results.totalTests
+                        })`
+                      : ""}
+                  </Button>
 
-                <>
                   <Button
                     onClick={handleRunTest}
                     disabled={isLoading}
-                    className="bg-green-700 text-white hover:bg-green-800"
+                    className="w-1/2 bg-green-700 text-white hover:bg-green-800 h-7"
                     size="sm"
                   >
                     {isLoading ? (
@@ -427,44 +545,33 @@ export default function NewTestCasePage() {
                     )}
                     Run Test
                   </Button>
-
-                  {!showProgress && watch("resultRunner")?.reportUrl &&
-                    typeof watch("resultRunner")?.results?.passed === 'number' &&
-                    typeof watch("resultRunner")?.results?.totalTests === 'number' && (
-                      <Button
-                        variant="default"
-                        className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
-                        size="sm"
-                        onClick={handleOpenResults}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View Results ({watch("resultRunner").results.passed}/{watch("resultRunner").results.totalTests})
-                      </Button>
-                    )}
-                </>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="w-[30%] h-full">
-            <Tabs defaultValue="assistant" className="h-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="assistant">UrTest Assistant</TabsTrigger>
-                <TabsTrigger value="comments">Comments</TabsTrigger>
-              </TabsList>
-              <TabsContent
-                value="assistant"
-                className="mt-2 h-[calc(100%-40px)]"
-              >
-                <ChatPanel />
-              </TabsContent>
-              <TabsContent
-                value="comments"
-                className="mt-2 h-[calc(100%-40px)]"
-              >
-                <CommentPanel projectId={projectId} testSuiteId={testSuiteId} />
-              </TabsContent>
-            </Tabs>
+            <div className="border rounded-lg bg-card flex-1 overflow-hidden flex flex-col mt-4">
+              <Tabs defaultValue="assistant" className="flex flex-col h-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="assistant">Assistant</TabsTrigger>
+                  <TabsTrigger value="comments">Comments</TabsTrigger>
+                </TabsList>
+                <TabsContent
+                  value="assistant"
+                  className="flex-1 overflow-hidden p-0"
+                >
+                  <ChatPanel />
+                </TabsContent>
+                <TabsContent
+                  value="comments"
+                  className="flex-1 overflow-hidden p-0"
+                >
+                  <CommentPanel
+                    projectId={projectId}
+                    testSuiteId={testSuiteId}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
       </div>

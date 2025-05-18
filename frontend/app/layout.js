@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -16,7 +17,9 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <Toaster richColors position="top-right" />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <SettingsProvider>{children}</SettingsProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

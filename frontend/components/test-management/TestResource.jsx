@@ -25,10 +25,12 @@ export default function TestRoute({ project = {} }) {
 
   const { data, refetch } = useQuery({
     enabled: project.id ? true : false,
-    queryKey: ["test-resource"],
+    queryKey: ["test-resource", project.id],
     queryFn: () => {
       return TestResourceApi().list({ projectId: project.id });
     },
+    refetchOnMount: true,
+    cacheTime: 0,
   });
 
   useEffect(() => {
@@ -38,6 +40,13 @@ export default function TestRoute({ project = {} }) {
       setListTestResource(data.listTestResource.slice(startIndex, endIndex));
     }
   }, [data, page]);
+
+  useEffect(() => {
+    if (localStorage.getItem("resource_updated") === "true" && project.id) {
+      localStorage.removeItem("resource_updated");
+      refetch();
+    }
+  }, [project.id, refetch]);
 
   return (
     <Card className="overflow-hidden border rounded-lg shadow-sm">
@@ -106,7 +115,9 @@ const TestResourceItem = ({ item, refetch, project }) => {
   const handleDeleteResource = async () => {
     try {
       setIsDeleting(true);
-      await TestResourceApi().delete(item.id);
+      await TestResourceApi().delete(item.id, {
+        projectId: project.id,
+      });
       toast.success("Test resource deleted successfully");
       if (refetch) {
         refetch();
@@ -132,9 +143,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
               router.push(
                 `/test-management/ur-editor/resource?project=${encodeURIComponent(
                   project.title
-                )}&projectId=${project.id}&resourceId=${item.id}&slug=${
-                  project?.slug
-                }`
+                )}&projectId=${project.id}&resourceId=${item.id}`
               );
             }}
             className="h-7 w-7 p-0"
