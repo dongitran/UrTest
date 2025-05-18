@@ -27,13 +27,49 @@ TestSuiteRoute.get(
   zValidator('param', TestSuiteSchema.schemaForIdParamOnly),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
+    const user = ctx.get('user');
+
     const testSuite = await db.query.TestSuiteTable.findFirst({
       where: (clm, { eq, and, isNull }) => and(eq(clm.id, id), isNull(clm.deletedAt)),
     });
+
     if (!testSuite) {
       return ctx.json({ message: 'Không tìm thấy thông tin kịch bản test' }, 404);
     }
-    return ctx.json({ ...testSuite });
+
+    const oauthToken = await db.query.OAuthTokensTable.findFirst({
+      where: (clm, { eq }) => eq(clm.userEmail, user.email),
+    });
+
+    let jiraConnectionInfo = {
+      isJiraLinked: false,
+      remoteLinkData: null,
+    };
+
+    if (oauthToken) {
+      jiraConnectionInfo.isJiraLinked = true;
+
+      const remoteLinkData = await db.query.RemoteLinkLocksTable.findFirst({
+        where: (clm, { eq, and, isNull }) => and(eq(clm.testSuiteId, id), isNull(clm.deletedAt)),
+      });
+
+      if (remoteLinkData) {
+        jiraConnectionInfo.remoteLinkData = {
+          id: remoteLinkData.id,
+          issueKey: remoteLinkData.issueKey,
+          applicationType: remoteLinkData.applicationType,
+          applicationName: remoteLinkData.applicationName,
+          email: remoteLinkData.email,
+          createdAt: remoteLinkData.createdAt,
+          updatedAt: remoteLinkData.updatedAt,
+        };
+      }
+    }
+
+    return ctx.json({
+      ...testSuite,
+      jiraConnection: jiraConnectionInfo,
+    });
   }
 );
 

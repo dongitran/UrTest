@@ -127,3 +127,15 @@ export const OAuthTokensTable = pgTable('oauth_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow(),
 });
+
+export const RemoteLinkLocksTable = pgTable('remote_link_locks', {
+  id: serial('id').primaryKey(),
+  issueKey: varchar('issue_key', { length: 255 }).notNull(),
+  testSuiteId: varchar('test_suite_id', { length: 255 }).notNull(),
+  applicationType: varchar('application_type', { length: 255 }),
+  applicationName: varchar('application_name', { length: 255 }),
+  email: varchar('email', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
+});
