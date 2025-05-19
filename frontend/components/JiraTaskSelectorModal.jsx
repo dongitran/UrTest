@@ -45,6 +45,14 @@ export default function JiraTaskSelectorModal({
     }
   }, [open]);
 
+  const handleModalOpen = (isOpen) => {
+    if (isOpen) {
+      setSearchTerm("");
+      setSelectedTask(null);
+    }
+    setOpen(isOpen);
+  };
+
   const handleLinkTask = async () => {
     if (!selectedTask) return;
 
@@ -58,6 +66,7 @@ export default function JiraTaskSelectorModal({
       onLinkSuccess();
       setOpen(false);
       setSelectedTask(null);
+      setSearchTerm("");
     }
   };
 
@@ -72,7 +81,14 @@ export default function JiraTaskSelectorModal({
     if (success) {
       onLinkSuccess();
       setOpen(false);
+      setSearchTerm("");
     }
+  };
+
+  const handleCancel = () => {
+    setOpen(false);
+    setSelectedTask(null);
+    setSearchTerm("");
   };
 
   const openJiraTask = (issueKey) => {
@@ -82,30 +98,15 @@ export default function JiraTaskSelectorModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className="sm:max-w-[600px] max-h-[80vh] [&>.bg-background]:!bg-white [&>.bg-background]:dark:!bg-slate-900 shadow-xl dark:shadow-slate-800/50"
-        style={{
-          backgroundColor: "white",
-        }}
-        data-theme-bg="true"
-      >
-        <style jsx>{`
-          [data-theme-bg="true"] {
-            background-color: white !important;
-          }
-          .dark [data-theme-bg="true"] {
-            background-color: rgb(15 23 42) !important;
-          }
-        `}</style>
-
+    <Dialog open={open} onOpenChange={handleModalOpen}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] dialog-content-override shadow-xl dark:shadow-slate-950/50">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-slate-100 text-lg font-semibold">
+          <DialogTitle className="text-gray-900 dark:text-slate-100 text-lg font-semibold dialog-title-override">
             {currentLinkedTask
               ? "Change Linked Jira Task"
               : "Link to Jira Task"}
           </DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-slate-400">
+          <DialogDescription className="text-gray-600 dark:text-slate-400 dialog-description-override">
             {currentLinkedTask
               ? `Currently linked to ${currentLinkedTask.issueKey}. Select a different task or unlink.`
               : "Select a Jira task to link with this test suite."}
@@ -129,7 +130,7 @@ export default function JiraTaskSelectorModal({
                     variant="outline"
                     size="sm"
                     onClick={() => openJiraTask(currentLinkedTask.issueKey)}
-                    className="border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600/50"
+                    className="border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700"
                   >
                     <ExternalLink className="h-4 w-4 mr-1" />
                     View in Jira
@@ -156,6 +157,7 @@ export default function JiraTaskSelectorModal({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 h-4 w-4" />
             <Input
+              key={open ? "open" : "closed"}
               placeholder="Search Jira tasks..."
               className="pl-10 bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-600/50 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500/20"
               value={searchTerm}
@@ -163,7 +165,7 @@ export default function JiraTaskSelectorModal({
             />
           </div>
 
-          <div className="border border-gray-200 dark:border-slate-600/30 rounded-lg max-h-[400px] overflow-y-auto bg-gray-50 dark:bg-slate-900/40">
+          <div className="border border-gray-200 dark:border-slate-700 rounded-lg max-h-[400px] overflow-y-auto bg-gray-50 dark:bg-slate-800">
             {isLoadingTasks ? (
               <div className="flex items-center justify-center py-8">
                 <LoaderCircle className="h-8 w-8 animate-spin text-blue-500" />
@@ -184,8 +186,8 @@ export default function JiraTaskSelectorModal({
                     key={task.issueKey}
                     className={`p-3 rounded-lg cursor-pointer border transition-all duration-200 ${
                       selectedTask?.issueKey === task.issueKey
-                        ? "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-500/50 shadow-sm"
-                        : "bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600/30 hover:bg-gray-50 dark:hover:bg-slate-700/40 hover:border-gray-300 dark:hover:border-slate-500/50"
+                        ? "bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-600 shadow-sm"
+                        : "bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 hover:border-gray-300 dark:hover:border-slate-500"
                     }`}
                     onClick={() => setSelectedTask(task)}
                   >
@@ -217,7 +219,7 @@ export default function JiraTaskSelectorModal({
                           e.stopPropagation();
                           openJiraTask(task.issueKey);
                         }}
-                        className="ml-2 flex-shrink-0 h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-slate-600/40 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
+                        className="ml-2 flex-shrink-0 h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -232,11 +234,8 @@ export default function JiraTaskSelectorModal({
         <DialogFooter className="gap-2">
           <Button
             variant="outline"
-            onClick={() => {
-              setOpen(false);
-              setSelectedTask(null);
-            }}
-            className="border-gray-300 dark:border-slate-600/50 bg-white dark:bg-slate-800/30 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50"
+            onClick={handleCancel}
+            className="border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700"
           >
             Cancel
           </Button>
