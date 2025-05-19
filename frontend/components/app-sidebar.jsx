@@ -1,11 +1,10 @@
 import {
   BarChart3Icon,
   BookOpenIcon,
-  LayoutDashboardIcon,
-  SearchIcon,
-  SettingsIcon,
   ClipboardListIcon,
-  ZapIcon,
+  FlaskConical,
+  LayoutDashboardIcon,
+  SettingsIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -21,8 +20,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
 import { useProjects } from "@/hooks/useProjects";
+import { useEffect, useState } from "react";
 
 export function AppSidebar({ ...props }) {
   const { user } = useAuth();
@@ -87,17 +86,11 @@ export function AppSidebar({ ...props }) {
       <SidebarHeader className="p-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-0 h-auto hover:bg-transparent"
-            >
-              <a href="#" className="block w-full p-0">
-                <img
-                  src="https://s0.dtur.xyz/cover/urtest-dash-banner.jpg"
-                  alt="UrTest Dashboard Banner"
-                  className="w-full h-auto object-cover"
-                />
-              </a>
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+              <div>
+                <FlaskConical className="h-5 w-5" />
+                <span className="text-base font-semibold">Ur Draw</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
