@@ -7,6 +7,8 @@ export default function JiraLinkButton({
   jiraConnection,
   testSuiteId,
   testSuiteName,
+  projectId,
+  projectName,
   onRefresh,
   size = "sm",
   className = "",
@@ -49,6 +51,8 @@ export default function JiraLinkButton({
           testSuiteName={testSuiteName}
           currentLinkedTask={null}
           onLinkSuccess={onRefresh}
+          projectId={projectId}
+          projectName={projectName}
         />
       </>
     );
@@ -73,6 +77,8 @@ export default function JiraLinkButton({
         setOpen={setModalOpen}
         testSuiteId={testSuiteId}
         testSuiteName={testSuiteName}
+        projectId={projectId}
+        projectName={projectName}
         currentLinkedTask={linkedTask}
         onLinkSuccess={onRefresh}
       />

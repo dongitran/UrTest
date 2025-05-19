@@ -556,6 +556,8 @@ export default function NewTestCasePage() {
                     jiraConnection={testSuiteDetail.jiraConnection}
                     testSuiteId={testSuiteId}
                     testSuiteName={testSuiteDetail.name}
+                    projectId={projectId}
+                    projectName={projectName}
                     onRefresh={refetchTestSuite}
                     size="sm"
                     className="w-full h-7"

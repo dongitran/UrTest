@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 export function useJiraConnection() {
   const [isConnected, setIsConnected] = useState(false);
@@ -47,6 +48,32 @@ export function useJiraConnection() {
       : "";
   };
 
+  const unlinkJiraConnection = async () => {
+    try {
+      const token = getToken();
+
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/jira-oauth/unlink-jira-connection`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setIsConnected(false);
+      setConnectionData(null);
+
+      toast.success("Jira connection has been successfully unlinked");
+      return true;
+    } catch (error) {
+      console.error("Error unlinking Jira:", error);
+      toast.error("Failed to unlink Jira connection");
+      return false;
+    }
+  };
+
   useEffect(() => {
     checkJiraConnection();
   }, []);
@@ -58,5 +85,6 @@ export function useJiraConnection() {
     error,
     checkJiraConnection,
     getToken,
+    unlinkJiraConnection,
   };
 }

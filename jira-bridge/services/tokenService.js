@@ -22,12 +22,12 @@ const tokenService = {
 
       if (email) {
         existingUser = await db.oneOrNone(
-          "SELECT id FROM oauth_tokens WHERE user_email = $1",
+          "SELECT id FROM oauth_tokens WHERE user_email = $1 AND deleted_at IS NULL",
           [email]
         );
       } else if (user_id) {
         existingUser = await db.oneOrNone(
-          "SELECT id FROM oauth_tokens WHERE user_id = $1",
+          "SELECT id FROM oauth_tokens WHERE user_id = $1 AND deleted_at IS NULL",
           [user_id]
         );
       }
@@ -47,7 +47,7 @@ const tokenService = {
           cloud_url = $9,
           scopes = $10,
           updated_at = CURRENT_TIMESTAMP
-          WHERE id = $1
+          WHERE id = $1 AND deleted_at IS NULL
           RETURNING *
           `,
           [
@@ -104,7 +104,7 @@ const tokenService = {
   async getTokenByUserId(user_id) {
     try {
       return await db.oneOrNone(
-        "SELECT * FROM oauth_tokens WHERE user_id = $1",
+        "SELECT * FROM oauth_tokens WHERE user_id = $1 AND deleted_at IS NULL",
         [user_id]
       );
     } catch (error) {
@@ -116,7 +116,7 @@ const tokenService = {
   async getTokenByEmail(email) {
     try {
       return await db.oneOrNone(
-        "SELECT * FROM oauth_tokens WHERE user_email = $1",
+        "SELECT * FROM oauth_tokens WHERE user_email = $1 AND deleted_at IS NULL",
         [email]
       );
     } catch (error) {
@@ -201,7 +201,7 @@ const tokenService = {
         refresh_token = CASE WHEN $3 IS NULL THEN refresh_token ELSE $3 END,
         token_expires_at = $4,
         updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $1
+        WHERE user_id = $1 AND deleted_at IS NULL
         RETURNING *
         `,
         [user_id, access_token, refresh_token, token_expires_at]
@@ -227,7 +227,7 @@ const tokenService = {
         refresh_token = CASE WHEN $3 IS NULL THEN refresh_token ELSE $3 END,
         token_expires_at = $4,
         updated_at = CURRENT_TIMESTAMP
-        WHERE user_email = $1
+        WHERE user_email = $1 AND deleted_at IS NULL
         RETURNING *
         `,
         [email, access_token, refresh_token, token_expires_at]
@@ -240,7 +240,10 @@ const tokenService = {
 
   async deleteToken(user_id) {
     try {
-      await db.none("DELETE FROM oauth_tokens WHERE user_id = $1", [user_id]);
+      await db.none(
+        "UPDATE oauth_tokens SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND deleted_at IS NULL",
+        [user_id]
+      );
     } catch (error) {
       console.error("Error deleting token:", error);
       throw error;
@@ -249,7 +252,10 @@ const tokenService = {
 
   async deleteTokenByEmail(email) {
     try {
-      await db.none("DELETE FROM oauth_tokens WHERE user_email = $1", [email]);
+      await db.none(
+        "UPDATE oauth_tokens SET deleted_at = CURRENT_TIMESTAMP WHERE user_email = $1 AND deleted_at IS NULL",
+        [email]
+      );
     } catch (error) {
       console.error("Error deleting token by email:", error);
       throw error;

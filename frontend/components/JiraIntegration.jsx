@@ -9,6 +9,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useJiraConnection } from "@/hooks/useJiraConnection";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoaderCircle, Unlink } from "lucide-react";
 
 export default function JiraIntegration() {
   const {
@@ -17,10 +19,13 @@ export default function JiraIntegration() {
     isLoading,
     checkJiraConnection,
     getToken,
+    unlinkJiraConnection,
   } = useJiraConnection();
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auth = useAuth();
 
   useEffect(() => {
     const jiraIntegration = searchParams.get("jira-integration");
@@ -36,8 +41,14 @@ export default function JiraIntegration() {
 
   const handleConnectJira = () => {
     const token = getToken();
-    const redirectUrl = `${process.env.NEXT_PUBLIC_JIRA_BRIDGE_URL}?email=dong.tt@urbox.vn&access_token=${token}&callback_url=http://localhost:3000/settings?jira-integration=success`;
+    const redirectUrl = `${process.env.NEXT_PUBLIC_JIRA_BRIDGE_URL}?email=${auth.user.email}&access_token=${token}&callback_url=https://urtest.click/settings?jira-integration=success`;
     window.location.href = redirectUrl;
+  };
+
+  const handleUnlinkJira = async () => {
+    setIsUnlinking(true);
+    await unlinkJiraConnection();
+    setIsUnlinking(false);
   };
 
   const handleCloseDialog = () => {
@@ -57,7 +68,7 @@ export default function JiraIntegration() {
 
         <div className="p-6">
           {isLoading ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center ">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
               <p>Checking connection status...</p>
             </div>
@@ -69,15 +80,31 @@ export default function JiraIntegration() {
               {connectionData && (
                 <div className="mt-2 text-sm text-muted-foreground">
                   <p>
-                    Connected to {connectionData.cloudName} (
-                    {connectionData.cloudUrl})
-                  </p>
-                  <p>
                     Connected at:{" "}
                     {new Date(connectionData.connectedAt).toLocaleString()}
                   </p>
                 </div>
               )}
+              <div className="mt-4">
+                <Button
+                  onClick={handleUnlinkJira}
+                  disabled={isUnlinking}
+                  variant="outline"
+                  className="border-red-300 dark:border-red-600/50 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30"
+                >
+                  {isUnlinking ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+                      Unlinking...
+                    </>
+                  ) : (
+                    <>
+                      <Unlink className="h-4 w-4 mr-2" />
+                      Unlink from Jira
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col space-y-2">

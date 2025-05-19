@@ -47,6 +47,11 @@ class LinkService {
     email: string
   ): Promise<CheckAndCreateLinkResult> {
     try {
+      const isConnected = await jiraService.checkJiraConnection(email);
+      if (!isConnected) {
+        throw new Error('No valid JIRA connection found. Please link your JIRA account first.');
+      }
+
       const existingLinkByTestSuite = await db.query.RemoteLinkLocksTable.findFirst({
         where: and(
           eq(RemoteLinkLocksTable.testSuiteId, testSuiteId),
@@ -118,12 +123,24 @@ class LinkService {
 
   async deleteLink(issueKey: string, testSuiteId: string, email: string): Promise<boolean> {
     try {
-      const remoteLinks = await jiraService.getRemoteLinks(email, issueKey);
+      const isConnected = await jiraService.checkJiraConnection(email);
 
-      const linkToDelete = this.findRemoteLinkByTestSuiteId(remoteLinks, testSuiteId);
+      if (isConnected) {
+        try {
+          const remoteLinks = await jiraService.getRemoteLinks(email, issueKey);
+          const linkToDelete = this.findRemoteLinkByTestSuiteId(remoteLinks, testSuiteId);
 
-      if (linkToDelete && linkToDelete.id) {
-        await jiraService.deleteRemoteLink(email, issueKey, linkToDelete.id);
+          if (linkToDelete && linkToDelete.id) {
+            await jiraService.deleteRemoteLink(email, issueKey, linkToDelete.id);
+          }
+        } catch (jiraError) {
+          console.error(
+            'Failed to delete remote link from JIRA (but will continue with local delete):',
+            jiraError
+          );
+        }
+      } else {
+        console.log('JIRA connection not found, skipping JIRA remote link deletion');
       }
 
       const result = await db
@@ -172,6 +189,33 @@ class LinkService {
       });
     } catch (error) {
       console.error('Error getting links by issue:', error);
+      throw error;
+    }
+  }
+
+  async getLinksByUser(email: string) {
+    try {
+      return await db.query.RemoteLinkLocksTable.findMany({
+        where: and(eq(RemoteLinkLocksTable.email, email), isNull(RemoteLinkLocksTable.deletedAt)),
+        orderBy: (clm, { desc }) => desc(clm.createdAt),
+      });
+    } catch (error) {
+      console.error('Error getting links by user:', error);
+      throw error;
+    }
+  }
+
+  async getTestSuiteLinkOwner(testSuiteId: string): Promise<string | null> {
+    try {
+      const link = await db.query.RemoteLinkLocksTable.findFirst({
+        where: and(
+          eq(RemoteLinkLocksTable.testSuiteId, testSuiteId),
+          isNull(RemoteLinkLocksTable.deletedAt)
+        ),
+      });
+      return link ? link.email : null;
+    } catch (error) {
+      console.error('Error getting test suite link owner:', error);
       throw error;
     }
   }

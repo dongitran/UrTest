@@ -17,6 +17,8 @@ export default function JiraTaskSelectorModal({
   setOpen,
   testSuiteId,
   testSuiteName,
+  projectId,
+  projectName,
   currentLinkedTask,
   onLinkSuccess,
 }) {
@@ -59,7 +61,9 @@ export default function JiraTaskSelectorModal({
     const success = await linkTestSuiteToJira(
       testSuiteId,
       selectedTask.issueKey,
-      testSuiteName
+      testSuiteName,
+      projectId,
+      projectName
     );
 
     if (success) {

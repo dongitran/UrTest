@@ -118,8 +118,8 @@ export const OAuthTokensTable = pgTable('oauth_tokens', {
   userId: varchar('user_id', { length: 255 }).notNull(),
   userName: varchar('user_name', { length: 255 }),
   userEmail: varchar('user_email', { length: 255 }),
-  accessToken: text('access_token').notNull(),
-  refreshToken: text('refresh_token').notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
   tokenExpiresAt: bigint('token_expires_at', { mode: 'number' }).notNull(),
   cloudId: varchar('cloud_id', { length: 255 }),
   cloudName: varchar('cloud_name', { length: 255 }),
@@ -127,6 +127,7 @@ export const OAuthTokensTable = pgTable('oauth_tokens', {
   scopes: text('scopes').array(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
 });
 
 export const RemoteLinkLocksTable = pgTable('remote_link_locks', {

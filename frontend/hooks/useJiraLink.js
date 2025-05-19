@@ -39,16 +39,27 @@ export function useJiraLink() {
     }
   };
 
-  const linkTestSuiteToJira = async (testSuiteId, issueKey, testSuiteName) => {
+  const linkTestSuiteToJira = async (
+    testSuiteId,
+    issueKey,
+    testSuiteName,
+    projectId,
+    projectName
+  ) => {
     try {
       setIsLoading(true);
       const token = getToken();
+
+      const url = `${window.location.origin
+        }/test-management/ur-editor?project=${encodeURIComponent(
+          projectName
+        )}&projectId=${projectId}&testSuiteId=${testSuiteId}`;
 
       const payload = {
         issueKey,
         testSuiteId,
         object: {
-          url: `${window.location.origin}/test-management/ur-editor?testSuiteId=${testSuiteId}`,
+          url,
           title: `Test Suite: ${testSuiteName}`,
           summary: `Automated test suite for ${testSuiteName}`,
         },
