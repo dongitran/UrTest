@@ -103,3 +103,21 @@
     background-position: 40px 0;
   }
 }
+
+.dialog-content-override {
+  background-color: white !important;
+  border-color: rgb(229 231 235) !important;
+}
+
+.dark .dialog-content-override {
+  background-color: rgb(15 23 42) !important;
+  border-color: rgb(51 65 85) !important;
+}
+
+.dark .dialog-title-override {
+  color: rgb(241 245 249) !important;
+}
+
+.dark .dialog-description-override {
+  color: rgb(148 163 184) !important;
+}

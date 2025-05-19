@@ -48,13 +48,6 @@ export function AppSidebar({ ...props }) {
       icon: BarChart3Icon,
       url: "/reports",
     },
-    {
-      id: "4",
-      name: "Test Execution",
-      description: "Execute test cases",
-      icon: ZapIcon,
-      url: "/test-execution",
-    },
   ]);
 
   const { data } = useProjects();
@@ -86,11 +79,6 @@ export function AppSidebar({ ...props }) {
       title: "Settings",
       url: "/settings",
       icon: SettingsIcon,
-    },
-    {
-      title: "Search",
-      url: "/search",
-      icon: SearchIcon,
     },
   ];
 

@@ -4,6 +4,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import JiraIntegration from "@/components/JiraIntegration";
 
 export default function SettingsPage() {
   const { settings, updateEditorSettings, resetSettings, isLoaded } =
@@ -214,6 +215,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <JiraIntegration />
     </div>
   );
 }

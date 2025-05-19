@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS oauth_tokens_user_id_idx ON oauth_tokens(user_id);
+
+ALTER TABLE oauth_tokens 
+ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
+
+ALTER TABLE oauth_tokens 
+ALTER COLUMN access_token DROP NOT NULL,
+ALTER COLUMN refresh_token DROP NOT NULL;
+
+CREATE INDEX IF NOT EXISTS oauth_tokens_deleted_at_idx ON oauth_tokens(deleted_at);
+
+CREATE INDEX IF NOT EXISTS oauth_tokens_user_email_deleted_at_idx ON oauth_tokens(user_email, deleted_at);
