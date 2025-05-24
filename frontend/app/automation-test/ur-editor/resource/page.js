@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { LoaderCircle } from "lucide-react";
-import MonacoEditor from "@/components/MonacoEditor";
+import MonacoEditor from "@/components/automation-test/MonacoEditor";
 import { TestResourceApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel from "@/components/automation-test/ChatPanel";
 
 export default function NewResourcePage() {
   const searchParams = useSearchParams();

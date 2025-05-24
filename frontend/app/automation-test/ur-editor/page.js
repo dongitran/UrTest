@@ -12,15 +12,15 @@ import {
   ExternalLink,
   Trash2,
 } from "lucide-react";
-import MonacoEditor from "@/components/MonacoEditor";
+import MonacoEditor from "@/components/automation-test/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import JiraLinkButton from "@/components/JiraLinkButton";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ChatPanel from "@/components/ChatPanel";
-import CommentPanel from "@/components/CommentPanel";
+import ChatPanel from "@/components/automation-test/ChatPanel";
+import CommentPanel from "@/components/automation-test/CommentPanel";
 import {
   saveTestSuiteDraft,
   getTestSuiteDraft,

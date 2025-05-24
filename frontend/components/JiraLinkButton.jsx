@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, LinkIcon, AlertCircle } from "lucide-react";
-import JiraTaskSelectorModal from "@/components/JiraTaskSelectorModal";
+import JiraTaskSelectorModal from "@/components/automation-test/JiraTaskSelectorModal";
 
 export default function JiraLinkButton({
   jiraConnection,

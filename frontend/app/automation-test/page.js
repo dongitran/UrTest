@@ -1,5 +1,6 @@
 "use client";
 
+import AutomationTestStats from "@/components/automation-test/AutomationTestStats";
 import EditProjectModal from "@/components/automation-test/EditProjectModal";
 import ProjectSelector from "@/components/automation-test/ProjectSelector";
 import RecentTestRuns from "@/components/automation-test/RecentTestRuns";
@@ -94,6 +95,10 @@ export default function TestManagement() {
 
       {project && (
         <Fragment>
+          <div className="mt-6">
+            <AutomationTestStats project={project} />
+          </div>
+
           <TestCaseList
             setReRender={setReRender}
             project={project}
