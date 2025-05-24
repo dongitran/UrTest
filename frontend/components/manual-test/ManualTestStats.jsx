@@ -41,15 +41,15 @@ export default function ManualTestStats({ project }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsData.map((stat, index) => (
         <Card
           key={index}
           className={`${stat.bgColor} border-l-4 ${stat.color} shadow-sm hover:shadow-md transition-shadow`}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex flex-col">
-              <div className={`text-3xl font-bold ${stat.textColor} mb-2`}>
+              <div className={`text-2xl font-bold ${stat.textColor} mb-1`}>
                 {stat.value}
               </div>
               <div className="text-sm font-medium text-muted-foreground">

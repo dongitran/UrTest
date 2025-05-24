@@ -348,157 +348,158 @@ export default function ManualTestCaseList({ project, setReRender }) {
   };
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden shadow-sm">
-      <div className="px-6 py-4 border-b bg-muted/30">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Test Cases</h2>
+    <div className="border rounded-lg bg-card overflow-hidden shadow-sm mx-2">
+      <Tabs
+        value={activeFilter}
+        onValueChange={setActiveFilter}
+        className="w-full"
+      >
+        <div className="px-4 py-4 border-b bg-muted/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <h2 className="text-lg font-semibold">Test Cases</h2>
 
-          <div className="flex items-center gap-3">
-            <div className="relative w-[280px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search test cases..."
-                className="pl-10 h-9 w-full text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <TabsList className="bg-background">
+                {statusFilters.map((filter) => (
+                  <TabsTrigger
+                    key={filter.key}
+                    value={filter.key}
+                    className="text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    {filter.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
 
-            <Button
-              onClick={() => {
-                router.push(
-                  `/manual-test/ur-editor?project=${encodeURIComponent(
-                    project.title
-                  )}&projectId=${project.id}`
-                );
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white h-9 text-sm px-4"
-            >
-              <FilePlus2 className="mr-2 h-4 w-4" />
-              Create Test Case
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="relative w-[280px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search test cases..."
+                  className="pl-10 h-9 w-full text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <Button
+                onClick={() => {
+                  router.push(
+                    `/manual-test/ur-editor?project=${encodeURIComponent(
+                      project.title
+                    )}&projectId=${project.id}`
+                  );
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white h-9 text-sm px-4"
+              >
+                <FilePlus2 className="mr-2 h-4 w-4" />
+                Create Test Case
+              </Button>
+            </div>
           </div>
         </div>
 
-        <Tabs
-          value={activeFilter}
-          onValueChange={setActiveFilter}
-          className="w-full"
-        >
-          <div className="px-6 py-4 border-b bg-muted/30">
-            <TabsList className="bg-background">
-              {statusFilters.map((filter) => (
-                <TabsTrigger
-                  key={filter.key}
-                  value={filter.key}
-                  className="text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  {filter.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          <div className="p-6">
-            <TabsContent value={activeFilter} className="mt-0">
-              <div className="w-full border rounded-md overflow-hidden bg-card">
-                <Table className="w-full">
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      {table.getHeaderGroups().map((headerGroup) =>
-                        headerGroup.headers.map((header) => (
-                          <TableHead
-                            key={header.id}
-                            className="py-3 px-4 text-sm font-semibold text-foreground"
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="border-b hover:bg-muted/30 transition-colors"
+        <div className="p-4">
+          <TabsContent value={activeFilter} className="mt-0">
+            <div className="w-full border rounded-md overflow-hidden bg-card">
+              <Table className="w-full">
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    {table.getHeaderGroups().map((headerGroup) =>
+                      headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className="py-3 px-4 text-sm font-semibold text-foreground"
                         >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="py-4 px-4">
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
                               )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
+                        </TableHead>
                       ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-32 text-center"
-                        >
-                          <div className="flex flex-col items-center justify-center text-muted-foreground">
-                            <div className="text-lg mb-2">
-                              {searchQuery ? "🔍" : "📋"}
-                            </div>
-                            <div className="text-sm">
-                              {searchQuery
-                                ? "No test cases found matching your search criteria."
-                                : "No test cases found. Create your first test case to get started."}
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
                     )}
-                  </TableBody>
-                </Table>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="py-4 px-4">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-32 text-center"
+                      >
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                          <div className="text-lg mb-2">
+                            {searchQuery ? "🔍" : "📋"}
+                          </div>
+                          <div className="text-sm">
+                            {searchQuery
+                              ? "No test cases found matching your search criteria."
+                              : "No test cases found. Create your first test case to get started."}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-muted-foreground">
+                Showing {table.getRowModel().rows.length} of{" "}
+                {filteredData.length} test cases
               </div>
 
-              <div className="flex items-center justify-between mt-6">
-                <div className="text-sm text-muted-foreground">
-                  Showing {table.getRowModel().rows.length} of{" "}
-                  {filteredData.length} test cases
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                    className="h-8 w-8 rounded-md p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-sm"
-                  >
-                    {table.getState().pagination.pageIndex + 1}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                    className="h-8 w-8 rounded-md p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="h-8 w-8 rounded-md p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-sm"
+                >
+                  {table.getState().pagination.pageIndex + 1}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="h-8 w-8 rounded-md p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
