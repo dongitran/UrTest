@@ -57,7 +57,7 @@ export default function TestManagement() {
   }, [projectId, queryClient]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       {headerContainer &&
         createPortal(
           <div className="flex items-center gap-4">
@@ -99,15 +99,19 @@ export default function TestManagement() {
             <AutomationTestStats project={project} />
           </div>
 
-          <TestCaseList
-            setReRender={setReRender}
-            project={project}
-            listTestSuite={project.listTestSuite}
-          />
+          <div className="mt-6">
+            <TestCaseList
+              setReRender={setReRender}
+              project={project}
+              listTestSuite={project.listTestSuite}
+            />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TestRoute project={project} />
-            <RecentTestRuns recentTestRun={project.recentTestRun} />
+          <div className="mt-6 mx-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <TestRoute project={project} />
+              <RecentTestRuns recentTestRun={project.recentTestRun} />
+            </div>
           </div>
 
           <EditProjectModal
