@@ -1,4 +1,4 @@
-import MonacoEditor from "@/components/MonacoEditor";
+import MonacoEditor from "@/components/automation-test/MonacoEditor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

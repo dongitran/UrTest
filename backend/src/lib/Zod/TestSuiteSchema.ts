@@ -15,7 +15,8 @@ export const shemaForCreateAndPatch = z.object({
       error: z.boolean().optional(),
       message: z.string().optional(),
     })
-    .optional(),
+    .optional()
+    .nullable(),
   duration: z.number().optional(),
 });
 export const schemaForIdParamOnly = z.object({

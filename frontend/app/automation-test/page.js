@@ -1,5 +1,6 @@
 "use client";
 
+import AutomationTestStats from "@/components/automation-test/AutomationTestStats";
 import EditProjectModal from "@/components/automation-test/EditProjectModal";
 import ProjectSelector from "@/components/automation-test/ProjectSelector";
 import RecentTestRuns from "@/components/automation-test/RecentTestRuns";
@@ -56,7 +57,7 @@ export default function TestManagement() {
   }, [projectId, queryClient]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       {headerContainer &&
         createPortal(
           <div className="flex items-center gap-4">
@@ -94,15 +95,23 @@ export default function TestManagement() {
 
       {project && (
         <Fragment>
-          <TestCaseList
-            setReRender={setReRender}
-            project={project}
-            listTestSuite={project.listTestSuite}
-          />
+          <div className="mt-6">
+            <AutomationTestStats project={project} />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TestRoute project={project} />
-            <RecentTestRuns recentTestRun={project.recentTestRun} />
+          <div className="mt-6">
+            <TestCaseList
+              setReRender={setReRender}
+              project={project}
+              listTestSuite={project.listTestSuite}
+            />
+          </div>
+
+          <div className="mt-6 mx-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <TestRoute project={project} />
+              <RecentTestRuns recentTestRun={project.recentTestRun} />
+            </div>
           </div>
 
           <EditProjectModal

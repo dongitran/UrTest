@@ -339,17 +339,19 @@ export default function TestCaseList({
   }, [queryClient, project.id, setReRender]);
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden mt-2">
-      <div className="px-6 py-3">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Test Suites</h2>
+    <div className="border rounded-lg bg-card overflow-hidden shadow-sm mx-2">
+      <div className="px-4 py-4 border-b bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <h2 className="text-lg font-semibold">Test Suites</h2>
+          </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative w-[250px]">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
+          <div className="flex items-center gap-3">
+            <div className="relative w-[280px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search test cases..."
-                className="pl-8 h-8 w-full text-sm"
+                className="pl-10 h-9 w-full text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -357,9 +359,9 @@ export default function TestCaseList({
 
             <Button
               onClick={handleExecuteAllTestSuite}
-              className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm px-4"
             >
-              <Play className="mr-1.5 h-3.5 w-3.5" />
+              <Play className="mr-2 h-4 w-4" />
               Run All Tests
             </Button>
 
@@ -371,14 +373,16 @@ export default function TestCaseList({
                   )}&projectId=${project.id}`
                 );
               }}
-              className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+              className="bg-green-600 hover:bg-green-700 text-white h-9 text-sm px-4"
             >
-              <FilePlus2 className="mr-1.5 h-3.5 w-3.5" />
+              <FilePlus2 className="mr-2 h-4 w-4" />
               Create Test Suite
             </Button>
           </div>
         </div>
+      </div>
 
+      <div className="p-4">
         <div className="w-full border rounded-md overflow-hidden bg-card min-h-[300px]">
           <Table className="w-full">
             <TableHeader className="bg-muted/30">
