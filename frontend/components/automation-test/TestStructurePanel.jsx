@@ -15,15 +15,10 @@ export default function TestStructurePanel({
   const isActive = (sectionKey) => activeSection === sectionKey;
 
   return (
-    <Card className="flex flex-col border rounded-lg bg-card overflow-hidden mt-2">
-      <CardHeader className="py-3 px-4 border-b">
-        <CardTitle className="text-base font-semibold">
-          Test Structure
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 p-0 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="flex flex-col gap-1 p-2">
+    <Card className="flex flex-col border rounded-lg bg-card overflow-hidden h-full">
+      <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
+        <div className="flex flex-col h-full">
+          <div className="flex-shrink-0 p-2 space-y-1">
             <button
               className={cn(
                 "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors",
@@ -35,7 +30,9 @@ export default function TestStructurePanel({
             >
               Full Code
             </button>
-            <hr className="my-1 border-border" />
+
+            <div className="border-t border-border my-2"></div>
+
             {parsedSections.settings.trim() !== "" && (
               <button
                 className={cn(
@@ -49,6 +46,7 @@ export default function TestStructurePanel({
                 Settings
               </button>
             )}
+
             {parsedSections.variables.trim() !== "" && (
               <button
                 className={cn(
@@ -62,31 +60,7 @@ export default function TestStructurePanel({
                 Variables
               </button>
             )}
-            {parsedSections.testCases.length > 0 && (
-              <>
-                <div className="text-xs font-semibold text-muted-foreground uppercase mt-2 mb-1 px-3">
-                  Test Cases ({parsedSections.testCases.length})
-                </div>
-                <ul className="space-y-1">
-                  {parsedSections.testCases.map((testCase, index) => (
-                    <li key={`TestCase_${index}`}>
-                      <button
-                        className={cn(
-                          "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors text-left",
-                          isActive(`TestCase_${index}`)
-                            ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 font-medium"
-                            : "hover:bg-muted-foreground/10 text-muted-foreground"
-                        )}
-                        onClick={() => handleSectionClick(`TestCase_${index}`)}
-                        title={testCase.name}
-                      >
-                        {testCase.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+
             {parsedSections.keywords.trim() !== "" && (
               <button
                 className={cn(
@@ -100,6 +74,7 @@ export default function TestStructurePanel({
                 Keywords
               </button>
             )}
+
             {parsedSections.tasks.trim() !== "" && (
               <button
                 className={cn(
@@ -114,7 +89,47 @@ export default function TestStructurePanel({
               </button>
             )}
           </div>
-        </ScrollArea>
+
+          {parsedSections.testCases.length > 0 && (
+            <>
+              <div className="border-t border-border mx-2"></div>
+
+              <div className="flex-shrink-0 px-2 py-2">
+                <div className="px-3 py-1 bg-muted/50 rounded-md border">
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wide">
+                    Test Cases ({parsedSections.testCases.length})
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="px-2 pb-2 space-y-1">
+                    {parsedSections.testCases.map((testCase, index) => (
+                      <button
+                        key={`TestCase_${index}`}
+                        className={cn(
+                          "flex items-center w-full px-3 py-1.5 text-sm rounded-md transition-colors text-left group",
+                          isActive(`TestCase_${index}`)
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 font-medium"
+                            : "hover:bg-muted-foreground/10 text-muted-foreground"
+                        )}
+                        onClick={() => handleSectionClick(`TestCase_${index}`)}
+                        title={testCase.name}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="line-clamp-2 break-words leading-tight">
+                            {testCase.name}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

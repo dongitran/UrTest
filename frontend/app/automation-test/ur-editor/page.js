@@ -70,6 +70,9 @@ Get Customer ID
   const [displayedContent, setDisplayedContent] = useState("");
   const [activeSection, setActiveSection] = useState("FullCode");
 
+  const [rightPanelActiveTab, setRightPanelActiveTab] =
+    useState("testStructure");
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -518,11 +521,11 @@ Get Customer ID
       e.preventDefault();
     };
 
-    document.addEventListener("wheel", preventDefault, { passive: false });
+    //document.addEventListener("wheel", preventDefault, { passive: false });
 
     return () => {
       window.removeEventListener("resize", calculateHeight);
-      document.removeEventListener("wheel", preventDefault);
+      //document.removeEventListener("wheel", preventDefault);
 
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
@@ -558,14 +561,6 @@ Get Customer ID
     >
       <div className="grid h-full">
         <div className="flex gap-2 h-full overflow-hidden">
-          <div className="w-[200px] overflow-hidden flex-shrink-0">
-            <TestStructurePanel
-              parsedSections={parsedSections}
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-            />
-          </div>
-
           <div className="flex-1 overflow-hidden relative">
             <div className="overflow-hidden h-full">
               {editorContentLoading ? (
@@ -615,7 +610,7 @@ Get Customer ID
             </div>
           </div>
 
-          <div className="w-[30%] flex flex-col overflow-hidden">
+          <div className="w-[35%] flex flex-col overflow-hidden">
             <div className="border rounded-lg bg-card p-2 flex flex-col gap-2 mt-2">
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap font-medium w-[80px]">
@@ -734,11 +729,30 @@ Get Customer ID
             </div>
 
             <div className="border rounded-lg bg-card flex-1 overflow-hidden flex flex-col mt-4">
-              <Tabs defaultValue="assistant" className="flex flex-col h-full">
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs
+                value={rightPanelActiveTab}
+                onValueChange={setRightPanelActiveTab}
+                className="flex flex-col h-full"
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  {" "}
+                  <TabsTrigger value="testStructure">
+                    Test Structure
+                  </TabsTrigger>{" "}
+                  {/* Tab mới */}
                   <TabsTrigger value="assistant">Assistant</TabsTrigger>
                   <TabsTrigger value="comments">Comments</TabsTrigger>
                 </TabsList>
+                <TabsContent
+                  value="testStructure"
+                  className="flex-1 overflow-hidden p-0 flex flex-col"
+                >
+                  <TestStructurePanel
+                    parsedSections={parsedSections}
+                    activeSection={activeSection}
+                    setActiveSection={setActiveSection}
+                  />
+                </TabsContent>
                 <TabsContent
                   value="assistant"
                   className="flex-1 overflow-hidden p-0"
