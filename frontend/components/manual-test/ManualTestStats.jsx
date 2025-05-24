@@ -47,9 +47,9 @@ export default function ManualTestStats({ project }) {
           key={index}
           className={`${stat.bgColor} border-l-4 ${stat.color} shadow-sm hover:shadow-md transition-shadow`}
         >
-          <CardContent className="p-4">
-            <div className="flex flex-col">
-              <div className={`text-2xl font-bold ${stat.textColor} mb-1`}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className={`text-xl font-bold ${stat.textColor}`}>
                 {stat.value}
               </div>
               <div className="text-sm font-medium text-muted-foreground">

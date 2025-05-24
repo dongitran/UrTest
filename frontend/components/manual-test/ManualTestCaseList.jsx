@@ -102,6 +102,134 @@ const mockTestCases = [
     bugStatus: { type: "fixed", reporter: "Sarah Chen", message: "Bug Fixed" },
     lastUpdated: "45 minutes ago",
   },
+  {
+    id: 6,
+    name: "API authentication security",
+    category: "Security Test",
+    priority: "High",
+    assignedTo: {
+      name: "Sarah Chen",
+      email: "sarah@example.com",
+      avatar: null,
+    },
+    status: "In Progress",
+    bugStatus: { type: "testing", message: "Testing" },
+    lastUpdated: "15 minutes ago",
+  },
+  {
+    id: 7,
+    name: "Database performance load",
+    category: "Performance Test",
+    priority: "Medium",
+    assignedTo: {
+      name: "Mike Wilson",
+      email: "mike@example.com",
+      avatar: null,
+    },
+    status: "Passed",
+    bugStatus: { type: "none", message: "No Issues" },
+    lastUpdated: "3 hours ago",
+  },
+  {
+    id: 8,
+    name: "Email notification system",
+    category: "Integration Test",
+    priority: "Medium",
+    assignedTo: { name: "Bob Johnson", email: "bob@example.com", avatar: null },
+    status: "Failed",
+    bugStatus: { type: "bug", reporter: "John Doe", message: "Bug Found" },
+    lastUpdated: "2 hours ago",
+  },
+  {
+    id: 9,
+    name: "Shopping cart functionality",
+    category: "Functional Test",
+    priority: "High",
+    assignedTo: {
+      name: "Alice Smith",
+      email: "alice@example.com",
+      avatar: null,
+    },
+    status: "Passed",
+    bugStatus: { type: "none", message: "No Issues" },
+    lastUpdated: "1 hour ago",
+  },
+  {
+    id: 10,
+    name: "Cross-browser compatibility",
+    category: "UI Test",
+    priority: "Medium",
+    assignedTo: {
+      name: "Sarah Chen",
+      email: "sarah@example.com",
+      avatar: null,
+    },
+    status: "In Progress",
+    bugStatus: { type: "testing", message: "Testing" },
+    lastUpdated: "20 minutes ago",
+  },
+  {
+    id: 11,
+    name: "File upload validation",
+    category: "Security Test",
+    priority: "High",
+    assignedTo: {
+      name: "Mike Wilson",
+      email: "mike@example.com",
+      avatar: null,
+    },
+    status: "Not Started",
+    bugStatus: { type: "pending", message: "Pending" },
+    lastUpdated: "Never",
+  },
+  {
+    id: 12,
+    name: "Search functionality accuracy",
+    category: "Functional Test",
+    priority: "Medium",
+    assignedTo: { name: "John Doe", email: "john@example.com", avatar: null },
+    status: "Passed",
+    bugStatus: { type: "fixed", reporter: "Alice Smith", message: "Bug Fixed" },
+    lastUpdated: "4 hours ago",
+  },
+  {
+    id: 13,
+    name: "Social media integration",
+    category: "Integration Test",
+    priority: "Low",
+    assignedTo: { name: "Bob Johnson", email: "bob@example.com", avatar: null },
+    status: "In Progress",
+    bugStatus: { type: "testing", message: "Testing" },
+    lastUpdated: "1 hour ago",
+  },
+  {
+    id: 14,
+    name: "Page loading speed optimization",
+    category: "Performance Test",
+    priority: "High",
+    assignedTo: {
+      name: "Sarah Chen",
+      email: "sarah@example.com",
+      avatar: null,
+    },
+    status: "Failed",
+    bugStatus: { type: "bug", reporter: "Mike Wilson", message: "Bug Found" },
+    lastUpdated: "30 minutes ago",
+  },
+  {
+    id: 15,
+    name: "Form validation messages",
+    category: "UI Test",
+    priority: "Medium",
+    assignedTo: {
+      name: "Alice Smith",
+      email: "alice@example.com",
+      avatar: null,
+    },
+    status: "Passed",
+    bugStatus: { type: "none", message: "No Issues" },
+    lastUpdated: "2 hours ago",
+  },
 ];
 
 const statusFilters = [
@@ -133,13 +261,16 @@ export default function ManualTestCaseList({ project, setReRender }) {
         header: "Test Case",
         cell: ({ row }) => {
           const testCase = row.original;
+          return <div className="font-medium">{testCase.name}</div>;
+        },
+      },
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: ({ row }) => {
+          const category = row.getValue("category");
           return (
-            <div>
-              <div className="font-medium">{testCase.name}</div>
-              <div className="text-sm text-muted-foreground">
-                {testCase.category}
-              </div>
-            </div>
+            <span className="text-sm text-muted-foreground">{category}</span>
           );
         },
       },
@@ -253,18 +384,18 @@ export default function ManualTestCaseList({ project, setReRender }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:text-blue-300"
+                className="h-7 w-7 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:text-blue-300"
                 onClick={() => {
                   // View test case details
                 }}
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3 w-3" />
               </Button>
 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-foreground/70 hover:bg-muted"
+                className="h-7 w-7 text-foreground/70 hover:bg-muted"
                 onClick={() => {
                   router.push(
                     `/manual-test/ur-editor?project=${encodeURIComponent(
@@ -273,19 +404,19 @@ export default function ManualTestCaseList({ project, setReRender }) {
                   );
                 }}
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3 w-3" />
               </Button>
 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100 dark:hover:text-red-300 dark:hover:bg-red-900"
+                className="h-7 w-7 text-red-600 hover:text-red-800 hover:bg-red-100 dark:hover:text-red-300 dark:hover:bg-red-900"
                 onClick={() => {
                   setSelectedTestCase(row.original);
                   setDeleteDialogOpen(true);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           );
@@ -330,7 +461,7 @@ export default function ManualTestCaseList({ project, setReRender }) {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 5,
+        pageSize: 10,
       },
     },
   });
@@ -410,7 +541,7 @@ export default function ManualTestCaseList({ project, setReRender }) {
                       headerGroup.headers.map((header) => (
                         <TableHead
                           key={header.id}
-                          className="py-3 px-4 text-sm font-semibold text-foreground"
+                          className="py-2 px-3 text-sm font-semibold text-foreground"
                         >
                           {header.isPlaceholder
                             ? null
@@ -431,7 +562,7 @@ export default function ManualTestCaseList({ project, setReRender }) {
                         className="border-b hover:bg-muted/30 transition-colors"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="py-4 px-4">
+                          <TableCell key={cell.id} className="py-2 px-3">
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
