@@ -1,10 +1,10 @@
 "use client";
 
-import EditProjectModal from "@/components/test-management/EditProjectModal";
-import ProjectSelector from "@/components/test-management/ProjectSelector";
-import RecentTestRuns from "@/components/test-management/RecentTestRuns";
-import TestCaseList from "@/components/test-management/TestCaseList";
-import TestRoute from "@/components/test-management/TestResource";
+import EditProjectModal from "@/components/automation-test/EditProjectModal";
+import ProjectSelector from "@/components/automation-test/ProjectSelector";
+import RecentTestRuns from "@/components/automation-test/RecentTestRuns";
+import TestCaseList from "@/components/automation-test/TestCaseList";
+import TestRoute from "@/components/automation-test/TestResource";
 import { Button } from "@/components/ui/button";
 import { Edit, Users } from "lucide-react";
 import dayjs from "dayjs";

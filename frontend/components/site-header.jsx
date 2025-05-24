@@ -10,22 +10,22 @@ export function SiteHeader() {
   const searchParams = useSearchParams();
 
   const pageInfo = useMemo(() => {
-    if (pathname.startsWith("/test-management/ur-editor/resource")) {
+    if (pathname.startsWith("/automation-test/ur-editor/resource")) {
       const projectName = searchParams.get("project");
       const projectId = searchParams.get("projectId");
       const resourceId = searchParams.get("resourceId");
 
       return {
-        title: "Test Management",
+        title: "Automation Test",
         isBreadcrumb: true,
         breadcrumbs: [
           {
-            title: "Test Management",
-            path: `/test-management?projectId=${projectId}`,
+            title: "Automation Test",
+            path: `/automation-test?projectId=${projectId}`,
           },
           {
             title: projectName,
-            path: `/test-management?projectId=${projectId}`,
+            path: `/automation-test?projectId=${projectId}`,
           },
           {
             title: resourceId ? "Edit Resource" : "New Resource",
@@ -34,22 +34,22 @@ export function SiteHeader() {
         ],
       };
     }
-    if (pathname.startsWith("/test-management/ur-editor")) {
+    if (pathname.startsWith("/automation-test/ur-editor")) {
       const projectName = searchParams.get("project");
       const projectId = searchParams.get("projectId");
       const testSuiteId = searchParams.get("testSuiteId");
 
       return {
-        title: "Test Management",
+        title: "Automation Test",
         isBreadcrumb: true,
         breadcrumbs: [
           {
-            title: "Test Management",
-            path: `/test-management?projectId=${projectId}`,
+            title: "Automation Test",
+            path: `/automation-test?projectId=${projectId}`,
           },
           {
             title: projectName,
-            path: `/test-management?projectId=${projectId}`,
+            path: `/automation-test?projectId=${projectId}`,
           },
           {
             title: testSuiteId ? "Edit Test Suite" : "New Test Suite",
@@ -58,8 +58,8 @@ export function SiteHeader() {
         ],
       };
     }
-    if (pathname.startsWith("/test-management"))
-      return { title: "Test Management" };
+    if (pathname.startsWith("/automation-test"))
+      return { title: "Automation Test" };
     if (pathname.startsWith("/test-execution"))
       return { title: "Test Execution" };
     if (pathname.startsWith("/reports")) return { title: "Reports" };

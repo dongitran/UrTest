@@ -65,7 +65,7 @@ export default function TestRoute({ project = {} }) {
           <Button
             onClick={() => {
               router.push(
-                `/test-management/ur-editor/resource?project=${encodeURIComponent(
+                `/automation-test/ur-editor/resource?project=${encodeURIComponent(
                   project.title
                 )}&projectId=${project.id}`
               );
@@ -141,7 +141,7 @@ const TestResourceItem = ({ item, refetch, project }) => {
           <Button
             onClick={() => {
               router.push(
-                `/test-management/ur-editor/resource?project=${encodeURIComponent(
+                `/automation-test/ur-editor/resource?project=${encodeURIComponent(
                   project.title
                 )}&projectId=${project.id}&resourceId=${item.id}`
               );

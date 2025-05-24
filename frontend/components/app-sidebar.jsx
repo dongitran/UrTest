@@ -36,10 +36,10 @@ export function AppSidebar({ ...props }) {
     },
     {
       id: "2",
-      name: "Test Management",
+      name: "Automation Test",
       description: "Manage your test cases",
       icon: ClipboardListIcon,
-      url: "/test-management",
+      url: "/automation-test",
     },
     {
       id: "3",
@@ -61,7 +61,7 @@ export function AppSidebar({ ...props }) {
           item.id === "2"
             ? {
                 ...item,
-                url: `/test-management?projectId=${firstProjectId}`,
+                url: `/automation-test?projectId=${firstProjectId}`,
               }
             : item
         )

@@ -366,7 +366,7 @@ export default function TestCaseList({
             <Button
               onClick={() => {
                 router.push(
-                  `/test-management/ur-editor?project=${encodeURIComponent(
+                  `/automation-test/ur-editor?project=${encodeURIComponent(
                     project.title
                   )}&projectId=${project.id}`
                 );
@@ -582,7 +582,7 @@ const RenderActions = ({
             const currentProjectName = params.get("project");
 
             router.push(
-              `/test-management/ur-editor?project=${encodeURIComponent(
+              `/automation-test/ur-editor?project=${encodeURIComponent(
                 currentProjectName || project.title
               )}&projectId=${currentProjectId || project.id}&testSuiteId=${
                 testSuite.id

@@ -223,7 +223,7 @@ export default function NewTestCasePage() {
       await invalidateCaches();
       localStorage.setItem("test_suite_updated", "true");
 
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       toast.error(`Error editing test script`);
     } finally {
@@ -258,7 +258,7 @@ export default function NewTestCasePage() {
       await invalidateCaches();
       localStorage.setItem("test_suite_updated", "true");
 
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
       toast.error("Failed to save test case");
@@ -480,7 +480,7 @@ export default function NewTestCasePage() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      router.push(`/test-management?projectId=${projectId}`)
+                      router.push(`/automation-test?projectId=${projectId}`)
                     }
                     size="sm"
                     className="w-1/2 h-7"
@@ -530,9 +530,8 @@ export default function NewTestCasePage() {
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Results
                     {hasResults
-                      ? ` (${watch("resultRunner").results.passed}/${
-                          watch("resultRunner").results.totalTests
-                        })`
+                      ? ` (${watch("resultRunner").results.passed}/${watch("resultRunner").results.totalTests
+                      })`
                       : ""}
                   </Button>
 

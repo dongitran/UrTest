@@ -118,7 +118,7 @@ export default function ProjectTable({
   }, [isMobile]);
 
   const navigateToProject = (projectId) => {
-    router.push(`/test-management?projectId=${projectId}`);
+    router.push(`/automation-test?projectId=${projectId}`);
   };
 
   const columns = React.useMemo(() => {
