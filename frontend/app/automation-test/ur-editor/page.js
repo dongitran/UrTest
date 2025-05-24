@@ -745,7 +745,7 @@ Get Customer ID
                 </TabsList>
                 <TabsContent
                   value="testStructure"
-                  className="flex-1 overflow-hidden p-0 flex flex-col"
+                  className="flex-1 overflow-hidden p-0"
                 >
                   <TestStructurePanel
                     parsedSections={parsedSections}
