@@ -79,6 +79,8 @@ Get Customer ID
 
   const userInteractedRef = useRef(false);
   const mainContainerRef = useRef(null);
+  const debounceTimerRef = useRef(null);
+  const previousActiveSectionRef = useRef("FullCode");
 
   const {
     data: testSuiteDetail,
@@ -116,6 +118,43 @@ Get Customer ID
     setAutoSaveEnabled(true);
   };
 
+  const parseTestCaseWithName = (contentWithName) => {
+    const lines = contentWithName.split("\n");
+    let testCaseName = "";
+    let testCaseContent = "";
+
+    if (lines.length > 0) {
+      const firstLine = lines[0].trim();
+      if (
+        firstLine &&
+        !firstLine.startsWith(" ") &&
+        !firstLine.startsWith("\t")
+      ) {
+        testCaseName = firstLine;
+        testCaseContent = lines.slice(1).join("\n");
+      } else {
+        testCaseContent = contentWithName;
+      }
+    }
+
+    return { name: testCaseName, content: testCaseContent };
+  };
+
+  const syncScriptContent = useCallback(() => {
+    const newScriptContent = reconstructRobotFramework(parsedSections);
+    setScriptContent(newScriptContent);
+  }, [parsedSections]);
+
+  const debouncedSyncScript = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      syncScriptContent();
+    }, 1000);
+  }, [syncScriptContent]);
+
   const handleMonacoEditorChange = useCallback(
     (newContent) => {
       setDisplayedContent(newContent);
@@ -126,6 +165,7 @@ Get Customer ID
       } else {
         setParsedSections((prevParsed) => {
           const updatedParsed = { ...prevParsed };
+
           if (activeSection === "Settings") {
             updatedParsed.settings = newContent;
           } else if (activeSection === "Variables") {
@@ -133,20 +173,25 @@ Get Customer ID
           } else if (activeSection.startsWith("TestCase_")) {
             const index = parseInt(activeSection.split("_")[1]);
             if (updatedParsed.testCases[index]) {
-              updatedParsed.testCases[index].content = newContent;
+              const { name, content } = parseTestCaseWithName(newContent);
+              if (name) {
+                updatedParsed.testCases[index].name = name;
+              }
+              updatedParsed.testCases[index].content = content;
             }
           } else if (activeSection === "Keywords") {
             updatedParsed.keywords = newContent;
           } else if (activeSection === "Tasks") {
             updatedParsed.tasks = newContent;
           }
-          setScriptContent(reconstructRobotFramework(updatedParsed));
+
+          debouncedSyncScript();
           return updatedParsed;
         });
       }
       markUserInteraction();
     },
-    [activeSection]
+    [activeSection, debouncedSyncScript]
   );
 
   const handleTagsChange = (newTags) => {
@@ -167,11 +212,13 @@ Get Customer ID
   const autoSave = useCallback(() => {
     if (!autoSaveEnabled || !projectId || !userInteractedRef.current) return;
 
+    const currentScriptContent = reconstructRobotFramework(parsedSections);
+
     const data = getValues();
     const draftData = {
       name: data.name || "",
       tags: tags,
-      content: scriptContent,
+      content: currentScriptContent,
     };
 
     const wasSaved = saveTestSuiteDraft(projectId, testSuiteId, draftData);
@@ -180,7 +227,14 @@ Get Customer ID
       setLastSaved(new Date().toISOString());
       setHasDraft(true);
     }
-  }, [autoSaveEnabled, projectId, testSuiteId, getValues, tags, scriptContent]);
+  }, [
+    autoSaveEnabled,
+    projectId,
+    testSuiteId,
+    getValues,
+    tags,
+    parsedSections,
+  ]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -198,7 +252,7 @@ Get Customer ID
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [scriptContent, tags, autoSave]);
+  }, [parsedSections, tags, autoSave]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -261,10 +315,13 @@ Get Customer ID
     }
     try {
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       await TestSuiteApi().patch(testSuiteId, {
         ...data,
         tags,
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
 
@@ -296,10 +353,13 @@ Get Customer ID
     }
     try {
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       await TestSuiteApi().post({
         ...data,
         tags,
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
 
@@ -325,8 +385,11 @@ Get Customer ID
       toast.success("Test execution requested. Please wait for results");
       setShowProgress(true);
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       const { resultRunner, duration } = await TestSuiteApi().draftExecute({
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
       setValue("resultRunner", resultRunner);
@@ -386,23 +449,32 @@ Get Customer ID
   };
 
   useEffect(() => {
-    let content = "";
-    if (activeSection === "FullCode") {
-      content = scriptContent;
-    } else if (activeSection === "Settings") {
-      content = parsedSections.settings;
-    } else if (activeSection === "Variables") {
-      content = parsedSections.variables;
-    } else if (activeSection.startsWith("TestCase_")) {
-      const index = parseInt(activeSection.split("_")[1]);
-      content = parsedSections.testCases[index]?.content || "";
-    } else if (activeSection === "Keywords") {
-      content = parsedSections.keywords;
-    } else if (activeSection === "Tasks") {
-      content = parsedSections.tasks;
+    if (previousActiveSectionRef.current !== activeSection) {
+      if (previousActiveSectionRef.current !== "FullCode") {
+        syncScriptContent();
+      }
+
+      let content = "";
+      if (activeSection === "FullCode") {
+        content = scriptContent;
+      } else if (activeSection === "Settings") {
+        content = parsedSections.settings;
+      } else if (activeSection === "Variables") {
+        content = parsedSections.variables;
+      } else if (activeSection.startsWith("TestCase_")) {
+        const index = parseInt(activeSection.split("_")[1]);
+        const testCase = parsedSections.testCases[index];
+        content = testCase ? `${testCase.name}\n${testCase.content}` : "";
+      } else if (activeSection === "Keywords") {
+        content = parsedSections.keywords;
+      } else if (activeSection === "Tasks") {
+        content = parsedSections.tasks;
+      }
+      setDisplayedContent(content);
+
+      previousActiveSectionRef.current = activeSection;
     }
-    setDisplayedContent(content);
-  }, [activeSection, parsedSections, scriptContent]);
+  }, [activeSection, parsedSections, scriptContent, syncScriptContent]);
 
   useEffect(() => {
     const calculateHeight = () => {
@@ -458,6 +530,10 @@ Get Customer ID
       const styleEl = document.getElementById("scroll-lock-styles");
       if (styleEl) {
         styleEl.remove();
+      }
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
   }, []);
