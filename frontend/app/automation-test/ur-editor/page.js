@@ -28,6 +28,11 @@ import {
   formatDraftSavedTime,
 } from "@/utils/testSuiteDrafts";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
+import {
+  parseRobotFramework,
+  reconstructRobotFramework,
+} from "@/utils/robotFrameworkParser";
+import TestStructurePanel from "@/components/automation-test/TestStructurePanel";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
@@ -39,9 +44,32 @@ export default function NewTestCasePage() {
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
+
+  const defaultScriptContent = `*** Settings ***
+Resource    ../common-imports.robot
+Resource    ./resources/init.robot
+
+*** Variables ***
+
+*** Test Cases ***
+Get Customer ID
+    Connect To UC Urcard Database
+    @{query_result}=    Query    SELECT id FROM tbl_customers LIMIT ${"${LIMIT_QUERY}"}
+
+    Close All DB Connections
+`;
 
   const [scriptContent, setScriptContent] = useState("");
+  const [parsedSections, setParsedSections] = useState({
+    settings: "",
+    variables: "",
+    testCases: [],
+    keywords: "",
+    tasks: "",
+  });
+  const [displayedContent, setDisplayedContent] = useState("");
+  const [activeSection, setActiveSection] = useState("FullCode");
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -88,12 +116,38 @@ export default function NewTestCasePage() {
     setAutoSaveEnabled(true);
   };
 
-  const handleScriptContentChange = (newContent) => {
-    setScriptContent(newContent);
-    if (newContent !== scriptContent) {
+  const handleMonacoEditorChange = useCallback(
+    (newContent) => {
+      setDisplayedContent(newContent);
+
+      if (activeSection === "FullCode") {
+        setScriptContent(newContent);
+        setParsedSections(parseRobotFramework(newContent));
+      } else {
+        setParsedSections((prevParsed) => {
+          const updatedParsed = { ...prevParsed };
+          if (activeSection === "Settings") {
+            updatedParsed.settings = newContent;
+          } else if (activeSection === "Variables") {
+            updatedParsed.variables = newContent;
+          } else if (activeSection.startsWith("TestCase_")) {
+            const index = parseInt(activeSection.split("_")[1]);
+            if (updatedParsed.testCases[index]) {
+              updatedParsed.testCases[index].content = newContent;
+            }
+          } else if (activeSection === "Keywords") {
+            updatedParsed.keywords = newContent;
+          } else if (activeSection === "Tasks") {
+            updatedParsed.tasks = newContent;
+          }
+          setScriptContent(reconstructRobotFramework(updatedParsed));
+          return updatedParsed;
+        });
+      }
       markUserInteraction();
-    }
-  };
+    },
+    [activeSection]
+  );
 
   const handleTagsChange = (newTags) => {
     if (JSON.stringify(newTags) !== JSON.stringify(tags)) {
@@ -154,45 +208,44 @@ export default function NewTestCasePage() {
     setAutoSaveEnabled(false);
 
     const draft = getTestSuiteDraft(projectId, testSuiteId);
+    let contentToLoad = defaultScriptContent;
+    let initialName = "";
+    let initialTags = [];
+    let initialResultRunner = null;
+
     if (draft) {
       setHasDraft(true);
       setLastSaved(draft.lastSaved);
-
-      setValue("name", draft.name);
-      setTags(draft.tags || []);
-      setScriptContent(draft.content);
-
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
+      contentToLoad = draft.content;
+      initialName = draft.name;
+      initialTags = draft.tags || [];
+    } else if (testSuiteId && testSuiteDetail) {
+      contentToLoad = testSuiteDetail.content;
+      initialName = testSuiteDetail.name;
+      initialTags = testSuiteDetail.tags || [];
+      initialResultRunner = testSuiteDetail.params?.resultRunner || null;
     } else {
       setHasDraft(false);
-      if (!testSuiteId) {
-        setScriptContent(defaultScriptContent);
-      }
     }
+
+    const parsed = parseRobotFramework(contentToLoad);
+    setParsedSections(parsed);
+    setScriptContent(contentToLoad);
+
+    setActiveSection("FullCode");
+    setDisplayedContent(contentToLoad);
+
+    setValue("name", initialName);
+    setTags(initialTags);
+    setValue("resultRunner", initialResultRunner);
 
     setDraftChecked(true);
-  }, [projectId, testSuiteId, setValue]);
-
-  useEffect(() => {
-    if (testSuiteDetail && draftChecked && !hasDraft) {
-      setValue("name", testSuiteDetail.name);
-      setTags(testSuiteDetail.tags || []);
-      setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRunner) {
-        setValue("resultRunner", testSuiteDetail.params.resultRunner);
-      }
-
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
-    }
-  }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
+  }, [projectId, testSuiteId, setValue, testSuiteDetail]);
 
   const invalidateCaches = async () => {
     await queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
     await queryClient.invalidateQueries(["test-resource", projectId]);
     await queryClient.invalidateQueries(["detail-test-suite"]);
-
     await queryClient.resetQueries();
   };
 
@@ -294,35 +347,62 @@ export default function NewTestCasePage() {
   };
 
   const handleResetToOriginal = () => {
+    let contentToRestore = "";
+    let nameToRestore = "";
+    let tagsToRestore = [];
+    let resultRunnerToRestore = null;
+
     if (testSuiteDetail) {
-      setValue("name", testSuiteDetail.name);
-      setTags(testSuiteDetail.tags || []);
-      setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRunner) {
-        setValue("resultRunner", testSuiteDetail.params.resultRunner);
-      }
-
-      clearTestSuiteDraft(projectId, testSuiteId);
-      setHasDraft(false);
-      setLastSaved(null);
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
-
-      toast.success("Restored to original version");
+      contentToRestore = testSuiteDetail.content;
+      nameToRestore = testSuiteDetail.name;
+      tagsToRestore = testSuiteDetail.tags || [];
+      resultRunnerToRestore = testSuiteDetail.params?.resultRunner || null;
     } else {
-      setValue("name", "");
-      setTags([]);
-      setScriptContent(defaultScriptContent);
-
-      clearTestSuiteDraft(projectId, "new");
-      setHasDraft(false);
-      setLastSaved(null);
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
-
-      toast.success("Draft deleted");
+      contentToRestore = defaultScriptContent;
+      nameToRestore = "";
+      tagsToRestore = [];
     }
+
+    const parsed = parseRobotFramework(contentToRestore);
+    setParsedSections(parsed);
+    setScriptContent(contentToRestore);
+
+    setActiveSection("FullCode");
+    setDisplayedContent(contentToRestore);
+
+    setValue("name", nameToRestore);
+    setTags(tagsToRestore);
+    setValue("resultRunner", resultRunnerToRestore);
+
+    clearTestSuiteDraft(projectId, testSuiteId || "new");
+    setHasDraft(false);
+    setLastSaved(null);
+    userInteractedRef.current = false;
+    setAutoSaveEnabled(false);
+
+    toast.success(
+      testSuiteDetail ? "Restored to original version" : "Draft deleted"
+    );
   };
+
+  useEffect(() => {
+    let content = "";
+    if (activeSection === "FullCode") {
+      content = scriptContent;
+    } else if (activeSection === "Settings") {
+      content = parsedSections.settings;
+    } else if (activeSection === "Variables") {
+      content = parsedSections.variables;
+    } else if (activeSection.startsWith("TestCase_")) {
+      const index = parseInt(activeSection.split("_")[1]);
+      content = parsedSections.testCases[index]?.content || "";
+    } else if (activeSection === "Keywords") {
+      content = parsedSections.keywords;
+    } else if (activeSection === "Tasks") {
+      content = parsedSections.tasks;
+    }
+    setDisplayedContent(content);
+  }, [activeSection, parsedSections, scriptContent]);
 
   useEffect(() => {
     const calculateHeight = () => {
@@ -344,17 +424,17 @@ export default function NewTestCasePage() {
       const styleEl = document.createElement("style");
       styleEl.id = "scroll-lock-styles";
       styleEl.textContent = `
-        body, html {
-          overflow: hidden !important;
-          height: 100% !important;
-          position: relative !important;
-        }
-        .ur-editor-page {
-          height: var(--ur-editor-height, calc(100vh - 95px)) !important;
-          max-height: var(--ur-editor-height, calc(100vh - 95px)) !important;
-          overflow: hidden !important;
-        }
-      `;
+                body, html {
+                    overflow: hidden !important;
+                    height: 100% !important;
+                    position: relative !important;
+                }
+                .ur-editor-page {
+                    height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+                    max-height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+                    overflow: hidden !important;
+                }
+            `;
       document.head.appendChild(styleEl);
     };
 
@@ -388,6 +468,8 @@ export default function NewTestCasePage() {
     typeof watch("resultRunner")?.results?.passed === "number" &&
     typeof watch("resultRunner")?.results?.totalTests === "number";
 
+  const isMonacoReadOnly = false;
+
   return (
     <div
       ref={mainContainerRef}
@@ -400,7 +482,15 @@ export default function NewTestCasePage() {
     >
       <div className="grid h-full">
         <div className="flex gap-2 h-full overflow-hidden">
-          <div className="w-[70%] overflow-hidden relative">
+          <div className="w-[200px] overflow-hidden flex-shrink-0">
+            <TestStructurePanel
+              parsedSections={parsedSections}
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            />
+          </div>
+
+          <div className="flex-1 overflow-hidden relative">
             <div className="overflow-hidden h-full">
               {editorContentLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
@@ -415,9 +505,10 @@ export default function NewTestCasePage() {
                 <div className="h-full pt-1">
                   <MonacoEditor
                     language="robotframework"
-                    value={scriptContent}
-                    onChange={handleScriptContentChange}
+                    value={displayedContent}
+                    onChange={handleMonacoEditorChange}
                     projectName={projectName}
+                    readOnly={isMonacoReadOnly}
                   />
                 </div>
               )}
@@ -530,8 +621,9 @@ export default function NewTestCasePage() {
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Results
                     {hasResults
-                      ? ` (${watch("resultRunner").results.passed}/${watch("resultRunner").results.totalTests
-                      })`
+                      ? ` (${watch("resultRunner").results.passed}/${
+                          watch("resultRunner").results.totalTests
+                        })`
                       : ""}
                   </Button>
 
@@ -542,7 +634,7 @@ export default function NewTestCasePage() {
                     size="sm"
                   >
                     {isLoading ? (
-                      <LoaderCircle className="animate-spin mr-2" />
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
                     )}
