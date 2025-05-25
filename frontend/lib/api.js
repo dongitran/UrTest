@@ -18,10 +18,12 @@ apiClient.interceptors.request.use(
       }
     } catch (error) {
       console.error("Token update error:", error);
-      if (error.name !== 'TypeError' ||
-        (!error.message.includes('Failed to fetch') &&
-          !error.message.includes('NetworkError') &&
-          !error.message.includes('Network request failed'))) {
+      if (
+        error.name !== "TypeError" ||
+        (!error.message.includes("Failed to fetch") &&
+          !error.message.includes("NetworkError") &&
+          !error.message.includes("Network request failed"))
+      ) {
         await logout();
         return Promise.reject(error);
       }
@@ -45,7 +47,8 @@ apiClient.interceptors.response.use(
 
     if (
       error.response?.status === 401 ||
-      (error.response?.data?.error === "invalid_grant" && !originalRequest._retry)
+      (error.response?.data?.error === "invalid_grant" &&
+        !originalRequest._retry)
     ) {
       originalRequest._retry = true;
 
@@ -117,7 +120,74 @@ export const TestSuiteApi = (path = "/api/testsuite") => {
     const res = await apiClient.post(`${path}/execute/all`, data);
     return res;
   };
-  return { retrySync, executeAll, draftExecute, post, patch, detail, execute, delete: _delete };
+  return {
+    retrySync,
+    executeAll,
+    draftExecute,
+    post,
+    patch,
+    detail,
+    execute,
+    delete: _delete,
+  };
+};
+
+export const ManualTestApi = (path = "/api/manual-test") => {
+  const getStats = async (projectId) => {
+    const res = await apiClient.get(`${path}/stats`, { params: { projectId } });
+    return res.data;
+  };
+
+  const getTestCases = async (projectId, params = {}) => {
+    const res = await apiClient.get(`${path}/test-cases`, {
+      params: { projectId, ...params },
+    });
+    return res.data;
+  };
+
+  const getTestCase = async (id) => {
+    const res = await apiClient.get(`${path}/test-cases/${id}`);
+    return res.data;
+  };
+
+  const createTestCase = async (data) => {
+    const res = await apiClient.post(`${path}/test-cases`, data);
+    return res.data;
+  };
+
+  const updateTestCase = async (id, data) => {
+    const res = await apiClient.patch(`${path}/test-cases/${id}`, data);
+    return res.data;
+  };
+
+  const deleteTestCase = async (id) => {
+    const res = await apiClient.delete(`${path}/test-cases/${id}`);
+    return res.data;
+  };
+
+  const executeTestCase = async (id, data) => {
+    const res = await apiClient.post(`${path}/test-cases/${id}/execute`, data);
+    return res.data;
+  };
+
+  const updateTestCaseStatus = async (id, status, notes = "") => {
+    const res = await apiClient.patch(`${path}/test-cases/${id}/status`, {
+      status,
+      notes,
+    });
+    return res.data;
+  };
+
+  return {
+    getStats,
+    getTestCases,
+    getTestCase,
+    createTestCase,
+    updateTestCase,
+    deleteTestCase,
+    executeTestCase,
+    updateTestCaseStatus,
+  };
 };
 
 export const ProjectApi = (path = "/api/project") => {
@@ -138,8 +208,38 @@ export const ProjectApi = (path = "/api/project") => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  return { patch, detail, delete: _delete, get };
+  const getAssignments = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/assignments`);
+    return res.data;
+  };
+  const addAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.post(`${path}/${projectId}/assignments`, {
+      userEmail,
+    });
+    return res.data;
+  };
+  const removeAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.delete(
+      `${path}/${projectId}/assignments/${userEmail}`
+    );
+    return res.data;
+  };
+  const getAvailableStaff = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/available-staff`);
+    return res.data;
+  };
+  return {
+    patch,
+    detail,
+    delete: _delete,
+    get,
+    getAssignments,
+    addAssignment,
+    removeAssignment,
+    getAvailableStaff,
+  };
 };
+
 export const DashboardApi = (path = "/api/dashboard") => {
   const get = async (params) => {
     const res = await apiClient.get(path, {

@@ -46,7 +46,7 @@ const MySidebarMenuItem = ({ item = {} }) => {
   const target = stripTrailingSlash(targetUrl.pathname);
 
   const isTestManagement =
-    target === "/test-management" && current === "/test-management";
+    target === "/automation-test" && current === "/automation-test";
   const isActive =
     current === target || current.startsWith(`${target}/`) || isTestManagement;
 

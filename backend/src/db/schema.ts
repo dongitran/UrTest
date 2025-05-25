@@ -141,3 +141,54 @@ export const RemoteLinkLocksTable = pgTable('remote_link_locks', {
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
 });
+
+export const enumManualTestCaseStatus = pgEnum('manual_test_case_status', [
+  'Not Started',
+  'In Progress',
+  'Passed',
+  'Failed',
+  'Draft',
+]);
+
+export const enumManualTestCasePriority = pgEnum('manual_test_case_priority', [
+  'Low',
+  'Medium',
+  'High',
+]);
+
+export const enumManualTestCaseCategory = pgEnum('manual_test_case_category', [
+  'functional',
+  'ui',
+  'integration',
+  'api',
+  'performance',
+  'security',
+]);
+
+export const enumBugStatusType = pgEnum('bug_status_type', [
+  'none',
+  'bug',
+  'fixed',
+  'testing',
+  'pending',
+]);
+
+export const ManualTestCaseTable = pgTable('tbl_manual_test_cases', {
+  name: varchar({ length: 255 }).notNull(),
+  category: enumManualTestCaseCategory().notNull(),
+  priority: enumManualTestCasePriority().default('Medium'),
+  estimatedTime: integer('estimated_time'),
+  description: text().notNull(),
+  assignedTo: varchar('assigned_to', { length: 255 }),
+  assignedToEmail: varchar('assigned_to_email', { length: 255 }),
+  dueDate: timestamp('due_date', { withTimezone: true, mode: 'string' }),
+  status: enumManualTestCaseStatus().default('Not Started'),
+  bugStatusType: enumBugStatusType('bug_status_type').default('none'),
+  bugReporter: varchar('bug_reporter', { length: 255 }),
+  bugMessage: varchar('bug_message', { length: 255 }),
+  tags: text().array(),
+  notes: text(),
+  executionHistory: jsonb('execution_history').default([]),
+  projectId: varchar('project_id', { length: 255 }).notNull(),
+  ...commonTable,
+});

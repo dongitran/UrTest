@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full mt-2">
-      <div className="space-y-2 bg-card rounded-lg border shadow-sm">
+      <div className="space-y-2 bg-card rounded-lg border shadow-lg">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-semibold">Editor Settings</h2>
           <p className="text-muted-foreground text-sm">

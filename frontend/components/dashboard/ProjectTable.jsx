@@ -118,7 +118,7 @@ export default function ProjectTable({
   }, [isMobile]);
 
   const navigateToProject = (projectId) => {
-    router.push(`/test-management?projectId=${projectId}`);
+    router.push(`/automation-test?projectId=${projectId}`);
   };
 
   const columns = React.useMemo(() => {
@@ -344,7 +344,7 @@ export default function ProjectTable({
   };
 
   return (
-    <Card>
+    <Card className="shadow-lg">
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <CardTitle>Projects List</CardTitle>
