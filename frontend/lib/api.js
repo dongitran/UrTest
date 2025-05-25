@@ -208,7 +208,36 @@ export const ProjectApi = (path = "/api/project") => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  return { patch, detail, delete: _delete, get };
+  const getAssignments = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/assignments`);
+    return res.data;
+  };
+  const addAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.post(`${path}/${projectId}/assignments`, {
+      userEmail,
+    });
+    return res.data;
+  };
+  const removeAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.delete(
+      `${path}/${projectId}/assignments/${userEmail}`
+    );
+    return res.data;
+  };
+  const getAvailableStaff = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/available-staff`);
+    return res.data;
+  };
+  return {
+    patch,
+    detail,
+    delete: _delete,
+    get,
+    getAssignments,
+    addAssignment,
+    removeAssignment,
+    getAvailableStaff,
+  };
 };
 
 export const DashboardApi = (path = "/api/dashboard") => {

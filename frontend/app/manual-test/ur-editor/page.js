@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,13 +29,13 @@ import {
 } from "lucide-react";
 import TagInput from "@/components/TagInput";
 import { useForm } from "react-hook-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ManualTestApi } from "@/lib/api";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { ManualTestApi, ProjectApi } from "@/lib/api";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 const priorityOptions = [
   {
-    value: "high",
+    value: "High",
     label: "High",
     unselectedColor:
       "bg-gray-50 hover:bg-red-100 text-red-500 border-gray-200 " +
@@ -47,7 +47,7 @@ const priorityOptions = [
     icon: "🔥",
   },
   {
-    value: "medium",
+    value: "Medium",
     label: "Medium",
     unselectedColor:
       "bg-gray-50 hover:bg-amber-100 text-amber-500 border-gray-200 " +
@@ -59,7 +59,7 @@ const priorityOptions = [
     icon: "⚡",
   },
   {
-    value: "low",
+    value: "Low",
     label: "Low",
     unselectedColor:
       "bg-gray-50 hover:bg-green-100 text-green-500 border-gray-200 " +
@@ -81,36 +81,27 @@ const categoryOptions = [
   { value: "security", label: "Security Test", icon: "🔒" },
 ];
 
-const mockUsers = [
-  { id: 1, name: "John Doe", email: "john.doe@company.com", avatar: "JD" },
-  {
-    id: 2,
-    name: "Alice Smith",
-    email: "alice.smith@company.com",
-    avatar: "AS",
-  },
-  {
-    id: 3,
-    name: "Bob Johnson",
-    email: "bob.johnson@company.com",
-    avatar: "BJ",
-  },
-  { id: 4, name: "Sarah Chen", email: "sarah.chen@company.com", avatar: "SC" },
-];
-
 export default function ManualTestCaseEditor() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("projectId");
   const testCaseId = searchParams.get("testCaseId");
-  const projectName = decodeURIComponent(searchParams.get("project") || "");
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [tags, setTags] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [priority, setPriority] = useState("medium");
+  const [priority, setPriority] = useState("Medium");
+  const [lastSaved, setLastSaved] = useState(null);
+  const [currentStatus, setCurrentStatus] = useState("Not Started");
 
-  const { register, getValues, setValue, watch, reset } = useForm({
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
     defaultValues: {
       name: "",
       category: "",
@@ -121,73 +112,162 @@ export default function ManualTestCaseEditor() {
     },
   });
 
-  const { data: testCaseDetail, isLoading: testCaseLoading } = useQuery({
+  const {
+    data: testCaseDetail,
+    isLoading: testCaseLoading,
+    isSuccess: testCaseFetched,
+  } = useQuery({
     queryKey: ["manual-test-case", testCaseId],
     queryFn: () => ManualTestApi().getTestCase(testCaseId),
     enabled: !!testCaseId,
   });
 
-  useEffect(() => {
-    if (testCaseDetail && testCaseId) {
-      reset({
-        name: testCaseDetail.name,
-        category: testCaseDetail.category,
-        estimatedTime: testCaseDetail.estimatedTime,
-        description: testCaseDetail.description,
-        assignedTo: testCaseDetail.assignedTo,
-        dueDate: testCaseDetail.dueDate,
-      });
-      setPriority(testCaseDetail.priority || "medium");
-      setTags(testCaseDetail.tags || []);
-    }
-  }, [testCaseDetail, testCaseId, reset]);
+  const {
+    data: staffQueryData,
+    isLoading: staffLoading,
+    isSuccess: staffFetched,
+  } = useQuery({
+    queryKey: ["available-staff", projectId],
+    queryFn: () => ProjectApi().getAvailableStaff(projectId),
+    enabled: !!projectId,
+    select: (response) => response.availableStaff,
+  });
+  const availableStaff = staffQueryData || [];
 
-  const handleSave = async () => {
-    const data = getValues();
-    if (!data.name?.trim()) {
-      toast.error("Test case name is required");
-      return;
-    }
-    if (!data.category) {
-      toast.error("Category is required");
-      return;
-    }
-    if (!data.description?.trim()) {
-      toast.error("Test description is required");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const payload = {
-        ...data,
-        priority,
-        tags,
-        projectId,
+  const resetFormWithData = useCallback(
+    (data) => {
+      const defaultValues = {
+        name: data?.name || "",
+        category: data?.category || "",
+        estimatedTime: data?.estimatedTime?.toString() || "",
+        description: data?.description || "",
+        assignedTo: data?.assignedToEmail || "",
+        dueDate: data?.dueDate
+          ? new Date(data.dueDate).toISOString().substring(0, 16)
+          : "",
       };
+      reset(defaultValues);
 
-      if (testCaseId) {
-        await ManualTestApi().updateTestCase(testCaseId, payload);
-        toast.success("Test case updated successfully");
-      } else {
-        await ManualTestApi().createTestCase(payload);
-        toast.success("Test case created successfully");
+      setValue("category", defaultValues.category);
+
+      if (availableStaff && availableStaff.length > 0) {
+        const staffExists = availableStaff.some(
+          (s) => s.email === defaultValues.assignedTo
+        );
+        if (staffExists) {
+          setValue("assignedTo", defaultValues.assignedTo);
+        } else {
+          setValue("assignedTo", "");
+        }
+      } else if (!data?.assignedToEmail) {
+        setValue("assignedTo", "");
       }
 
-      await queryClient.invalidateQueries([
-        PROJECT_DETAIL_QUERY_KEY,
-        projectId,
-      ]);
-      await queryClient.invalidateQueries(["manual-test-cases", projectId]);
+      setPriority(data?.priority || "Medium");
+      setTags(data?.tags || []);
+      setCurrentStatus(data?.status || "Not Started");
+      setLastSaved(data?.updatedAt || data?.createdAt || null);
+    },
+    [reset, setValue, availableStaff]
+  );
+
+  useEffect(() => {
+    if (testCaseId && testCaseFetched && testCaseDetail) {
+      if (staffFetched || !testCaseDetail.assignedToEmail) {
+        resetFormWithData(testCaseDetail);
+      }
+    } else if (!testCaseId) {
+      resetFormWithData(null);
+    }
+  }, [
+    testCaseId,
+    testCaseDetail,
+    testCaseFetched,
+    staffFetched,
+    resetFormWithData,
+  ]);
+
+  const mutation = useMutation({
+    mutationFn: (payload) => {
+      if (testCaseId) {
+        return ManualTestApi().updateTestCase(testCaseId, payload);
+      } else {
+        return ManualTestApi().createTestCase(payload);
+      }
+    },
+    onSuccess: async (data) => {
+      toast.success(
+        `Test case ${testCaseId ? "updated" : "created"} successfully`
+      );
+
+      if (testCaseId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["manual-test-case", testCaseId],
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["available-staff", projectId],
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: [PROJECT_DETAIL_QUERY_KEY, projectId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["manual-test-cases", projectId],
+      });
 
       localStorage.setItem("manual_test_updated", "true");
-      router.push(`/manual-test?projectId=${projectId}`);
-    } catch (error) {
+      if (data && data.id && !testCaseId) {
+        setLastSaved(data.createdAt);
+        setCurrentStatus(data.status);
+      } else if (data) {
+        setLastSaved(data.updatedAt || data.createdAt);
+        setCurrentStatus(data.status);
+      }
+    },
+    onError: (error) => {
       console.error("Error saving test case:", error);
       toast.error("Failed to save test case");
-    } finally {
-      setIsLoading(false);
+    },
+  });
+
+  const processSave = async (
+    formData,
+    statusOverride = null,
+    redirect = true,
+    shouldResetForm = false
+  ) => {
+    const estTime = formData.estimatedTime;
+    const estimatedTimeValue =
+      estTime && !isNaN(parseInt(estTime, 10))
+        ? parseInt(estTime, 10)
+        : undefined;
+
+    const payload = {
+      ...formData,
+      priority,
+      tags,
+      projectId,
+      estimatedTime: estimatedTimeValue,
+      status: statusOverride || currentStatus || "Not Started",
+      dueDate: formData.dueDate
+        ? new Date(formData.dueDate).toISOString()
+        : null,
+    };
+
+    await mutation.mutateAsync(payload);
+
+    if (redirect) {
+      router.push(`/manual-test?projectId=${projectId}`);
     }
+    if (shouldResetForm) {
+      resetFormWithData(null);
+      toast.success("Ready to create another test case");
+    }
+  };
+
+  const onValidSubmit = (data) => {
+    processSave(data, null, true, false);
   };
 
   const handleCancel = () => {
@@ -195,26 +275,12 @@ export default function ManualTestCaseEditor() {
   };
 
   const handleSaveAsDraft = async () => {
-    try {
-      const data = getValues();
-      const payload = {
-        ...data,
-        priority,
-        tags,
-        projectId,
-        status: "draft",
-      };
-
-      if (testCaseId) {
-        await ManualTestApi().updateTestCase(testCaseId, payload);
-      } else {
-        await ManualTestApi().createTestCase(payload);
-      }
-
-      toast.success("Draft saved successfully");
-    } catch (error) {
-      toast.error("Failed to save draft");
+    const data = getValues();
+    if (!data.name?.trim()) {
+      toast.error("Test case name is required to save as draft");
+      return;
     }
+    processSave(data, "Draft", false, false);
   };
 
   const handleSaveAndAddAnother = async () => {
@@ -231,51 +297,14 @@ export default function ManualTestCaseEditor() {
       toast.error("Test description is required");
       return;
     }
-
-    try {
-      setIsLoading(true);
-      const payload = {
-        ...data,
-        priority,
-        tags,
-        projectId,
-      };
-
-      if (testCaseId) {
-        await ManualTestApi().updateTestCase(testCaseId, payload);
-        toast.success("Test case updated successfully");
-      } else {
-        await ManualTestApi().createTestCase(payload);
-        toast.success("Test case created successfully");
-      }
-
-      await queryClient.invalidateQueries([
-        PROJECT_DETAIL_QUERY_KEY,
-        projectId,
-      ]);
-      await queryClient.invalidateQueries(["manual-test-cases", projectId]);
-
-      reset({
-        name: "",
-        category: "",
-        estimatedTime: "",
-        description: "",
-        assignedTo: "",
-        dueDate: "",
-      });
-      setPriority("medium");
-      setTags([]);
-
-      toast.success("Ready to create another test case");
-    } catch (error) {
-      console.error("Error saving test case:", error);
-      toast.error("Failed to save test case");
-    } finally {
-      setIsLoading(false);
-    }
+    processSave(data, null, false, true);
   };
 
-  if (testCaseLoading) {
+  if (
+    testCaseLoading ||
+    (projectId && staffLoading && !staffFetched && !testCaseId) ||
+    (testCaseId && !testCaseFetched && testCaseLoading)
+  ) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
@@ -283,8 +312,18 @@ export default function ManualTestCaseEditor() {
     );
   }
 
+  const categorySelectKey = `category-${testCaseId || "new"}-${watch(
+    "category"
+  )}`;
+  const assignedToSelectKey = `assignedTo-${testCaseId || "new"}-${watch(
+    "assignedTo"
+  )}-${availableStaff.length}`;
+
   return (
-    <div className="w-full min-h-screen">
+    <form
+      onSubmit={handleSubmit(onValidSubmit)}
+      className="w-full min-h-screen"
+    >
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -309,10 +348,17 @@ export default function ManualTestCaseEditor() {
                     </Label>
                     <Input
                       id="name"
-                      {...register("name")}
+                      {...register("name", {
+                        required: "Test case name is required",
+                      })}
                       placeholder="Enter descriptive test case name"
                       className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors bg-background"
                     />
+                    {errors.name && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.name.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label
@@ -323,8 +369,14 @@ export default function ManualTestCaseEditor() {
                       Category *
                     </Label>
                     <Select
+                      key={categorySelectKey}
                       value={watch("category")}
-                      onValueChange={(value) => setValue("category", value)}
+                      onValueChange={(value) =>
+                        setValue("category", value, { shouldValidate: true })
+                      }
+                      {...register("category", {
+                        required: "Category is required",
+                      })}
                     >
                       <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 bg-background">
                         <SelectValue placeholder="Select test category" />
@@ -340,6 +392,11 @@ export default function ManualTestCaseEditor() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.category && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.category.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -380,10 +437,20 @@ export default function ManualTestCaseEditor() {
                     <Input
                       id="estimatedTime"
                       type="number"
-                      {...register("estimatedTime")}
+                      {...register("estimatedTime", {
+                        min: {
+                          value: 0,
+                          message: "Estimated time cannot be negative",
+                        },
+                      })}
                       placeholder="15"
                       className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                     />
+                    {errors.estimatedTime && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.estimatedTime.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -397,11 +464,18 @@ export default function ManualTestCaseEditor() {
                   </Label>
                   <Textarea
                     id="description"
-                    {...register("description")}
+                    {...register("description", {
+                      required: "Description is required",
+                    })}
                     placeholder="Describe the test steps, expected results, and acceptance criteria..."
                     rows={6}
                     className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                   />
+                  {errors.description && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.description.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -436,21 +510,27 @@ export default function ManualTestCaseEditor() {
                     Assigned To
                   </Label>
                   <Select
+                    key={assignedToSelectKey}
                     value={watch("assignedTo")}
                     onValueChange={(value) => setValue("assignedTo", value)}
+                    {...register("assignedTo")}
                   >
                     <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
                       <SelectValue placeholder="Select assignee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
+                      {availableStaff.map((user) => (
+                        <SelectItem key={user.email} value={user.email}>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                              {user.avatar}
+                              {user.username
+                                ? user.username.substring(0, 2).toUpperCase()
+                                : user.email.substring(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col">
-                              <span className="font-medium">{user.name}</span>
+                              <span className="font-medium">
+                                {user.username || user.email.split("@")[0]}
+                              </span>
                               <span className="text-xs text-slate-500 dark:text-slate-400">
                                 {user.email}
                               </span>
@@ -485,12 +565,22 @@ export default function ManualTestCaseEditor() {
                 <div className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
                   <div className="flex items-center justify-between">
                     <span>Last saved:</span>
-                    <span className="font-medium">2 minutes ago</span>
+                    <span className="font-medium">
+                      {lastSaved
+                        ? new Date(lastSaved).toLocaleString()
+                        : "Not saved yet"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Status:</span>
-                    <span className="font-medium text-amber-600 dark:text-amber-400">
-                      Draft
+                    <span
+                      className={`font-medium ${
+                        currentStatus === "Draft"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      {currentStatus}
                     </span>
                   </div>
                 </div>
@@ -502,51 +592,56 @@ export default function ManualTestCaseEditor() {
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={handleCancel}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                       Cancel
                     </Button>
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={handleSaveAsDraft}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-700"
                     >
                       Save as Draft
                     </Button>
                     <Button
-                      onClick={handleSave}
-                      disabled={isLoading}
+                      type="submit"
+                      disabled={isSubmitting}
                       className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                     >
-                      {isLoading && (
+                      {isSubmitting && (
                         <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
                       )}
                       {testCaseId ? "Update Test Case" : "Create Test Case"}
                     </Button>
                   </div>
 
-                  <Button
-                    onClick={handleSaveAndAddAnother}
-                    disabled={isLoading}
-                    variant="outline"
-                    className="w-full mt-2 border-dashed border-2 
-border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
-dark:border-green-500 dark:text-green-300 
-dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create and Add Another Test Case
-                  </Button>
+                  {!testCaseId && (
+                    <Button
+                      type="button"
+                      onClick={handleSaveAndAddAnother}
+                      disabled={isSubmitting}
+                      variant="outline"
+                      className="w-full mt-2 border-dashed border-2 
+                        border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
+                        dark:border-green-500 dark:text-green-300 
+                        dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create and Add Another Test Case
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
