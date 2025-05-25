@@ -25,7 +25,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ManualTestApi, ProjectApi } from "@/lib/api";
 
 const severityOptions = ["Critical", "High", "Medium", "Low"];
-const priorityOptions = ["High", "Medium", "Low"];
 
 const UNASSIGNED_VALUE = "null";
 
@@ -48,7 +47,6 @@ const CreateBugModal = ({
       title: "",
       description: "",
       severity: "Medium",
-      priority: "Medium",
       assignedToEmail: UNASSIGNED_VALUE,
     },
   });
@@ -86,6 +84,7 @@ const CreateBugModal = ({
         data.assignedToEmail === UNASSIGNED_VALUE ? null : data.assignedToEmail,
       manualTestCaseId: testCaseId,
       projectId,
+      priority: "Medium",
     };
     mutation.mutate(payload);
   };
@@ -96,7 +95,6 @@ const CreateBugModal = ({
         title: "",
         description: "",
         severity: "Medium",
-        priority: "Medium",
         assignedToEmail: UNASSIGNED_VALUE,
       });
     }
@@ -137,61 +135,32 @@ const CreateBugModal = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="severity">Severity *</Label>
-                <Controller
-                  name="severity"
-                  control={control}
-                  rules={{ required: "Severity is required" }}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select severity" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {severityOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.severity && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.severity.message}
-                  </p>
+            <div className="space-y-2">
+              <Label htmlFor="severity">Severity *</Label>
+              <Controller
+                name="severity"
+                control={control}
+                rules={{ required: "Severity is required" }}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select severity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {severityOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
-                <Controller
-                  name="priority"
-                  control={control}
-                  rules={{ required: "Priority is required" }}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorityOptions.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.priority && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {errors.priority.message}
-                  </p>
-                )}
-              </div>
+              />
+              {errors.severity && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.severity.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

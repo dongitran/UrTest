@@ -6,7 +6,7 @@ export const schemaForCreateBug = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().optional(),
   severity: z.enum(['Critical', 'High', 'Medium', 'Low']).default('Medium'),
-  priority: z.enum(['High', 'Medium', 'Low']).default('Medium'),
+  priority: z.enum(['High', 'Medium', 'Low']).default('Medium').optional(),
   assignedToEmail: z.string().email().optional().nullable(),
 });
 

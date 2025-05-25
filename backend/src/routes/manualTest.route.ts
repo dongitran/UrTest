@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import db from 'db/db';
 import { ManualTestCaseTable, BugTable } from 'db/schema';
-import { eq, and, isNull, inArray, count, sql, desc as drizzleDesc } from 'drizzle-orm';
+import { eq, and, isNull, desc as drizzleDesc } from 'drizzle-orm';
 import dayjs from 'dayjs';
 import fromNow from 'dayjs/plugin/relativeTime';
 import { ulid } from 'ulid';
@@ -11,6 +11,7 @@ import * as BugSchema from 'lib/Zod/BugSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
+import { z } from 'zod';
 
 dayjs.extend(fromNow);
 
@@ -436,7 +437,12 @@ ManualTestRoute.post(
   CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   CheckProjectAccess(),
   zValidator('param', BugSchema.schemaForTestCaseIdParam),
-  zValidator('json', BugSchema.schemaForCreateBug),
+  zValidator(
+    'json',
+    BugSchema.schemaForCreateBug.omit({ priority: true }).extend({
+      priority: z.enum(['High', 'Medium', 'Low']).optional(),
+    })
+  ),
   async (ctx) => {
     const { testCaseId } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
@@ -463,7 +469,7 @@ ManualTestRoute.post(
         title: body.title,
         description: body.description,
         severity: body.severity,
-        priority: body.priority,
+        priority: body.priority || 'Medium',
         status: 'Open',
         assignedToEmail: body.assignedToEmail,
         reporterEmail: user.email,
@@ -508,6 +514,77 @@ ManualTestRoute.get(
       orderBy: (clm, { desc }) => drizzleDesc(clm.createdAt),
     });
     return ctx.json(bugs);
+  }
+);
+
+ManualTestRoute.patch(
+  '/bugs/:id/status',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  zValidator('param', BugSchema.schemaForBugIdParam),
+  zValidator(
+    'json',
+    z.object({
+      status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed', 'Reopened']),
+    })
+  ),
+  async (ctx) => {
+    const { id: bugId } = ctx.req.valid('param');
+    const { status: newStatus } = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const bug = await db.query.BugTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, bugId), isNull(clm.deletedAt)),
+      with: { project: true },
+    });
+
+    if (!bug) {
+      return ctx.json({ message: 'Bug not found' }, 404);
+    }
+
+    if (!bug.project) {
+      return ctx.json({ message: 'Bug is not associated with a valid project' }, 400);
+    }
+
+    const isAdminOrManager = user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
+    if (!isAdminOrManager) {
+      const assignment = await db.query.ProjectAssignmentTable.findFirst({
+        where: (clm, { eq, and, isNull: dbIsNull }) =>
+          and(
+            eq(clm.projectId, bug.projectId),
+            eq(clm.userEmail, user.email),
+            dbIsNull(clm.deletedAt)
+          ),
+      });
+      if (!assignment) {
+        return ctx.json(
+          { message: "Forbidden: You don't have access to this project's bugs" },
+          403
+        );
+      }
+    }
+
+    const updatedBug = await db
+      .update(BugTable)
+      .set({
+        status: newStatus,
+        updatedAt: dayjs().toISOString(),
+        updatedBy: user.email,
+      })
+      .where(eq(BugTable.id, bugId))
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_UPDATED,
+      bug.projectId,
+      user.email,
+      `Updated status of bug "${bug.title}" to ${newStatus}`,
+      bug.id,
+      'bug',
+      { oldStatus: bug.status, newStatus }
+    );
+
+    return ctx.json(updatedBug);
   }
 );
 
