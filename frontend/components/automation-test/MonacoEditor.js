@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
-import { registerRobotFrameworkLanguage } from "../utils/robotFrameworkLanguage";
+import { registerRobotFrameworkLanguage } from "../../utils/robotFrameworkLanguage";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const MonacoEditorLib = dynamic(() => import("@monaco-editor/react"), {
@@ -74,18 +74,18 @@ export default function MonacoEditor({
       quickSuggestions:
         language === "robotframework"
           ? {
-              other: true,
-              comments: true,
-              strings: true,
-            }
+            other: true,
+            comments: true,
+            strings: true,
+          }
           : undefined,
       suggestOnTriggerCharacters:
         language === "robotframework" ? true : undefined,
       parameterHints:
         language === "robotframework"
           ? {
-              enabled: true,
-            }
+            enabled: true,
+          }
           : undefined,
     }),
     [language, readOnly, settings?.editor, isLoaded]

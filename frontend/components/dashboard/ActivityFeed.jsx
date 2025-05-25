@@ -89,7 +89,7 @@ export default function ActivityFeed({ limit = 5, refreshKey = 0 }) {
   };
 
   return (
-    <Card className="overflow-hidden border rounded-lg shadow-sm">
+    <Card className="overflow-hidden border rounded-lg shadow-lg">
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <h3 className="font-medium">Recent Activities</h3>
       </div>

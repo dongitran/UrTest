@@ -12,15 +12,15 @@ import {
   ExternalLink,
   Trash2,
 } from "lucide-react";
-import MonacoEditor from "@/components/MonacoEditor";
+import MonacoEditor from "@/components/automation-test/MonacoEditor";
 import TagInput from "@/components/TagInput";
 import JiraLinkButton from "@/components/JiraLinkButton";
 import { TestSuiteApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ChatPanel from "@/components/ChatPanel";
-import CommentPanel from "@/components/CommentPanel";
+import ChatPanel from "@/components/automation-test/ChatPanel";
+import CommentPanel from "@/components/automation-test/CommentPanel";
 import {
   saveTestSuiteDraft,
   getTestSuiteDraft,
@@ -28,6 +28,11 @@ import {
   formatDraftSavedTime,
 } from "@/utils/testSuiteDrafts";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
+import {
+  parseRobotFramework,
+  reconstructRobotFramework,
+} from "@/utils/robotFrameworkParser";
+import TestStructurePanel from "@/components/automation-test/TestStructurePanel";
 
 export default function NewTestCasePage() {
   const searchParams = useSearchParams();
@@ -39,9 +44,35 @@ export default function NewTestCasePage() {
 
   const [tags, setTags] = useState([]);
   const [showProgress, setShowProgress] = useState(false);
-  const defaultScriptContent = `*** Settings ***\nResource    ../common-imports.robot\nResource    ./resources/init.robot\n`;
+
+  const defaultScriptContent = `*** Settings ***
+Resource    ../common-imports.robot
+Resource    ./resources/init.robot
+
+*** Variables ***
+
+*** Test Cases ***
+Get Customer ID
+    Connect To UC Urcard Database
+    @{query_result}=    Query    SELECT id FROM tbl_customers LIMIT ${"${LIMIT_QUERY}"}
+
+    Close All DB Connections
+`;
 
   const [scriptContent, setScriptContent] = useState("");
+  const [parsedSections, setParsedSections] = useState({
+    settings: "",
+    variables: "",
+    testCases: [],
+    keywords: "",
+    tasks: "",
+  });
+  const [displayedContent, setDisplayedContent] = useState("");
+  const [activeSection, setActiveSection] = useState("FullCode");
+
+  const [rightPanelActiveTab, setRightPanelActiveTab] =
+    useState("testStructure");
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -51,6 +82,8 @@ export default function NewTestCasePage() {
 
   const userInteractedRef = useRef(false);
   const mainContainerRef = useRef(null);
+  const debounceTimerRef = useRef(null);
+  const previousActiveSectionRef = useRef("FullCode");
 
   const {
     data: testSuiteDetail,
@@ -88,12 +121,81 @@ export default function NewTestCasePage() {
     setAutoSaveEnabled(true);
   };
 
-  const handleScriptContentChange = (newContent) => {
-    setScriptContent(newContent);
-    if (newContent !== scriptContent) {
-      markUserInteraction();
+  const parseTestCaseWithName = (contentWithName) => {
+    const lines = contentWithName.split("\n");
+    let testCaseName = "";
+    let testCaseContent = "";
+
+    if (lines.length > 0) {
+      const firstLine = lines[0].trim();
+      if (
+        firstLine &&
+        !firstLine.startsWith(" ") &&
+        !firstLine.startsWith("\t")
+      ) {
+        testCaseName = firstLine;
+        testCaseContent = lines.slice(1).join("\n");
+      } else {
+        testCaseContent = contentWithName;
+      }
     }
+
+    return { name: testCaseName, content: testCaseContent };
   };
+
+  const syncScriptContent = useCallback(() => {
+    const newScriptContent = reconstructRobotFramework(parsedSections);
+    setScriptContent(newScriptContent);
+  }, [parsedSections]);
+
+  const debouncedSyncScript = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      syncScriptContent();
+    }, 1000);
+  }, [syncScriptContent]);
+
+  const handleMonacoEditorChange = useCallback(
+    (newContent) => {
+      setDisplayedContent(newContent);
+
+      if (activeSection === "FullCode") {
+        setScriptContent(newContent);
+        setParsedSections(parseRobotFramework(newContent));
+      } else {
+        setParsedSections((prevParsed) => {
+          const updatedParsed = { ...prevParsed };
+
+          if (activeSection === "Settings") {
+            updatedParsed.settings = newContent;
+          } else if (activeSection === "Variables") {
+            updatedParsed.variables = newContent;
+          } else if (activeSection.startsWith("TestCase_")) {
+            const index = parseInt(activeSection.split("_")[1]);
+            if (updatedParsed.testCases[index]) {
+              const { name, content } = parseTestCaseWithName(newContent);
+              if (name) {
+                updatedParsed.testCases[index].name = name;
+              }
+              updatedParsed.testCases[index].content = content;
+            }
+          } else if (activeSection === "Keywords") {
+            updatedParsed.keywords = newContent;
+          } else if (activeSection === "Tasks") {
+            updatedParsed.tasks = newContent;
+          }
+
+          debouncedSyncScript();
+          return updatedParsed;
+        });
+      }
+      markUserInteraction();
+    },
+    [activeSection, debouncedSyncScript]
+  );
 
   const handleTagsChange = (newTags) => {
     if (JSON.stringify(newTags) !== JSON.stringify(tags)) {
@@ -113,11 +215,13 @@ export default function NewTestCasePage() {
   const autoSave = useCallback(() => {
     if (!autoSaveEnabled || !projectId || !userInteractedRef.current) return;
 
+    const currentScriptContent = reconstructRobotFramework(parsedSections);
+
     const data = getValues();
     const draftData = {
       name: data.name || "",
       tags: tags,
-      content: scriptContent,
+      content: currentScriptContent,
     };
 
     const wasSaved = saveTestSuiteDraft(projectId, testSuiteId, draftData);
@@ -126,7 +230,14 @@ export default function NewTestCasePage() {
       setLastSaved(new Date().toISOString());
       setHasDraft(true);
     }
-  }, [autoSaveEnabled, projectId, testSuiteId, getValues, tags, scriptContent]);
+  }, [
+    autoSaveEnabled,
+    projectId,
+    testSuiteId,
+    getValues,
+    tags,
+    parsedSections,
+  ]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -144,7 +255,7 @@ export default function NewTestCasePage() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [scriptContent, tags, autoSave]);
+  }, [parsedSections, tags, autoSave]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -154,45 +265,44 @@ export default function NewTestCasePage() {
     setAutoSaveEnabled(false);
 
     const draft = getTestSuiteDraft(projectId, testSuiteId);
+    let contentToLoad = defaultScriptContent;
+    let initialName = "";
+    let initialTags = [];
+    let initialResultRunner = null;
+
     if (draft) {
       setHasDraft(true);
       setLastSaved(draft.lastSaved);
-
-      setValue("name", draft.name);
-      setTags(draft.tags || []);
-      setScriptContent(draft.content);
-
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
+      contentToLoad = draft.content;
+      initialName = draft.name;
+      initialTags = draft.tags || [];
+    } else if (testSuiteId && testSuiteDetail) {
+      contentToLoad = testSuiteDetail.content;
+      initialName = testSuiteDetail.name;
+      initialTags = testSuiteDetail.tags || [];
+      initialResultRunner = testSuiteDetail.params?.resultRunner || null;
     } else {
       setHasDraft(false);
-      if (!testSuiteId) {
-        setScriptContent(defaultScriptContent);
-      }
     }
+
+    const parsed = parseRobotFramework(contentToLoad);
+    setParsedSections(parsed);
+    setScriptContent(contentToLoad);
+
+    setActiveSection("FullCode");
+    setDisplayedContent(contentToLoad);
+
+    setValue("name", initialName);
+    setTags(initialTags);
+    setValue("resultRunner", initialResultRunner);
 
     setDraftChecked(true);
-  }, [projectId, testSuiteId, setValue]);
-
-  useEffect(() => {
-    if (testSuiteDetail && draftChecked && !hasDraft) {
-      setValue("name", testSuiteDetail.name);
-      setTags(testSuiteDetail.tags || []);
-      setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRunner) {
-        setValue("resultRunner", testSuiteDetail.params.resultRunner);
-      }
-
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
-    }
-  }, [testSuiteDetail, hasDraft, draftChecked, setValue]);
+  }, [projectId, testSuiteId, setValue, testSuiteDetail]);
 
   const invalidateCaches = async () => {
     await queryClient.invalidateQueries([PROJECT_DETAIL_QUERY_KEY, projectId]);
     await queryClient.invalidateQueries(["test-resource", projectId]);
     await queryClient.invalidateQueries(["detail-test-suite"]);
-
     await queryClient.resetQueries();
   };
 
@@ -208,10 +318,13 @@ export default function NewTestCasePage() {
     }
     try {
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       await TestSuiteApi().patch(testSuiteId, {
         ...data,
         tags,
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
 
@@ -223,7 +336,7 @@ export default function NewTestCasePage() {
       await invalidateCaches();
       localStorage.setItem("test_suite_updated", "true");
 
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       toast.error(`Error editing test script`);
     } finally {
@@ -243,10 +356,13 @@ export default function NewTestCasePage() {
     }
     try {
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       await TestSuiteApi().post({
         ...data,
         tags,
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
 
@@ -258,7 +374,7 @@ export default function NewTestCasePage() {
       await invalidateCaches();
       localStorage.setItem("test_suite_updated", "true");
 
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving test case:", error);
       toast.error("Failed to save test case");
@@ -272,8 +388,11 @@ export default function NewTestCasePage() {
       toast.success("Test execution requested. Please wait for results");
       setShowProgress(true);
       setIsLoading(true);
+
+      const finalScriptContent = reconstructRobotFramework(parsedSections);
+
       const { resultRunner, duration } = await TestSuiteApi().draftExecute({
-        content: scriptContent,
+        content: finalScriptContent,
         projectId,
       });
       setValue("resultRunner", resultRunner);
@@ -294,35 +413,71 @@ export default function NewTestCasePage() {
   };
 
   const handleResetToOriginal = () => {
+    let contentToRestore = "";
+    let nameToRestore = "";
+    let tagsToRestore = [];
+    let resultRunnerToRestore = null;
+
     if (testSuiteDetail) {
-      setValue("name", testSuiteDetail.name);
-      setTags(testSuiteDetail.tags || []);
-      setScriptContent(testSuiteDetail.content);
-      if (testSuiteDetail?.params?.resultRunner) {
-        setValue("resultRunner", testSuiteDetail.params.resultRunner);
+      contentToRestore = testSuiteDetail.content;
+      nameToRestore = testSuiteDetail.name;
+      tagsToRestore = testSuiteDetail.tags || [];
+      resultRunnerToRestore = testSuiteDetail.params?.resultRunner || null;
+    } else {
+      contentToRestore = defaultScriptContent;
+      nameToRestore = "";
+      tagsToRestore = [];
+    }
+
+    const parsed = parseRobotFramework(contentToRestore);
+    setParsedSections(parsed);
+    setScriptContent(contentToRestore);
+
+    setActiveSection("FullCode");
+    setDisplayedContent(contentToRestore);
+
+    setValue("name", nameToRestore);
+    setTags(tagsToRestore);
+    setValue("resultRunner", resultRunnerToRestore);
+
+    clearTestSuiteDraft(projectId, testSuiteId || "new");
+    setHasDraft(false);
+    setLastSaved(null);
+    userInteractedRef.current = false;
+    setAutoSaveEnabled(false);
+
+    toast.success(
+      testSuiteDetail ? "Restored to original version" : "Draft deleted"
+    );
+  };
+
+  useEffect(() => {
+    if (previousActiveSectionRef.current !== activeSection) {
+      if (previousActiveSectionRef.current !== "FullCode") {
+        syncScriptContent();
       }
 
-      clearTestSuiteDraft(projectId, testSuiteId);
-      setHasDraft(false);
-      setLastSaved(null);
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
+      let content = "";
+      if (activeSection === "FullCode") {
+        content = scriptContent;
+      } else if (activeSection === "Settings") {
+        content = parsedSections.settings;
+      } else if (activeSection === "Variables") {
+        content = parsedSections.variables;
+      } else if (activeSection.startsWith("TestCase_")) {
+        const index = parseInt(activeSection.split("_")[1]);
+        const testCase = parsedSections.testCases[index];
+        content = testCase ? `${testCase.name}\n${testCase.content}` : "";
+      } else if (activeSection === "Keywords") {
+        content = parsedSections.keywords;
+      } else if (activeSection === "Tasks") {
+        content = parsedSections.tasks;
+      }
+      setDisplayedContent(content);
 
-      toast.success("Restored to original version");
-    } else {
-      setValue("name", "");
-      setTags([]);
-      setScriptContent(defaultScriptContent);
-
-      clearTestSuiteDraft(projectId, "new");
-      setHasDraft(false);
-      setLastSaved(null);
-      userInteractedRef.current = false;
-      setAutoSaveEnabled(false);
-
-      toast.success("Draft deleted");
+      previousActiveSectionRef.current = activeSection;
     }
-  };
+  }, [activeSection, parsedSections, scriptContent, syncScriptContent]);
 
   useEffect(() => {
     const calculateHeight = () => {
@@ -344,17 +499,17 @@ export default function NewTestCasePage() {
       const styleEl = document.createElement("style");
       styleEl.id = "scroll-lock-styles";
       styleEl.textContent = `
-        body, html {
-          overflow: hidden !important;
-          height: 100% !important;
-          position: relative !important;
-        }
-        .ur-editor-page {
-          height: var(--ur-editor-height, calc(100vh - 95px)) !important;
-          max-height: var(--ur-editor-height, calc(100vh - 95px)) !important;
-          overflow: hidden !important;
-        }
-      `;
+                body, html {
+                    overflow: hidden !important;
+                    height: 100% !important;
+                    position: relative !important;
+                }
+                .ur-editor-page {
+                    height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+                    max-height: var(--ur-editor-height, calc(100vh - 95px)) !important;
+                    overflow: hidden !important;
+                }
+            `;
       document.head.appendChild(styleEl);
     };
 
@@ -366,11 +521,11 @@ export default function NewTestCasePage() {
       e.preventDefault();
     };
 
-    document.addEventListener("wheel", preventDefault, { passive: false });
+    //document.addEventListener("wheel", preventDefault, { passive: false });
 
     return () => {
       window.removeEventListener("resize", calculateHeight);
-      document.removeEventListener("wheel", preventDefault);
+      //document.removeEventListener("wheel", preventDefault);
 
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
@@ -378,6 +533,10 @@ export default function NewTestCasePage() {
       const styleEl = document.getElementById("scroll-lock-styles");
       if (styleEl) {
         styleEl.remove();
+      }
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
   }, []);
@@ -387,6 +546,8 @@ export default function NewTestCasePage() {
     watch("resultRunner")?.reportUrl &&
     typeof watch("resultRunner")?.results?.passed === "number" &&
     typeof watch("resultRunner")?.results?.totalTests === "number";
+
+  const isMonacoReadOnly = false;
 
   return (
     <div
@@ -400,7 +561,7 @@ export default function NewTestCasePage() {
     >
       <div className="grid h-full">
         <div className="flex gap-2 h-full overflow-hidden">
-          <div className="w-[70%] overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative">
             <div className="overflow-hidden h-full">
               {editorContentLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
@@ -415,9 +576,10 @@ export default function NewTestCasePage() {
                 <div className="h-full pt-1">
                   <MonacoEditor
                     language="robotframework"
-                    value={scriptContent}
-                    onChange={handleScriptContentChange}
+                    value={displayedContent}
+                    onChange={handleMonacoEditorChange}
                     projectName={projectName}
+                    readOnly={isMonacoReadOnly}
                   />
                 </div>
               )}
@@ -448,7 +610,7 @@ export default function NewTestCasePage() {
             </div>
           </div>
 
-          <div className="w-[30%] flex flex-col overflow-hidden">
+          <div className="w-[35%] flex flex-col overflow-hidden">
             <div className="border rounded-lg bg-card p-2 flex flex-col gap-2 mt-2">
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap font-medium w-[80px]">
@@ -480,7 +642,7 @@ export default function NewTestCasePage() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      router.push(`/test-management?projectId=${projectId}`)
+                      router.push(`/automation-test?projectId=${projectId}`)
                     }
                     size="sm"
                     className="w-1/2 h-7"
@@ -543,7 +705,7 @@ export default function NewTestCasePage() {
                     size="sm"
                   >
                     {isLoading ? (
-                      <LoaderCircle className="animate-spin mr-2" />
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
                     )}
@@ -567,11 +729,30 @@ export default function NewTestCasePage() {
             </div>
 
             <div className="border rounded-lg bg-card flex-1 overflow-hidden flex flex-col mt-4">
-              <Tabs defaultValue="assistant" className="flex flex-col h-full">
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs
+                value={rightPanelActiveTab}
+                onValueChange={setRightPanelActiveTab}
+                className="flex flex-col h-full"
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  {" "}
+                  <TabsTrigger value="testStructure">
+                    Test Structure
+                  </TabsTrigger>{" "}
+                  {/* Tab mới */}
                   <TabsTrigger value="assistant">Assistant</TabsTrigger>
                   <TabsTrigger value="comments">Comments</TabsTrigger>
                 </TabsList>
+                <TabsContent
+                  value="testStructure"
+                  className="flex-1 overflow-hidden p-0"
+                >
+                  <TestStructurePanel
+                    parsedSections={parsedSections}
+                    activeSection={activeSection}
+                    setActiveSection={setActiveSection}
+                  />
+                </TabsContent>
                 <TabsContent
                   value="assistant"
                   className="flex-1 overflow-hidden p-0"

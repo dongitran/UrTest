@@ -51,7 +51,7 @@ export function useJiraLink() {
       const token = getToken();
 
       const url = `${window.location.origin
-        }/test-management/ur-editor?project=${encodeURIComponent(
+        }/automation-test/ur-editor?project=${encodeURIComponent(
           projectName
         )}&projectId=${projectId}&testSuiteId=${testSuiteId}`;
 

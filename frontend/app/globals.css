@@ -23,11 +23,6 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -37,7 +32,28 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --stats-blue-bg-light: hsl(220, 100%, 95%);
+    --stats-blue-border-light: hsl(220, 80%, 60%);
+    --stats-blue-text-light: hsl(220, 75%, 45%);
+
+    --stats-purple-bg-light: hsl(270, 100%, 95%);
+    --stats-purple-border-light: hsl(270, 70%, 60%);
+    --stats-purple-text-light: hsl(270, 65%, 50%);
+
+    --stats-green-bg-light: hsl(135, 80%, 94%);
+    --stats-green-border-light: hsl(135, 60%, 48%);
+    --stats-green-text-light: hsl(135, 58%, 35%);
+
+    --stats-orange-bg-light: hsl(30, 100%, 94%);
+    --stats-orange-border-light: hsl(25, 95%, 58%);
+    --stats-orange-text-light: hsl(25, 90%, 50%);
+
+    --stats-red-bg-light: hsl(0, 100%, 95%);
+    --stats-red-border-light: hsl(0, 85%, 62%);
+    --stats-red-text-light: hsl(0, 80%, 52%);
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -58,11 +74,6 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -71,6 +82,103 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --stats-blue-bg-dark: hsl(220, 40%, 18%);
+    --stats-blue-border-dark: hsl(220, 50%, 40%);
+    --stats-blue-text-dark: hsl(220, 70%, 70%);
+
+    --stats-purple-bg-dark: hsl(260, 35%, 18%);
+    --stats-purple-border-dark: hsl(260, 45%, 40%);
+    --stats-purple-text-dark: hsl(260, 65%, 70%);
+
+    --stats-green-bg-dark: hsl(140, 35%, 15%);
+    --stats-green-border-dark: hsl(140, 45%, 35%);
+    --stats-green-text-dark: hsl(140, 65%, 65%);
+
+    --stats-orange-bg-dark: hsl(30, 45%, 18%);
+    --stats-orange-border-dark: hsl(30, 55%, 40%);
+    --stats-orange-text-dark: hsl(30, 75%, 70%);
+
+    --stats-red-bg-dark: hsl(0, 45%, 18%);
+    --stats-red-border-dark: hsl(0, 55%, 40%);
+    --stats-red-text-dark: hsl(0, 75%, 70%);
+  }
+}
+
+@layer components {
+  .stats-card.stats-blue {
+    background-color: var(--stats-blue-bg-light);
+    border-color: var(--stats-blue-border-light);
+  }
+  .dark .stats-card.stats-blue {
+    background-color: var(--stats-blue-bg-dark);
+    border-color: var(--stats-blue-border-dark);
+  }
+  .stats-card.stats-blue .stats-text-value {
+    color: var(--stats-blue-text-light);
+  }
+  .dark .stats-card.stats-blue .stats-text-value {
+    color: var(--stats-blue-text-dark);
+  }
+
+  .stats-card.stats-purple {
+    background-color: var(--stats-purple-bg-light);
+    border-color: var(--stats-purple-border-light);
+  }
+  .dark .stats-card.stats-purple {
+    background-color: var(--stats-purple-bg-dark);
+    border-color: var(--stats-purple-border-dark);
+  }
+  .stats-card.stats-purple .stats-text-value {
+    color: var(--stats-purple-text-light);
+  }
+  .dark .stats-card.stats-purple .stats-text-value {
+    color: var(--stats-purple-text-dark);
+  }
+
+  .stats-card.stats-green {
+    background-color: var(--stats-green-bg-light);
+    border-color: var(--stats-green-border-light);
+  }
+  .dark .stats-card.stats-green {
+    background-color: var(--stats-green-bg-dark);
+    border-color: var(--stats-green-border-dark);
+  }
+  .stats-card.stats-green .stats-text-value {
+    color: var(--stats-green-text-light);
+  }
+  .dark .stats-card.stats-green .stats-text-value {
+    color: var(--stats-green-text-dark);
+  }
+
+  .stats-card.stats-orange {
+    background-color: var(--stats-orange-bg-light);
+    border-color: var(--stats-orange-border-light);
+  }
+  .dark .stats-card.stats-orange {
+    background-color: var(--stats-orange-bg-dark);
+    border-color: var(--stats-orange-border-dark);
+  }
+  .stats-card.stats-orange .stats-text-value {
+    color: var(--stats-orange-text-light);
+  }
+  .dark .stats-card.stats-orange .stats-text-value {
+    color: var(--stats-orange-text-dark);
+  }
+
+  .stats-card.stats-red {
+    background-color: var(--stats-red-bg-light);
+    border-color: var(--stats-red-border-light);
+  }
+  .dark .stats-card.stats-red {
+    background-color: var(--stats-red-bg-dark);
+    border-color: var(--stats-red-border-dark);
+  }
+  .stats-card.stats-red .stats-text-value {
+    color: var(--stats-red-text-light);
+  }
+  .dark .stats-card.stats-red .stats-text-value {
+    color: var(--stats-red-text-dark);
   }
 }
 
@@ -120,4 +228,12 @@
 
 .dark .dialog-description-override {
   color: rgb(148 163 184) !important;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
