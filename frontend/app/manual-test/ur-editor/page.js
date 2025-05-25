@@ -26,12 +26,19 @@ import {
   Target,
   Hash,
   Plus,
+  Bug,
 } from "lucide-react";
 import TagInput from "@/components/TagInput";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { ManualTestApi, ProjectApi } from "@/lib/api";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const priorityOptions = [
   {
@@ -93,6 +100,8 @@ export default function ManualTestCaseEditor() {
   const [lastSaved, setLastSaved] = useState(null);
   const [currentStatus, setCurrentStatus] = useState("Not Started");
 
+  const isEditMode = !!testCaseId;
+
   const {
     register,
     handleSubmit,
@@ -142,9 +151,7 @@ export default function ManualTestCaseEditor() {
         estimatedTime: data?.estimatedTime?.toString() || "",
         description: data?.description || "",
         assignedTo: data?.assignedToEmail || "",
-        dueDate: data?.dueDate
-          ? new Date(data.dueDate).toISOString().substring(0, 16)
-          : "",
+        dueDate: data?.dueDate ? dayjs(data.dueDate).format("YYYY-MM-DD") : "",
       };
       reset(defaultValues);
 
@@ -251,7 +258,7 @@ export default function ManualTestCaseEditor() {
       estimatedTime: estimatedTimeValue,
       status: statusOverride || currentStatus || "Not Started",
       dueDate: formData.dueDate
-        ? new Date(formData.dueDate).toISOString()
+        ? dayjs(formData.dueDate).endOf("day").toISOString()
         : null,
     };
 
@@ -272,15 +279,6 @@ export default function ManualTestCaseEditor() {
 
   const handleCancel = () => {
     router.push(`/manual-test?projectId=${projectId}`);
-  };
-
-  const handleSaveAsDraft = async () => {
-    const data = getValues();
-    if (!data.name?.trim()) {
-      toast.error("Test case name is required to save as draft");
-      return;
-    }
-    processSave(data, "Draft", false, false);
   };
 
   const handleSaveAndAddAnother = async () => {
@@ -319,13 +317,125 @@ export default function ManualTestCaseEditor() {
     "assignedTo"
   )}-${availableStaff.length}`;
 
+  const renderAssignmentCard = () => (
+    <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+            <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+          </div>
+          <CardTitle className="text-lg">Assignment</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="assignedTo" className="text-sm font-medium">
+            Assigned To
+          </Label>
+          <Select
+            key={assignedToSelectKey}
+            value={watch("assignedTo")}
+            onValueChange={(value) => setValue("assignedTo", value)}
+            {...register("assignedTo")}
+          >
+            <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
+              <SelectValue placeholder="Select assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableStaff.map((user) => (
+                <SelectItem key={user.email} value={user.email}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                      {user.username
+                        ? user.username.substring(0, 2).toUpperCase()
+                        : user.email.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {user.username || user.email.split("@")[0]}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {user.email}
+                      </span>
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label
+            htmlFor="dueDate"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            Due Date
+          </Label>
+          <Input
+            id="dueDate"
+            type="date"
+            {...register("dueDate")}
+            className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderActionsCard = () => (
+    <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+              className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              {isSubmitting && (
+                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
+              )}
+              {testCaseId ? "Update Test Case" : "Create Test Case"}
+            </Button>
+          </div>
+
+          {!testCaseId && (
+            <Button
+              type="button"
+              onClick={handleSaveAndAddAnother}
+              disabled={isSubmitting}
+              variant="outline"
+              className="w-full mt-2 border-dashed border-2 
+border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
+dark:border-green-500 dark:text-green-300 
+dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create and Add Another Test Case
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <form
-      onSubmit={handleSubmit(onValidSubmit)}
-      className="w-full min-h-screen"
-    >
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <form onSubmit={handleSubmit(onValidSubmit)} className="w-full">
+      <div
+        className={`mx-auto px-6 py-8 ${isEditMode ? "w-full" : "max-w-6xl"}`}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
               <CardHeader className="pb-4">
@@ -468,7 +578,7 @@ export default function ManualTestCaseEditor() {
                       required: "Description is required",
                     })}
                     placeholder="Describe the test steps, expected results, and acceptance criteria..."
-                    rows={6}
+                    rows={3}
                     className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                   />
                   {errors.description && (
@@ -492,153 +602,35 @@ export default function ManualTestCaseEditor() {
                 </div>
               </CardContent>
             </Card>
+
+            {isEditMode && renderAssignmentCard()}
+            {isEditMode && renderActionsCard()}
           </div>
 
-          <div className="space-y-6">
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <div className="lg:col-span-3 space-y-6">
+            {isEditMode ? (
+              <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                      <Bug className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <CardTitle className="text-lg">Bug Management</CardTitle>
                   </div>
-                  <CardTitle className="text-lg">Assignment</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo" className="text-sm font-medium">
-                    Assigned To
-                  </Label>
-                  <Select
-                    key={assignedToSelectKey}
-                    value={watch("assignedTo")}
-                    onValueChange={(value) => setValue("assignedTo", value)}
-                    {...register("assignedTo")}
-                  >
-                    <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStaff.map((user) => (
-                        <SelectItem key={user.email} value={user.email}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                              {user.username
-                                ? user.username.substring(0, 2).toUpperCase()
-                                : user.email.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {user.username || user.email.split("@")[0]}
-                              </span>
-                              <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {user.email}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="dueDate"
-                    className="text-sm font-medium flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                    Due Date
-                  </Label>
-                  <Input
-                    id="dueDate"
-                    type="datetime-local"
-                    {...register("dueDate")}
-                    className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card">
-              <CardContent className="p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span>Last saved:</span>
-                    <span className="font-medium">
-                      {lastSaved
-                        ? new Date(lastSaved).toLocaleString()
-                        : "Not saved yet"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Status:</span>
-                    <span
-                      className={`font-medium ${
-                        currentStatus === "Draft"
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-slate-600 dark:text-slate-400"
-                      }`}
-                    >
-                      {currentStatus}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={isSubmitting}
-                      className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSaveAsDraft}
-                      disabled={isSubmitting}
-                      className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-700"
-                    >
-                      Save as Draft
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      {isSubmitting && (
-                        <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
-                      )}
-                      {testCaseId ? "Update Test Case" : "Create Test Case"}
-                    </Button>
-                  </div>
-
-                  {!testCaseId && (
-                    <Button
-                      type="button"
-                      onClick={handleSaveAndAddAnother}
-                      disabled={isSubmitting}
-                      variant="outline"
-                      className="w-full mt-2 border-dashed border-2 
-                        border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
-                        dark:border-green-500 dark:text-green-300 
-                        dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create and Add Another Test Case
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Manage bugs related to this test case here. (Content to be
+                    implemented)
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {renderAssignmentCard()}
+                {renderActionsCard()}
+              </>
+            )}
           </div>
         </div>
       </div>
