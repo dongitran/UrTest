@@ -344,7 +344,7 @@ export default function ProjectTable({
   };
 
   return (
-    <Card>
+    <Card className="shadow-lg">
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <CardTitle>Projects List</CardTitle>

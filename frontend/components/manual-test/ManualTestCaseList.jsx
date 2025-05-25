@@ -248,7 +248,6 @@ export default function ManualTestCaseList({ project, setReRender }) {
                 size="icon"
                 className="h-7 w-7 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:text-blue-300"
                 onClick={() => {
-                  // Implement view functionality or use edit for now
                   router.push(
                     `/manual-test/ur-editor?project=${encodeURIComponent(
                       project.title
@@ -350,7 +349,7 @@ export default function ManualTestCaseList({ project, setReRender }) {
   };
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden shadow-sm mx-2">
+    <div className="border rounded-lg bg-card overflow-hidden shadow-lg mx-2">
       <Tabs
         value={activeFilter}
         onValueChange={setActiveFilter}

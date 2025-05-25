@@ -75,7 +75,10 @@ export default function AutomationTestStats({ project }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsData.map((stat, index) => (
-        <Card key={index} className={cn("stats-card", stat.colorClass)}>
+        <Card
+          key={index}
+          className={cn("stats-card shadow-lg", stat.colorClass)}
+        >
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
               <div className={cn("text-xl font-bold", stat.textClass)}>

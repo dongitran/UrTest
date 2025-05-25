@@ -17,7 +17,7 @@ export default function ManualTestStats({ project }) {
         {Array(4)
           .fill(0)
           .map((_, index) => (
-            <Card key={index} className="stats-card">
+            <Card key={index} className="stats-card shadow-lg">
               <CardContent className="p-3 flex items-center justify-center h-[60px]">
                 <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
               </CardContent>
@@ -57,7 +57,10 @@ export default function ManualTestStats({ project }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsData.map((stat, index) => (
-        <Card key={index} className={cn("stats-card", stat.colorClass)}>
+        <Card
+          key={index}
+          className={cn("stats-card shadow-lg", stat.colorClass)}
+        >
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
               <div className={cn("text-xl font-bold", stat.textClass)}>

@@ -327,7 +327,7 @@ export default function ManualTestCaseEditor() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
+            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -495,7 +495,7 @@ export default function ManualTestCaseEditor() {
           </div>
 
           <div className="space-y-6">
-            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
+            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -560,7 +560,7 @@ export default function ManualTestCaseEditor() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-0 bg-card">
+            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card">
               <CardContent className="p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
                   <div className="flex items-center justify-between">
@@ -587,7 +587,7 @@ export default function ManualTestCaseEditor() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
+            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex gap-2">

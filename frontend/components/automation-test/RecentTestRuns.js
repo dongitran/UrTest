@@ -21,7 +21,7 @@ export default function RecentTestRuns({ recentTestRun = [] }) {
   }, [currentPage, recentTestRun]);
 
   return (
-    <Card className="overflow-hidden border rounded-lg shadow-sm flex flex-col">
+    <Card className="overflow-hidden border rounded-lg shadow-lg flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <h3 className="font-medium">Recent Test Runs</h3>
         {recentTestRun.length > ITEMS_PER_PAGE && (

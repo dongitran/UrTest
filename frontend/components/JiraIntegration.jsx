@@ -58,7 +58,7 @@ export default function JiraIntegration() {
 
   return (
     <div className="mt-6">
-      <Card className="space-y-2 bg-card rounded-lg border shadow-sm">
+      <Card className="space-y-2 bg-card rounded-lg border shadow-lg">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-semibold">Jira Integration</h2>
           <p className="text-muted-foreground text-sm">
