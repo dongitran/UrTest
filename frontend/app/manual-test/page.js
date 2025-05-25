@@ -89,7 +89,7 @@ export default function ManualTestManagement() {
 
       {project && (
         <Fragment>
-          <div className="mt-6">
+          <div className="mt-6 mx-2">
             <ManualTestStats project={project} />
           </div>
 

@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { ManualTestApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export default function ManualTestStats({ project }) {
   const { data: stats } = useQuery({
@@ -13,43 +14,36 @@ export default function ManualTestStats({ project }) {
     {
       title: "Total Test Cases",
       value: stats?.totalTestCases || 24,
-      color: "border-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      textColor: "text-blue-600 dark:text-blue-400",
+      colorClass: "stats-blue",
+      textClass: "stats-blue-text",
     },
     {
       title: "Passed",
       value: stats?.passed || 18,
-      color: "border-green-500",
-      bgColor: "bg-green-50 dark:bg-green-950/30",
-      textColor: "text-green-600 dark:text-green-400",
+      colorClass: "stats-green",
+      textClass: "stats-green-text",
     },
     {
       title: "Progress",
       value: `${stats?.progress || 75}%`,
-      color: "border-orange-500",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-      textColor: "text-orange-600 dark:text-orange-400",
+      colorClass: "stats-orange",
+      textClass: "stats-orange-text",
     },
     {
       title: "Active Bugs",
       value: stats?.activeBugs || 5,
-      color: "border-red-500",
-      bgColor: "bg-red-50 dark:bg-red-950/30",
-      textColor: "text-red-600 dark:text-red-400",
+      colorClass: "stats-red",
+      textClass: "stats-red-text",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsData.map((stat, index) => (
-        <Card
-          key={index}
-          className={`${stat.bgColor} border-l-4 ${stat.color} shadow-sm hover:shadow-md transition-shadow`}
-        >
+        <Card key={index} className={cn("stats-card", stat.colorClass)}>
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className={`text-xl font-bold ${stat.textColor}`}>
+              <div className={cn("text-xl font-bold", stat.textClass)}>
                 {stat.value}
               </div>
               <div className="text-sm font-medium text-muted-foreground">

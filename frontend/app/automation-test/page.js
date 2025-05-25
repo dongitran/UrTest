@@ -95,7 +95,7 @@ export default function TestManagement() {
 
       {project && (
         <Fragment>
-          <div className="mt-6">
+          <div className="mt-6 mx-2">
             <AutomationTestStats project={project} />
           </div>
 

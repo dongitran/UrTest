@@ -1,11 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export default function AutomationTestStats({ project }) {
   const calculateStats = () => {
     const listTestSuite = project?.listTestSuite || [];
-
     const totalTestSuites = listTestSuite.length;
-
     let totalTestCases = 0;
     let passedTestCases = 0;
 
@@ -17,7 +16,6 @@ export default function AutomationTestStats({ project }) {
       } else {
         const estimatedCases = suite.testCaseCount || 3;
         totalTestCases += estimatedCases;
-
         if (suite.status === "Passed" || suite.status === "Completed") {
           passedTestCases += estimatedCases;
         }
@@ -37,16 +35,11 @@ export default function AutomationTestStats({ project }) {
         ? Math.round((passedTestCases / totalTestCases) * 100)
         : 0;
 
-    const runningTests = listTestSuite.filter(
-      (suite) => suite.status === "Running"
-    ).length;
-
     return {
       totalTestSuites,
       totalTestCases,
       passedTestCases,
       successRate,
-      runningTests,
     };
   };
 
@@ -56,43 +49,36 @@ export default function AutomationTestStats({ project }) {
     {
       title: "Total Test Suites",
       value: stats.totalTestSuites,
-      color: "border-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      textColor: "text-blue-600 dark:text-blue-400",
+      colorClass: "stats-blue",
+      textClass: "stats-blue-text",
     },
     {
       title: "Total Test Cases",
       value: stats.totalTestCases,
-      color: "border-purple-500",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-      textColor: "text-purple-600 dark:text-purple-400",
+      colorClass: "stats-purple",
+      textClass: "stats-purple-text",
     },
     {
       title: "Passed Cases",
       value: stats.passedTestCases,
-      color: "border-green-500",
-      bgColor: "bg-green-50 dark:bg-green-950/30",
-      textColor: "text-green-600 dark:text-green-400",
+      colorClass: "stats-green",
+      textClass: "stats-green-text",
     },
     {
       title: "Success Rate",
       value: `${stats.successRate}%`,
-      color: "border-orange-500",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-      textColor: "text-orange-600 dark:text-orange-400",
+      colorClass: "stats-orange",
+      textClass: "stats-orange-text",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsData.map((stat, index) => (
-        <Card
-          key={index}
-          className={`${stat.bgColor} border-l-4 ${stat.color} shadow-sm hover:shadow-md transition-shadow`}
-        >
+        <Card key={index} className={cn("stats-card", stat.colorClass)}>
           <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className={`text-xl font-bold ${stat.textColor}`}>
+              <div className={cn("text-xl font-bold", stat.textClass)}>
                 {stat.value}
               </div>
               <div className="text-sm font-medium text-muted-foreground">
