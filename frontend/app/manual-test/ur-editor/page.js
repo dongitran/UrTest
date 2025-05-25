@@ -26,6 +26,7 @@ import {
   Zap,
   Target,
   Hash,
+  Plus,
 } from "lucide-react";
 import TagInput from "@/components/TagInput";
 import { useForm } from "react-hook-form";
@@ -37,19 +38,27 @@ const priorityOptions = [
   {
     value: "high",
     label: "High",
-    color: "bg-red-500 hover:bg-red-600",
+    unselectedColor: "bg-gray-50 hover:bg-red-50 text-red-400 border-gray-100",
+    selectedColor:
+      "bg-red-300 hover:bg-red-400 text-white border-red-300 shadow-sm ring-2 ring-red-50",
     icon: "🔥",
   },
   {
     value: "medium",
     label: "Medium",
-    color: "bg-amber-500 hover:bg-amber-600",
+    unselectedColor:
+      "bg-gray-50 hover:bg-amber-50 text-amber-400 border-gray-100",
+    selectedColor:
+      "bg-amber-300 hover:bg-amber-400 text-white border-amber-300 shadow-sm ring-2 ring-amber-50",
     icon: "⚡",
   },
   {
     value: "low",
     label: "Low",
-    color: "bg-green-500 hover:bg-green-600",
+    unselectedColor:
+      "bg-gray-50 hover:bg-green-50 text-green-400 border-gray-100",
+    selectedColor:
+      "bg-green-300 hover:bg-green-400 text-white border-green-300 shadow-sm ring-2 ring-green-50",
     icon: "🌱",
   },
 ];
@@ -199,6 +208,64 @@ export default function ManualTestCaseEditor() {
     }
   };
 
+  const handleSaveAndAddAnother = async () => {
+    const data = getValues();
+    if (!data.name?.trim()) {
+      toast.error("Test case name is required");
+      return;
+    }
+    if (!data.category) {
+      toast.error("Category is required");
+      return;
+    }
+    if (!data.description?.trim()) {
+      toast.error("Test description is required");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const payload = {
+        ...data,
+        priority,
+        tags,
+        projectId,
+      };
+
+      if (testCaseId) {
+        await ManualTestApi().updateTestCase(testCaseId, payload);
+        toast.success("Test case updated successfully");
+      } else {
+        await ManualTestApi().createTestCase(payload);
+        toast.success("Test case created successfully");
+      }
+
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        projectId,
+      ]);
+      await queryClient.invalidateQueries(["manual-test-cases", projectId]);
+
+      reset({
+        name: "",
+        category: "",
+        estimatedTime: "",
+        description: "",
+        assignedTo: "",
+        dueDate: "",
+      });
+      setPriority("medium");
+      setTags([]);
+
+      toast.success("Ready to create another test case");
+    } catch (error) {
+      console.error("Error saving test case:", error);
+      toast.error("Failed to save test case");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (testCaseLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -207,70 +274,8 @@ export default function ManualTestCaseEditor() {
     );
   }
 
-  const selectedCategory = categoryOptions.find(
-    (cat) => cat.value === watch("category")
-  );
-  const selectedUser = mockUsers.find(
-    (u) => u.id.toString() === watch("assignedTo")
-  );
-
   return (
     <div className="w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-                {testCaseId ? "Edit Test Case" : "Create Test Case"}
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                {testCaseId
-                  ? "Modify your test case details"
-                  : "Create a new manual test case for your project"}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSaveAsDraft}
-              disabled={isLoading}
-              className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20"
-            >
-              Save as Draft
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              {isLoading && (
-                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
-              )}
-              {testCaseId ? "Update Test Case" : "Create Test Case"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -313,12 +318,7 @@ export default function ManualTestCaseEditor() {
                       onValueChange={(value) => setValue("category", value)}
                     >
                       <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500">
-                        <div className="flex items-center gap-2">
-                          {selectedCategory && (
-                            <span>{selectedCategory.icon}</span>
-                          )}
-                          <SelectValue placeholder="Select test category" />
-                        </div>
+                        <SelectValue placeholder="Select test category" />
                       </SelectTrigger>
                       <SelectContent>
                         {categoryOptions.map((option) => (
@@ -345,15 +345,13 @@ export default function ManualTestCaseEditor() {
                         <Button
                           key={option.value}
                           type="button"
-                          variant={
-                            priority === option.value ? "default" : "outline"
-                          }
+                          variant="outline"
                           size="sm"
                           onClick={() => setPriority(option.value)}
-                          className={`flex-1 gap-2 h-10 transition-all duration-200 ${
+                          className={`flex-1 gap-2 h-10 transition-all duration-200 border ${
                             priority === option.value
-                              ? `${option.color} text-white shadow-lg`
-                              : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                              ? `${option.selectedColor}`
+                              : `${option.unselectedColor}`
                           }`}
                         >
                           <span>{option.icon}</span>
@@ -470,24 +468,6 @@ export default function ManualTestCaseEditor() {
                     className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors"
                   />
                 </div>
-
-                {selectedUser && (
-                  <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                        {selectedUser.avatar}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">
-                          {selectedUser.name}
-                        </div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                          {selectedUser.email}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -507,37 +487,51 @@ export default function ManualTestCaseEditor() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
 
-        <div className="mt-8 flex items-center justify-center">
-          <div className="flex gap-4 p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSaveAsDraft}
-              disabled={isLoading}
-              className="px-6 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
-            >
-              Save as Draft
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              {isLoading && (
-                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
-              )}
-              {testCaseId ? "Update Test Case" : "Create Test Case"}
-            </Button>
+            <Card className="shadow-xl border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                      className="flex-1 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleSaveAsDraft}
+                      disabled={isLoading}
+                      className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20"
+                    >
+                      Save as Draft
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={isLoading}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      {isLoading && (
+                        <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
+                      )}
+                      {testCaseId ? "Update Test Case" : "Create Test Case"}
+                    </Button>
+                  </div>
+
+                  <Button
+                    onClick={handleSaveAndAddAnother}
+                    disabled={isLoading}
+                    variant="outline"
+                    className="w-full mt-2 border-dashed border-2 border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create and Add Another Test Case
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
