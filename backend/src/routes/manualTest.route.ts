@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import db from 'db/db';
-import { ManualTestCaseTable } from 'db/schema';
-import { eq, and, isNull, inArray, count, sql } from 'drizzle-orm';
+import { ManualTestCaseTable, BugTable } from 'db/schema';
+import { eq, and, isNull, inArray, count, sql, desc as drizzleDesc } from 'drizzle-orm';
 import dayjs from 'dayjs';
 import fromNow from 'dayjs/plugin/relativeTime';
 import { ulid } from 'ulid';
 import * as ManualTestCaseSchema from 'lib/Zod/ManualTestCaseSchema';
+import * as BugSchema from 'lib/Zod/BugSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
@@ -140,7 +141,7 @@ ManualTestRoute.get(
 
     const responseTc = {
       ...testCase,
-      assignedTo: testCase.assignedToEmail, // Ensure frontend gets the email for the select value
+      assignedTo: testCase.assignedToEmail,
     };
 
     return ctx.json(responseTc);
@@ -174,7 +175,7 @@ ManualTestRoute.post(
         priority: body.priority || 'Medium',
         estimatedTime: body.estimatedTime,
         description: body.description,
-        assignedTo: body.assignedTo ? body.assignedTo.split('@')[0] : null, // Store username part or full email
+        assignedTo: body.assignedTo ? body.assignedTo.split('@')[0] : null,
         assignedToEmail: body.assignedTo,
         dueDate: body.dueDate,
         tags: body.tags,
@@ -186,12 +187,12 @@ ManualTestRoute.post(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_CREATED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_CREATED,
       body.projectId,
       user.email,
       `Created manual test case "${body.name}"`,
       testCase.id,
-      'manual_test_case' as any
+      'manual_test_case'
     );
 
     return ctx.json(testCase);
@@ -260,12 +261,12 @@ ManualTestRoute.patch(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_UPDATED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_UPDATED,
       testCase.projectId,
       user.email,
       `Updated manual test case "${updatedTestCase.name}"`,
       testCase.id,
-      'manual_test_case' as any,
+      'manual_test_case',
       {
         previousName: testCase.name,
         newName: updatedTestCase.name,
@@ -317,12 +318,12 @@ ManualTestRoute.delete(
       .where(eq(ManualTestCaseTable.id, id));
 
     await logActivity(
-      'MANUAL_TEST_CASE_DELETED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_DELETED,
       testCase.projectId,
       user.email,
       `Deleted manual test case "${testCase.name}"`,
       testCase.id,
-      'manual_test_case' as any
+      'manual_test_case'
     );
 
     return ctx.json({ message: 'Test case deleted successfully' });
@@ -371,12 +372,12 @@ ManualTestRoute.post(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_EXECUTED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_EXECUTED,
       testCase.projectId,
       user.email,
       `Executed manual test case "${testCase.name}" with status: ${body.status}`,
       testCase.id,
-      'manual_test_case' as any,
+      'manual_test_case',
       {
         status: body.status,
         notes: body.notes,
@@ -427,6 +428,86 @@ ManualTestRoute.patch(
       .then((res) => res[0]);
 
     return ctx.json(updatedTestCase);
+  }
+);
+
+ManualTestRoute.post(
+  '/test-cases/:testCaseId/bugs',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
+  zValidator('param', BugSchema.schemaForTestCaseIdParam),
+  zValidator('json', BugSchema.schemaForCreateBug),
+  async (ctx) => {
+    const { testCaseId } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const manualTestCase = await db.query.ManualTestCaseTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, testCaseId), isNull(clm.deletedAt)),
+    });
+
+    if (!manualTestCase) {
+      return ctx.json({ message: 'Manual Test Case not found' }, 404);
+    }
+
+    if (manualTestCase.projectId !== body.projectId) {
+      return ctx.json({ message: 'Project ID mismatch with test case' }, 400);
+    }
+
+    const bug = await db
+      .insert(BugTable)
+      .values({
+        id: ulid(),
+        manualTestCaseId: testCaseId,
+        projectId: body.projectId,
+        title: body.title,
+        description: body.description,
+        severity: body.severity,
+        priority: body.priority,
+        status: 'Open',
+        assignedToEmail: body.assignedToEmail,
+        reporterEmail: user.email,
+        createdAt: dayjs().toISOString(),
+        createdBy: user.email,
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_CREATED,
+      body.projectId,
+      user.email,
+      `Created bug "${bug.title}" for test case "${manualTestCase.name}"`,
+      bug.id,
+      'bug'
+    );
+
+    return ctx.json(bug, 201);
+  }
+);
+
+ManualTestRoute.get(
+  '/test-cases/:testCaseId/bugs',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
+  zValidator('param', BugSchema.schemaForTestCaseIdParam),
+  async (ctx) => {
+    const { testCaseId } = ctx.req.valid('param');
+
+    const manualTestCase = await db.query.ManualTestCaseTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, testCaseId), isNull(clm.deletedAt)),
+    });
+
+    if (!manualTestCase) {
+      return ctx.json({ message: 'Manual Test Case not found, cannot fetch bugs.' }, 404);
+    }
+
+    const bugs = await db.query.BugTable.findMany({
+      where: (clm, { eq, and, isNull }) =>
+        and(eq(clm.manualTestCaseId, testCaseId), isNull(clm.deletedAt)),
+      orderBy: (clm, { desc }) => drizzleDesc(clm.createdAt),
+    });
+    return ctx.json(bugs);
   }
 );
 
