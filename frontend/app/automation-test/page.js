@@ -1,10 +1,11 @@
 "use client";
 
-import EditProjectModal from "@/components/test-management/EditProjectModal";
-import ProjectSelector from "@/components/test-management/ProjectSelector";
-import RecentTestRuns from "@/components/test-management/RecentTestRuns";
-import TestCaseList from "@/components/test-management/TestCaseList";
-import TestRoute from "@/components/test-management/TestResource";
+import AutomationTestStats from "@/components/automation-test/AutomationTestStats";
+import EditProjectModal from "@/components/automation-test/EditProjectModal";
+import ProjectSelector from "@/components/automation-test/ProjectSelector";
+import RecentTestRuns from "@/components/automation-test/RecentTestRuns";
+import TestCaseList from "@/components/automation-test/TestCaseList";
+import TestRoute from "@/components/automation-test/TestResource";
 import { Button } from "@/components/ui/button";
 import { Edit, Users } from "lucide-react";
 import dayjs from "dayjs";
@@ -56,7 +57,7 @@ export default function TestManagement() {
   }, [projectId, queryClient]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       {headerContainer &&
         createPortal(
           <div className="flex items-center gap-4">
@@ -94,15 +95,23 @@ export default function TestManagement() {
 
       {project && (
         <Fragment>
-          <TestCaseList
-            setReRender={setReRender}
-            project={project}
-            listTestSuite={project.listTestSuite}
-          />
+          <div className="mt-6 mx-2">
+            <AutomationTestStats project={project} />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TestRoute project={project} />
-            <RecentTestRuns recentTestRun={project.recentTestRun} />
+          <div className="mt-6">
+            <TestCaseList
+              setReRender={setReRender}
+              project={project}
+              listTestSuite={project.listTestSuite}
+            />
+          </div>
+
+          <div className="mt-6 mx-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <TestRoute project={project} />
+              <RecentTestRuns recentTestRun={project.recentTestRun} />
+            </div>
           </div>
 
           <EditProjectModal

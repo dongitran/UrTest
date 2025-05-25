@@ -16,6 +16,7 @@ import ActivityRoute from '@route/activity.route';
 import JiraOAuthRoute from '@route/jiraOauth.route';
 import JiraRoute from '@route/jira.route';
 import JiraLinkRoute from '@route/jiraLink.route';
+import ManualTestRoute from '@route/manualTest.route';
 
 const app = new Hono();
 
@@ -35,6 +36,7 @@ app.route('/api/activities', ActivityRoute);
 app.route('/api/jira-oauth', JiraOAuthRoute);
 app.route('/api/jira', JiraRoute);
 app.route('/api/jira-link', JiraLinkRoute);
+app.route('/api/manual-test', ManualTestRoute);
 
 app.onError(ErrorLog);
 
