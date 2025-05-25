@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import {
   LoaderCircle,
-  ArrowLeft,
   FileText,
   Tag,
   Clock,
@@ -38,27 +37,37 @@ const priorityOptions = [
   {
     value: "high",
     label: "High",
-    unselectedColor: "bg-gray-50 hover:bg-red-50 text-red-400 border-gray-100",
+    unselectedColor:
+      "bg-gray-50 hover:bg-red-100 text-red-500 border-gray-200 " +
+      "dark:bg-red-900 dark:text-red-300 dark:border-red-700 " +
+      "dark:hover:bg-red-800 dark:hover:text-red-100 dark:hover:border-red-600",
     selectedColor:
-      "bg-red-300 hover:bg-red-400 text-white border-red-300 shadow-sm ring-2 ring-red-50",
+      "bg-red-300 hover:bg-red-400 text-white border-red-300 " +
+      "dark:bg-red-500 dark:hover:bg-red-600 dark:text-white dark:border-red-500 shadow-sm ring-2 ring-red-50 dark:ring-red-400",
     icon: "🔥",
   },
   {
     value: "medium",
     label: "Medium",
     unselectedColor:
-      "bg-gray-50 hover:bg-amber-50 text-amber-400 border-gray-100",
+      "bg-gray-50 hover:bg-amber-100 text-amber-500 border-gray-200 " +
+      "dark:bg-amber-900 dark:text-amber-300 dark:border-amber-700 " +
+      "dark:hover:bg-amber-800 dark:hover:text-amber-100 dark:hover:border-amber-600",
     selectedColor:
-      "bg-amber-300 hover:bg-amber-400 text-white border-amber-300 shadow-sm ring-2 ring-amber-50",
+      "bg-amber-300 hover:bg-amber-400 text-white border-amber-300 " +
+      "dark:bg-amber-500 dark:hover:bg-amber-600 dark:text-white dark:border-amber-500 shadow-sm ring-2 ring-amber-50 dark:ring-amber-400",
     icon: "⚡",
   },
   {
     value: "low",
     label: "Low",
     unselectedColor:
-      "bg-gray-50 hover:bg-green-50 text-green-400 border-gray-100",
+      "bg-gray-50 hover:bg-green-100 text-green-500 border-gray-200 " +
+      "dark:bg-green-900 dark:text-green-300 dark:border-green-700 " +
+      "dark:hover:bg-green-800 dark:hover:text-green-100 dark:hover:border-green-600",
     selectedColor:
-      "bg-green-300 hover:bg-green-400 text-white border-green-300 shadow-sm ring-2 ring-green-50",
+      "bg-green-300 hover:bg-green-400 text-white border-green-300 " +
+      "dark:bg-green-500 dark:hover:bg-green-600 dark:text-white dark:border-green-500 shadow-sm ring-2 ring-green-50 dark:ring-green-400",
     icon: "🌱",
   },
 ];
@@ -275,11 +284,11 @@ export default function ManualTestCaseEditor() {
   }
 
   return (
-    <div className="w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
+    <div className="w-full min-h-screen">
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-xl border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -295,14 +304,14 @@ export default function ManualTestCaseEditor() {
                       htmlFor="name"
                       className="text-sm font-medium flex items-center gap-2"
                     >
-                      <Hash className="h-4 w-4 text-slate-500" />
+                      <Hash className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                       Test Case Name *
                     </Label>
                     <Input
                       id="name"
                       {...register("name")}
                       placeholder="Enter descriptive test case name"
-                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
+                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors bg-background"
                     />
                   </div>
                   <div className="space-y-2">
@@ -310,14 +319,14 @@ export default function ManualTestCaseEditor() {
                       htmlFor="category"
                       className="text-sm font-medium flex items-center gap-2"
                     >
-                      <Target className="h-4 w-4 text-slate-500" />
+                      <Target className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                       Category *
                     </Label>
                     <Select
                       value={watch("category")}
                       onValueChange={(value) => setValue("category", value)}
                     >
-                      <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500">
+                      <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 bg-background">
                         <SelectValue placeholder="Select test category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -337,7 +346,7 @@ export default function ManualTestCaseEditor() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-slate-500" />
+                      <Zap className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                       Priority *
                     </Label>
                     <div className="flex gap-2">
@@ -365,7 +374,7 @@ export default function ManualTestCaseEditor() {
                       htmlFor="estimatedTime"
                       className="text-sm font-medium flex items-center gap-2"
                     >
-                      <Clock className="h-4 w-4 text-slate-500" />
+                      <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                       Estimated Time (minutes)
                     </Label>
                     <Input
@@ -373,7 +382,7 @@ export default function ManualTestCaseEditor() {
                       type="number"
                       {...register("estimatedTime")}
                       placeholder="15"
-                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors"
+                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                     />
                   </div>
                 </div>
@@ -383,7 +392,7 @@ export default function ManualTestCaseEditor() {
                     htmlFor="description"
                     className="text-sm font-medium flex items-center gap-2"
                   >
-                    <FileText className="h-4 w-4 text-slate-500" />
+                    <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                     What to Test *
                   </Label>
                   <Textarea
@@ -391,20 +400,20 @@ export default function ManualTestCaseEditor() {
                     {...register("description")}
                     placeholder="Describe the test steps, expected results, and acceptance criteria..."
                     rows={6}
-                    className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors"
+                    className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-slate-500" />
+                    <Tag className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                     Tags
                   </Label>
                   <TagInput
                     value={tags}
                     onChange={setTags}
                     placeholder="Add tags to categorize your test case..."
-                    className="w-full h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors"
+                    className="w-full h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                   />
                 </div>
               </CardContent>
@@ -412,7 +421,7 @@ export default function ManualTestCaseEditor() {
           </div>
 
           <div className="space-y-6">
-            <Card className="shadow-xl border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -430,7 +439,7 @@ export default function ManualTestCaseEditor() {
                     value={watch("assignedTo")}
                     onValueChange={(value) => setValue("assignedTo", value)}
                   >
-                    <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700">
+                    <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
                       <SelectValue placeholder="Select assignee" />
                     </SelectTrigger>
                     <SelectContent>
@@ -442,7 +451,7 @@ export default function ManualTestCaseEditor() {
                             </div>
                             <div className="flex flex-col">
                               <span className="font-medium">{user.name}</span>
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
                                 {user.email}
                               </span>
                             </div>
@@ -458,20 +467,20 @@ export default function ManualTestCaseEditor() {
                     htmlFor="dueDate"
                     className="text-sm font-medium flex items-center gap-2"
                   >
-                    <Calendar className="h-4 w-4 text-slate-500" />
+                    <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                     Due Date
                   </Label>
                   <Input
                     id="dueDate"
                     type="datetime-local"
                     {...register("dueDate")}
-                    className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors"
+                    className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-700/50">
+            <Card className="shadow-xl border-0 bg-card">
               <CardContent className="p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
                   <div className="flex items-center justify-between">
@@ -488,7 +497,7 @@ export default function ManualTestCaseEditor() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl border-0 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm">
+            <Card className="shadow-xl border-0 bg-card backdrop-blur-sm">
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -496,7 +505,7 @@ export default function ManualTestCaseEditor() {
                       variant="outline"
                       onClick={handleCancel}
                       disabled={isLoading}
-                      className="flex-1 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                       Cancel
                     </Button>
@@ -504,14 +513,14 @@ export default function ManualTestCaseEditor() {
                       variant="outline"
                       onClick={handleSaveAsDraft}
                       disabled={isLoading}
-                      className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20"
+                      className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-700"
                     >
                       Save as Draft
                     </Button>
                     <Button
                       onClick={handleSave}
                       disabled={isLoading}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       {isLoading && (
                         <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
@@ -524,7 +533,10 @@ export default function ManualTestCaseEditor() {
                     onClick={handleSaveAndAddAnother}
                     disabled={isLoading}
                     variant="outline"
-                    className="w-full mt-2 border-dashed border-2 border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
+                    className="w-full mt-2 border-dashed border-2 
+border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
+dark:border-green-500 dark:text-green-300 
+dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Create and Add Another Test Case
