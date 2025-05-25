@@ -21,6 +21,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  LoaderCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
@@ -40,218 +41,60 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ManualTestApi } from "@/lib/api";
-
-const mockTestCases = [
-  {
-    id: 1,
-    name: "Login with valid credentials",
-    category: "Functional Test",
-    priority: "High",
-    assignedTo: { name: "John Doe", email: "john@example.com", avatar: null },
-    status: "Passed",
-    bugStatus: { type: "none", message: "No Issues" },
-    lastUpdated: "2 hours ago",
-  },
-  {
-    id: 2,
-    name: "Payment processing flow",
-    category: "Integration Test",
-    priority: "High",
-    assignedTo: {
-      name: "Alice Smith",
-      email: "alice@example.com",
-      avatar: null,
-    },
-    status: "Failed",
-    bugStatus: { type: "bug", reporter: "Mike Wilson", message: "Bug Found" },
-    lastUpdated: "1 hour ago",
-  },
-  {
-    id: 3,
-    name: "User profile update",
-    category: "UI Test",
-    priority: "Medium",
-    assignedTo: { name: "Bob Johnson", email: "bob@example.com", avatar: null },
-    status: "In Progress",
-    bugStatus: { type: "testing", message: "Testing" },
-    lastUpdated: "30 minutes ago",
-  },
-  {
-    id: 4,
-    name: "Data export functionality",
-    category: "Functional Test",
-    priority: "Low",
-    assignedTo: { name: "John Doe", email: "john@example.com", avatar: null },
-    status: "Not Started",
-    bugStatus: { type: "pending", message: "Pending" },
-    lastUpdated: "Never",
-  },
-  {
-    id: 5,
-    name: "Mobile responsive layout",
-    category: "UI Test",
-    priority: "Medium",
-    assignedTo: {
-      name: "Alice Smith",
-      email: "alice@example.com",
-      avatar: null,
-    },
-    status: "Passed",
-    bugStatus: { type: "fixed", reporter: "Sarah Chen", message: "Bug Fixed" },
-    lastUpdated: "45 minutes ago",
-  },
-  {
-    id: 6,
-    name: "API authentication security",
-    category: "Security Test",
-    priority: "High",
-    assignedTo: {
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      avatar: null,
-    },
-    status: "In Progress",
-    bugStatus: { type: "testing", message: "Testing" },
-    lastUpdated: "15 minutes ago",
-  },
-  {
-    id: 7,
-    name: "Database performance load",
-    category: "Performance Test",
-    priority: "Medium",
-    assignedTo: {
-      name: "Mike Wilson",
-      email: "mike@example.com",
-      avatar: null,
-    },
-    status: "Passed",
-    bugStatus: { type: "none", message: "No Issues" },
-    lastUpdated: "3 hours ago",
-  },
-  {
-    id: 8,
-    name: "Email notification system",
-    category: "Integration Test",
-    priority: "Medium",
-    assignedTo: { name: "Bob Johnson", email: "bob@example.com", avatar: null },
-    status: "Failed",
-    bugStatus: { type: "bug", reporter: "John Doe", message: "Bug Found" },
-    lastUpdated: "2 hours ago",
-  },
-  {
-    id: 9,
-    name: "Shopping cart functionality",
-    category: "Functional Test",
-    priority: "High",
-    assignedTo: {
-      name: "Alice Smith",
-      email: "alice@example.com",
-      avatar: null,
-    },
-    status: "Passed",
-    bugStatus: { type: "none", message: "No Issues" },
-    lastUpdated: "1 hour ago",
-  },
-  {
-    id: 10,
-    name: "Cross-browser compatibility",
-    category: "UI Test",
-    priority: "Medium",
-    assignedTo: {
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      avatar: null,
-    },
-    status: "In Progress",
-    bugStatus: { type: "testing", message: "Testing" },
-    lastUpdated: "20 minutes ago",
-  },
-  {
-    id: 11,
-    name: "File upload validation",
-    category: "Security Test",
-    priority: "High",
-    assignedTo: {
-      name: "Mike Wilson",
-      email: "mike@example.com",
-      avatar: null,
-    },
-    status: "Not Started",
-    bugStatus: { type: "pending", message: "Pending" },
-    lastUpdated: "Never",
-  },
-  {
-    id: 12,
-    name: "Search functionality accuracy",
-    category: "Functional Test",
-    priority: "Medium",
-    assignedTo: { name: "John Doe", email: "john@example.com", avatar: null },
-    status: "Passed",
-    bugStatus: { type: "fixed", reporter: "Alice Smith", message: "Bug Fixed" },
-    lastUpdated: "4 hours ago",
-  },
-  {
-    id: 13,
-    name: "Social media integration",
-    category: "Integration Test",
-    priority: "Low",
-    assignedTo: { name: "Bob Johnson", email: "bob@example.com", avatar: null },
-    status: "In Progress",
-    bugStatus: { type: "testing", message: "Testing" },
-    lastUpdated: "1 hour ago",
-  },
-  {
-    id: 14,
-    name: "Page loading speed optimization",
-    category: "Performance Test",
-    priority: "High",
-    assignedTo: {
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      avatar: null,
-    },
-    status: "Failed",
-    bugStatus: { type: "bug", reporter: "Mike Wilson", message: "Bug Found" },
-    lastUpdated: "30 minutes ago",
-  },
-  {
-    id: 15,
-    name: "Form validation messages",
-    category: "UI Test",
-    priority: "Medium",
-    assignedTo: {
-      name: "Alice Smith",
-      email: "alice@example.com",
-      avatar: null,
-    },
-    status: "Passed",
-    bugStatus: { type: "none", message: "No Issues" },
-    lastUpdated: "2 hours ago",
-  },
-];
+import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 const statusFilters = [
-  { key: "all", label: "All Cases", count: 24 },
-  { key: "not-started", label: "Not Started", count: 6 },
-  { key: "in-progress", label: "In Progress", count: 8 },
-  { key: "passed", label: "Passed", count: 7 },
-  { key: "failed", label: "Failed", count: 3 },
+  { key: "all", label: "All Cases" },
+  { key: "draft", label: "Draft" },
+  { key: "not-started", label: "Not Started" },
+  { key: "in-progress", label: "In Progress" },
+  { key: "passed", label: "Passed" },
+  { key: "failed", label: "Failed" },
 ];
 
 export default function ManualTestCaseList({ project, setReRender }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState(null);
 
-  const { data: testCases = mockTestCases } = useQuery({
+  const { data: testCasesData, isLoading: isLoadingTestCases } = useQuery({
     queryKey: ["manual-test-cases", project.id, activeFilter],
     queryFn: () =>
-      ManualTestApi().getTestCases(project.id, { status: activeFilter }),
+      ManualTestApi().getTestCases(project.id, {
+        status: activeFilter === "all" ? undefined : activeFilter,
+      }),
     enabled: !!project.id,
+    placeholderData: { testCases: [] },
+  });
+
+  const testCases = testCasesData || [];
+
+  const deleteMutation = useMutation({
+    mutationFn: (testCaseId) => ManualTestApi().deleteTestCase(testCaseId),
+    onSuccess: async () => {
+      toast.success("Test case deleted successfully");
+      setDeleteDialogOpen(false);
+      setSelectedTestCase(null);
+      await queryClient.invalidateQueries([
+        "manual-test-cases",
+        project.id,
+        activeFilter,
+      ]);
+      await queryClient.invalidateQueries([
+        PROJECT_DETAIL_QUERY_KEY,
+        project.id,
+      ]);
+      if (setReRender) setReRender({});
+    },
+    onError: (error) => {
+      toast.error("Failed to delete test case");
+      console.error("Delete error:", error);
+    },
   });
 
   const columns = useMemo(() => {
@@ -286,7 +129,10 @@ export default function ManualTestCaseList({ project, setReRender }) {
             Low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-200 dark:border-green-800",
           };
           return (
-            <Badge variant="outline" className={priorityClass[priority]}>
+            <Badge
+              variant="outline"
+              className={priorityClass[priority] || "bg-gray-100 text-gray-800"}
+            >
               {priority}
             </Badge>
           );
@@ -297,18 +143,25 @@ export default function ManualTestCaseList({ project, setReRender }) {
         header: "Assigned To",
         cell: ({ row }) => {
           const assignedTo = row.getValue("assignedTo");
+          if (!assignedTo)
+            return <span className="text-sm text-muted-foreground">-</span>;
           const initials = assignedTo.name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .substring(0, 2);
+            ? assignedTo.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .substring(0, 2)
+                .toUpperCase()
+            : assignedTo.email.substring(0, 2).toUpperCase();
           return (
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={assignedTo.avatar} />
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
               </Avatar>
-              <span className="text-sm">{assignedTo.name}</span>
+              <span className="text-sm">
+                {assignedTo.name || assignedTo.email.split("@")[0]}
+              </span>
             </div>
           );
         },
@@ -327,9 +180,14 @@ export default function ManualTestCaseList({ project, setReRender }) {
               "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700",
             "In Progress":
               "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+            Draft:
+              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
           };
           return (
-            <Badge variant="outline" className={statusClass[status]}>
+            <Badge
+              variant="outline"
+              className={statusClass[status] || "bg-gray-100 text-gray-800"}
+            >
               {status}
             </Badge>
           );
@@ -340,6 +198,9 @@ export default function ManualTestCaseList({ project, setReRender }) {
         header: "Bug Status",
         cell: ({ row }) => {
           const bugStatus = row.getValue("bugStatus");
+          if (!bugStatus || !bugStatus.type)
+            return <span className="text-sm text-muted-foreground">-</span>;
+
           const bugStatusIcons = {
             none: <CheckCircle className="h-4 w-4 text-green-500" />,
             bug: <Bug className="h-4 w-4 text-red-500" />,
@@ -371,13 +232,14 @@ export default function ManualTestCaseList({ project, setReRender }) {
       {
         accessorKey: "lastUpdated",
         header: "Last Updated",
-        cell: ({ renderValue }) => {
-          return <span className="text-sm">{renderValue()}</span>;
+        cell: ({ row }) => {
+          const lastUpdated = row.getValue("lastUpdated");
+          return <span className="text-sm">{lastUpdated}</span>;
         },
       },
       {
         accessorKey: "actions",
-        header: ({ column }) => <div className="text-center">Actions</div>,
+        header: () => <div className="text-center">Actions</div>,
         cell: ({ row }) => {
           return (
             <div className="flex items-center justify-center gap-1">
@@ -386,7 +248,11 @@ export default function ManualTestCaseList({ project, setReRender }) {
                 size="icon"
                 className="h-7 w-7 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 dark:hover:text-blue-300"
                 onClick={() => {
-                  // View test case details
+                  router.push(
+                    `/manual-test/ur-editor?project=${encodeURIComponent(
+                      project.title
+                    )}&projectId=${project.id}&testCaseId=${row.original.id}`
+                  );
                 }}
               >
                 <Eye className="h-3 w-3" />
@@ -415,44 +281,54 @@ export default function ManualTestCaseList({ project, setReRender }) {
                   setSelectedTestCase(row.original);
                   setDeleteDialogOpen(true);
                 }}
+                disabled={
+                  deleteMutation.isLoading &&
+                  selectedTestCase?.id === row.original.id
+                }
               >
-                <Trash2 className="h-3 w-3" />
+                {deleteMutation.isLoading &&
+                selectedTestCase?.id === row.original.id ? (
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
               </Button>
             </div>
           );
         },
       },
     ];
-  }, [project, router]);
+  }, [
+    project,
+    router,
+    deleteMutation.isLoading,
+    selectedTestCase,
+    queryClient,
+    activeFilter,
+  ]);
 
   const filteredData = useMemo(() => {
     let filtered = testCases;
-
-    if (activeFilter !== "all") {
-      filtered = filtered.filter((testCase) => {
-        const statusMap = {
-          "not-started": "Not Started",
-          "in-progress": "In Progress",
-          passed: "Passed",
-          failed: "Failed",
-        };
-        return testCase.status === statusMap[activeFilter];
-      });
-    }
-
     if (searchQuery) {
       filtered = filtered.filter(
         (testCase) =>
           testCase.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          testCase.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          testCase.assignedTo.name
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          (testCase.category &&
+            testCase.category
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())) ||
+          (testCase.assignedTo?.name &&
+            testCase.assignedTo.name
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())) ||
+          (testCase.assignedTo?.email &&
+            testCase.assignedTo.email
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()))
       );
     }
-
     return filtered;
-  }, [testCases, activeFilter, searchQuery]);
+  }, [testCases, searchQuery]);
 
   const table = useReactTable({
     data: filteredData,
@@ -467,19 +343,13 @@ export default function ManualTestCaseList({ project, setReRender }) {
   });
 
   const handleDeleteTestCase = async () => {
-    try {
-      // await ManualTestApi().deleteTestCase(selectedTestCase.id);
-      toast.success("Test case deleted successfully");
-      setDeleteDialogOpen(false);
-      setSelectedTestCase(null);
-      if (setReRender) setReRender({});
-    } catch (error) {
-      toast.error("Failed to delete test case");
+    if (selectedTestCase) {
+      deleteMutation.mutate(selectedTestCase.id);
     }
   };
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden shadow-sm mx-2">
+    <div className="border rounded-lg bg-card overflow-hidden shadow-lg mx-2">
       <Tabs
         value={activeFilter}
         onValueChange={setActiveFilter}
@@ -536,9 +406,9 @@ export default function ManualTestCaseList({ project, setReRender }) {
             <div className="w-full border rounded-md overflow-hidden bg-card">
               <Table className="w-full">
                 <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    {table.getHeaderGroups().map((headerGroup) =>
-                      headerGroup.headers.map((header) => (
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
                         <TableHead
                           key={header.id}
                           className="py-2 px-3 text-sm font-semibold text-foreground"
@@ -550,12 +420,24 @@ export default function ManualTestCaseList({ project, setReRender }) {
                                 header.getContext()
                               )}
                         </TableHead>
-                      ))
-                    )}
-                  </TableRow>
+                      ))}
+                    </TableRow>
+                  ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isLoadingTestCases ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-32 text-center"
+                      >
+                        <div className="flex items-center justify-center">
+                          <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+                          <span className="ml-2">Loading test cases...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
@@ -632,7 +514,6 @@ export default function ManualTestCaseList({ project, setReRender }) {
         </div>
       </Tabs>
 
-      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -656,10 +537,18 @@ export default function ManualTestCaseList({ project, setReRender }) {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteMutation.isLoading}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTestCase}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTestCase}
+              disabled={deleteMutation.isLoading}
+            >
+              {deleteMutation.isLoading && (
+                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
+              )}
               Delete
             </Button>
           </DialogFooter>

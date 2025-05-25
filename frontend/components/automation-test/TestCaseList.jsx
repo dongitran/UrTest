@@ -339,7 +339,7 @@ export default function TestCaseList({
   }, [queryClient, project.id, setReRender]);
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden shadow-sm mx-2">
+    <div className="border rounded-lg bg-card overflow-hidden shadow-lg mx-2">
       <div className="px-4 py-4 border-b bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">

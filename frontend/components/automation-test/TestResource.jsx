@@ -49,7 +49,7 @@ export default function TestRoute({ project = {} }) {
   }, [project.id, refetch]);
 
   return (
-    <Card className="overflow-hidden border rounded-lg shadow-sm">
+    <Card className="overflow-hidden border rounded-lg shadow-lg">
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <h3 className="font-medium">Test Resources</h3>
         <div className="flex items-center gap-2">
