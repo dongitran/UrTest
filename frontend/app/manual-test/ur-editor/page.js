@@ -26,12 +26,21 @@ import {
   Target,
   Hash,
   Plus,
+  Bug,
 } from "lucide-react";
 import TagInput from "@/components/TagInput";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { ManualTestApi, ProjectApi } from "@/lib/api";
 import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import CreateBugModal from "@/components/manual-test/CreateBugModal";
+import BugList from "@/components/manual-test/BugList";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const priorityOptions = [
   {
@@ -92,6 +101,9 @@ export default function ManualTestCaseEditor() {
   const [priority, setPriority] = useState("Medium");
   const [lastSaved, setLastSaved] = useState(null);
   const [currentStatus, setCurrentStatus] = useState("Not Started");
+  const [isCreateBugModalOpen, setIsCreateBugModalOpen] = useState(false);
+
+  const isEditMode = !!testCaseId;
 
   const {
     register,
@@ -100,7 +112,7 @@ export default function ManualTestCaseEditor() {
     setValue,
     watch,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting: isTestCaseFormSubmitting },
   } = useForm({
     defaultValues: {
       name: "",
@@ -119,7 +131,7 @@ export default function ManualTestCaseEditor() {
   } = useQuery({
     queryKey: ["manual-test-case", testCaseId],
     queryFn: () => ManualTestApi().getTestCase(testCaseId),
-    enabled: !!testCaseId,
+    enabled: isEditMode,
   });
 
   const {
@@ -142,14 +154,10 @@ export default function ManualTestCaseEditor() {
         estimatedTime: data?.estimatedTime?.toString() || "",
         description: data?.description || "",
         assignedTo: data?.assignedToEmail || "",
-        dueDate: data?.dueDate
-          ? new Date(data.dueDate).toISOString().substring(0, 16)
-          : "",
+        dueDate: data?.dueDate ? dayjs(data.dueDate).format("YYYY-MM-DD") : "",
       };
       reset(defaultValues);
-
       setValue("category", defaultValues.category);
-
       if (availableStaff && availableStaff.length > 0) {
         const staffExists = availableStaff.some(
           (s) => s.email === defaultValues.assignedTo
@@ -162,7 +170,6 @@ export default function ManualTestCaseEditor() {
       } else if (!data?.assignedToEmail) {
         setValue("assignedTo", "");
       }
-
       setPriority(data?.priority || "Medium");
       setTags(data?.tags || []);
       setCurrentStatus(data?.status || "Not Started");
@@ -172,35 +179,56 @@ export default function ManualTestCaseEditor() {
   );
 
   useEffect(() => {
-    if (testCaseId && testCaseFetched && testCaseDetail) {
+    if (isEditMode && testCaseFetched && testCaseDetail) {
       if (staffFetched || !testCaseDetail.assignedToEmail) {
         resetFormWithData(testCaseDetail);
       }
-    } else if (!testCaseId) {
+    } else if (!isEditMode) {
       resetFormWithData(null);
     }
   }, [
-    testCaseId,
+    isEditMode,
     testCaseDetail,
     testCaseFetched,
     staffFetched,
     resetFormWithData,
   ]);
 
-  const mutation = useMutation({
+  const testCaseMutation = useMutation({
     mutationFn: (payload) => {
-      if (testCaseId) {
-        return ManualTestApi().updateTestCase(testCaseId, payload);
+      if (isEditMode) {
+        return ManualTestApi().updateTestCase(testCaseId, payload.data);
       } else {
-        return ManualTestApi().createTestCase(payload);
+        return ManualTestApi().createTestCase(payload.data);
       }
     },
-    onSuccess: async (data) => {
-      toast.success(
-        `Test case ${testCaseId ? "updated" : "created"} successfully`
-      );
+    onSuccess: async (data, variables) => {
+      const bugUpdatedFlag = localStorage.getItem("bug_updated_trigger");
+      if (bugUpdatedFlag) {
+        localStorage.removeItem("bug_updated_trigger");
+        await queryClient.invalidateQueries({
+          queryKey: ["manual-test-case", testCaseId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["available-staff", projectId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: [PROJECT_DETAIL_QUERY_KEY, projectId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["manual-test-cases", projectId],
+        });
+        localStorage.setItem("manual_test_updated", "true");
+        return;
+      }
 
-      if (testCaseId) {
+      if (variables.action === "create") {
+        toast.success("Test case created successfully");
+      } else if (variables.action === "update") {
+        toast.success("Test case updated successfully");
+      }
+
+      if (isEditMode) {
         await queryClient.invalidateQueries({
           queryKey: ["manual-test-case", testCaseId],
         });
@@ -208,7 +236,6 @@ export default function ManualTestCaseEditor() {
       await queryClient.invalidateQueries({
         queryKey: ["available-staff", projectId],
       });
-
       await queryClient.invalidateQueries({
         queryKey: [PROJECT_DETAIL_QUERY_KEY, projectId],
       });
@@ -217,24 +244,36 @@ export default function ManualTestCaseEditor() {
       });
 
       localStorage.setItem("manual_test_updated", "true");
-      if (data && data.id && !testCaseId) {
+
+      if (data && data.id && variables.action === "create") {
         setLastSaved(data.createdAt);
         setCurrentStatus(data.status);
-      } else if (data) {
+        if (!variables.isSaveAndAddAnother) {
+          router.replace(
+            `/manual-test/ur-editor?project=${encodeURIComponent(
+              searchParams.get("project") || ""
+            )}&projectId=${projectId}&testCaseId=${data.id}`
+          );
+        }
+      } else if (data && variables.action === "update") {
         setLastSaved(data.updatedAt || data.createdAt);
         setCurrentStatus(data.status);
+      }
+
+      if (variables.redirectAfterSave && variables.action === "update") {
+        router.push(`/manual-test?projectId=${projectId}`);
       }
     },
     onError: (error) => {
       console.error("Error saving test case:", error);
-      toast.error("Failed to save test case");
+      toast.error(error.response?.data?.message || "Failed to save test case");
     },
   });
 
-  const processSave = async (
+  const processSaveTestCase = async (
     formData,
     statusOverride = null,
-    redirect = true,
+    redirectAfterSave = true,
     shouldResetForm = false
   ) => {
     const estTime = formData.estimatedTime;
@@ -243,7 +282,7 @@ export default function ManualTestCaseEditor() {
         ? parseInt(estTime, 10)
         : undefined;
 
-    const payload = {
+    const apiPayload = {
       ...formData,
       priority,
       tags,
@@ -251,59 +290,65 @@ export default function ManualTestCaseEditor() {
       estimatedTime: estimatedTimeValue,
       status: statusOverride || currentStatus || "Not Started",
       dueDate: formData.dueDate
-        ? new Date(formData.dueDate).toISOString()
+        ? dayjs(formData.dueDate).endOf("day").toISOString()
         : null,
     };
 
-    await mutation.mutateAsync(payload);
+    const actionType = isEditMode ? "update" : "create";
 
-    if (redirect) {
-      router.push(`/manual-test?projectId=${projectId}`);
-    }
+    await testCaseMutation.mutateAsync({
+      data: apiPayload,
+      action: actionType,
+      isSaveAndAddAnother: shouldResetForm,
+      redirectAfterSave: redirectAfterSave,
+    });
+
     if (shouldResetForm) {
       resetFormWithData(null);
       toast.success("Ready to create another test case");
     }
   };
 
-  const onValidSubmit = (data) => {
-    processSave(data, null, true, false);
+  const onValidSubmitTestCase = (data) => {
+    processSaveTestCase(data, null, isEditMode, false);
   };
 
   const handleCancel = () => {
     router.push(`/manual-test?projectId=${projectId}`);
   };
 
-  const handleSaveAsDraft = async () => {
-    const data = getValues();
-    if (!data.name?.trim()) {
-      toast.error("Test case name is required to save as draft");
-      return;
-    }
-    processSave(data, "Draft", false, false);
-  };
-
   const handleSaveAndAddAnother = async () => {
     const data = getValues();
+    let valid = true;
     if (!data.name?.trim()) {
       toast.error("Test case name is required");
-      return;
+      valid = false;
     }
     if (!data.category) {
       toast.error("Category is required");
-      return;
+      valid = false;
     }
     if (!data.description?.trim()) {
       toast.error("Test description is required");
-      return;
+      valid = false;
     }
-    processSave(data, null, false, true);
+    if (!valid) return;
+
+    processSaveTestCase(data, null, false, true);
+  };
+
+  const handleBugCreated = () => {
+    queryClient.invalidateQueries(["bugs-for-test-case", testCaseId]);
+  };
+
+  const openCreateBugModal = (e) => {
+    setIsCreateBugModalOpen(true);
   };
 
   if (
-    testCaseLoading ||
-    (projectId && staffLoading && !staffFetched && !testCaseId) ||
-    (testCaseId && !testCaseFetched && testCaseLoading)
+    (isEditMode && testCaseLoading) ||
+    (!isEditMode && staffLoading && !staffFetched) ||
+    (isEditMode && !testCaseFetched && testCaseLoading)
   ) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -319,329 +364,337 @@ export default function ManualTestCaseEditor() {
     "assignedTo"
   )}-${availableStaff.length}`;
 
-  return (
-    <form
-      onSubmit={handleSubmit(onValidSubmit)}
-      className="w-full min-h-screen"
-    >
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+  const renderAssignmentCard = () => (
+    <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+            <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+          </div>
+          <CardTitle className="text-lg">Assignment</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="assignedTo" className="text-sm font-medium">
+            Assigned To
+          </Label>
+          <Select
+            key={assignedToSelectKey}
+            value={watch("assignedTo")}
+            onValueChange={(value) => setValue("assignedTo", value)}
+            {...register("assignedTo")}
+          >
+            <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
+              <SelectValue placeholder="Select assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableStaff.map((user) => (
+                <SelectItem key={user.email} value={user.email}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                      {user.username
+                        ? user.username.substring(0, 2).toUpperCase()
+                        : user.email.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {user.username || user.email.split("@")[0]}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {user.email}
+                      </span>
+                    </div>
                   </div>
-                  <CardTitle className="text-xl">Test Case Details</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="name"
-                      className="text-sm font-medium flex items-center gap-2"
-                    >
-                      <Hash className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      Test Case Name *
-                    </Label>
-                    <Input
-                      id="name"
-                      {...register("name", {
-                        required: "Test case name is required",
-                      })}
-                      placeholder="Enter descriptive test case name"
-                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors bg-background"
-                    />
-                    {errors.name && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.name.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="category"
-                      className="text-sm font-medium flex items-center gap-2"
-                    >
-                      <Target className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      Category *
-                    </Label>
-                    <Select
-                      key={categorySelectKey}
-                      value={watch("category")}
-                      onValueChange={(value) =>
-                        setValue("category", value, { shouldValidate: true })
-                      }
-                      {...register("category", {
-                        required: "Category is required",
-                      })}
-                    >
-                      <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 bg-background">
-                        <SelectValue placeholder="Select test category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center gap-2">
-                              <span>{option.icon}</span>
-                              {option.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.category && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.category.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label
+            htmlFor="dueDate"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            Due Date
+          </Label>
+          <Input
+            id="dueDate"
+            type="date"
+            {...register("dueDate")}
+            className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      Priority *
-                    </Label>
-                    <div className="flex gap-2">
-                      {priorityOptions.map((option) => (
-                        <Button
-                          key={option.value}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPriority(option.value)}
-                          className={`flex-1 gap-2 h-10 transition-all duration-200 border ${
-                            priority === option.value
-                              ? `${option.selectedColor}`
-                              : `${option.unselectedColor}`
-                          }`}
-                        >
-                          <span>{option.icon}</span>
-                          {option.label}
-                        </Button>
-                      ))}
+  const renderActionsCard = () => (
+    <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isTestCaseFormSubmitting}
+              className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isTestCaseFormSubmitting}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              {isTestCaseFormSubmitting && (
+                <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
+              )}
+              {isEditMode ? "Update Test Case" : "Create Test Case"}
+            </Button>
+          </div>
+          {!isEditMode && (
+            <Button
+              type="button"
+              onClick={handleSaveAndAddAnother}
+              disabled={isTestCaseFormSubmitting}
+              variant="outline"
+              className="w-full mt-2 border-dashed border-2 
+              border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
+              dark:border-green-500 dark:text-green-300 
+              dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create and Add Another Test Case
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <>
+      <form onSubmit={handleSubmit(onValidSubmitTestCase)} className="w-full">
+        <div
+          className={`mx-auto px-6 py-8 ${isEditMode ? "w-full" : "max-w-6xl"}`}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <CardTitle className="text-xl">Test Case Details</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    {" "}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="name"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <Hash className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        Test Case Name *
+                      </Label>
+                      <Input
+                        id="name"
+                        {...register("name", {
+                          required: "Test case name is required",
+                        })}
+                        placeholder="Enter descriptive test case name"
+                        className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors bg-background"
+                      />
+                      {errors.name && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="category"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <Target className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        Category *
+                      </Label>
+                      <Select
+                        key={categorySelectKey}
+                        value={watch("category")}
+                        onValueChange={(value) =>
+                          setValue("category", value, { shouldValidate: true })
+                        }
+                        {...register("category", {
+                          required: "Category is required",
+                        })}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 bg-background">
+                          <SelectValue placeholder="Select test category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              <div className="flex items-center gap-2">
+                                <span>{option.icon}</span>
+                                {option.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.category && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.category.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-6">
+                    {" "}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        Priority *
+                      </Label>
+                      <div className="flex gap-2">
+                        {priorityOptions.map((option) => (
+                          <Button
+                            key={option.value}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPriority(option.value)}
+                            className={`flex-1 gap-2 h-10 transition-all duration-200 border ${
+                              priority === option.value
+                                ? `${option.selectedColor}`
+                                : `${option.unselectedColor}`
+                            }`}
+                          >
+                            <span>{option.icon}</span>
+                            {option.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="estimatedTime"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        Estimated Time (minutes)
+                      </Label>
+                      <Input
+                        id="estimatedTime"
+                        type="number"
+                        {...register("estimatedTime", {
+                          min: {
+                            value: 0,
+                            message: "Estimated time cannot be negative",
+                          },
+                        })}
+                        placeholder="15"
+                        className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
+                      />
+                      {errors.estimatedTime && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {errors.estimatedTime.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label
-                      htmlFor="estimatedTime"
+                      htmlFor="description"
                       className="text-sm font-medium flex items-center gap-2"
                     >
-                      <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      Estimated Time (minutes)
+                      <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                      What to Test *
                     </Label>
-                    <Input
-                      id="estimatedTime"
-                      type="number"
-                      {...register("estimatedTime", {
-                        min: {
-                          value: 0,
-                          message: "Estimated time cannot be negative",
-                        },
+                    <Textarea
+                      id="description"
+                      {...register("description", {
+                        required: "Description is required",
                       })}
-                      placeholder="15"
-                      className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
+                      placeholder="Describe the test steps, expected results, and acceptance criteria..."
+                      rows={3}
+                      className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
                     />
-                    {errors.estimatedTime && (
+                    {errors.description && (
                       <p className="text-xs text-red-500 mt-1">
-                        {errors.estimatedTime.message}
+                        {errors.description.message}
                       </p>
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="description"
-                    className="text-sm font-medium flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                    What to Test *
-                  </Label>
-                  <Textarea
-                    id="description"
-                    {...register("description", {
-                      required: "Description is required",
-                    })}
-                    placeholder="Describe the test steps, expected results, and acceptance criteria..."
-                    rows={6}
-                    className="resize-none border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
-                  />
-                  {errors.description && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.description.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                    Tags
-                  </Label>
-                  <TagInput
-                    value={tags}
-                    onChange={setTags}
-                    placeholder="Add tags to categorize your test case..."
-                    className="w-full h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                      Tags
+                    </Label>
+                    <TagInput
+                      value={tags}
+                      onChange={setTags}
+                      placeholder="Add tags to categorize your test case..."
+                      className="w-full h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
+                    />
                   </div>
-                  <CardTitle className="text-lg">Assignment</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo" className="text-sm font-medium">
-                    Assigned To
-                  </Label>
-                  <Select
-                    key={assignedToSelectKey}
-                    value={watch("assignedTo")}
-                    onValueChange={(value) => setValue("assignedTo", value)}
-                    {...register("assignedTo")}
-                  >
-                    <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 bg-background">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStaff.map((user) => (
-                        <SelectItem key={user.email} value={user.email}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                              {user.username
-                                ? user.username.substring(0, 2).toUpperCase()
-                                : user.email.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {user.username || user.email.split("@")[0]}
-                              </span>
-                              <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {user.email}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="dueDate"
-                    className="text-sm font-medium flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                    Due Date
-                  </Label>
-                  <Input
-                    id="dueDate"
-                    type="datetime-local"
-                    {...register("dueDate")}
-                    className="h-11 border-slate-200 dark:border-slate-700 focus:border-blue-500 transition-colors bg-background"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              {isEditMode && renderAssignmentCard()}
+              {isEditMode && renderActionsCard()}
+            </div>
 
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card">
-              <CardContent className="p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span>Last saved:</span>
-                    <span className="font-medium">
-                      {lastSaved
-                        ? new Date(lastSaved).toLocaleString()
-                        : "Not saved yet"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Status:</span>
-                    <span
-                      className={`font-medium ${
-                        currentStatus === "Draft"
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-slate-600 dark:text-slate-400"
-                      }`}
-                    >
-                      {currentStatus}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex gap-2">
+            <div className="lg:col-span-3 space-y-6">
+              {isEditMode ? (
+                <Card className="shadow-2xl border border-slate-200 dark:border-slate-700 bg-card backdrop-blur-sm">
+                  <CardHeader className="pb-4 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                        <Bug className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <CardTitle className="text-lg">Bug Management</CardTitle>
+                    </div>
                     <Button
                       type="button"
+                      size="sm"
                       variant="outline"
-                      onClick={handleCancel}
-                      disabled={isSubmitting}
-                      className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      onClick={openCreateBugModal}
+                      className="flex items-center gap-1 text-sm"
                     >
-                      Cancel
+                      <Plus className="h-4 w-4" /> Add New Bug
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSaveAsDraft}
-                      disabled={isSubmitting}
-                      className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 dark:hover:border-blue-700"
-                    >
-                      Save as Draft
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      {isSubmitting && (
-                        <LoaderCircle className="animate-spin mr-2 h-4 w-4" />
-                      )}
-                      {testCaseId ? "Update Test Case" : "Create Test Case"}
-                    </Button>
-                  </div>
-
-                  {!testCaseId && (
-                    <Button
-                      type="button"
-                      onClick={handleSaveAndAddAnother}
-                      disabled={isSubmitting}
-                      variant="outline"
-                      className="w-full mt-2 border-dashed border-2 
-                        border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
-                        dark:border-green-500 dark:text-green-300 
-                        dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create and Add Another Test Case
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <BugList testCaseId={testCaseId} />
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {renderAssignmentCard()}
+                  {renderActionsCard()}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </form>
+      </form>
+      {isEditMode && (
+        <CreateBugModal
+          open={isCreateBugModalOpen}
+          setOpen={setIsCreateBugModalOpen}
+          testCaseId={testCaseId}
+          projectId={projectId}
+          onBugCreated={handleBugCreated}
+        />
+      )}
+    </>
   );
 }

@@ -8,6 +8,7 @@ import {
   ActivityLogTable,
   RemoteLinkLocksTable,
   ManualTestCaseTable,
+  BugTable,
 } from './schema';
 
 export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
@@ -17,6 +18,7 @@ export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
   comments: many(CommentTable),
   activities: many(ActivityLogTable),
   manualTestCases: many(ManualTestCaseTable),
+  bugs: many(BugTable),
 }));
 
 export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one, many }) => ({
@@ -72,9 +74,21 @@ export const RemoteLinkLocksTableRelations = relations(RemoteLinkLocksTable, ({ 
   }),
 }));
 
-export const ManualTestCaseTableRelations = relations(ManualTestCaseTable, ({ one }) => ({
+export const ManualTestCaseTableRelations = relations(ManualTestCaseTable, ({ one, many }) => ({
   project: one(ProjectTable, {
     fields: [ManualTestCaseTable.projectId],
+    references: [ProjectTable.id],
+  }),
+  bugs: many(BugTable),
+}));
+
+export const BugTableRelations = relations(BugTable, ({ one }) => ({
+  manualTestCase: one(ManualTestCaseTable, {
+    fields: [BugTable.manualTestCaseId],
+    references: [ManualTestCaseTable.id],
+  }),
+  project: one(ProjectTable, {
+    fields: [BugTable.projectId],
     references: [ProjectTable.id],
   }),
 }));

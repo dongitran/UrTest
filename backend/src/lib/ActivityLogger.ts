@@ -23,7 +23,10 @@ export type ActivityType =
   | 'MANUAL_TEST_CASE_CREATED'
   | 'MANUAL_TEST_CASE_UPDATED'
   | 'MANUAL_TEST_CASE_DELETED'
-  | 'MANUAL_TEST_CASE_EXECUTED';
+  | 'MANUAL_TEST_CASE_EXECUTED'
+  | 'BUG_CREATED'
+  | 'BUG_UPDATED'
+  | 'BUG_DELETED';
 
 export type TargetType =
   | 'project'
@@ -31,6 +34,7 @@ export type TargetType =
   | 'test_resource'
   | 'comment'
   | 'manual_test_case'
+  | 'bug'
   | null;
 
 export type ActivityMetadata = Record<string, any>;
@@ -86,4 +90,8 @@ export const ACTIVITY_TYPES: Record<string, ActivityType> = {
   MANUAL_TEST_CASE_UPDATED: 'MANUAL_TEST_CASE_UPDATED',
   MANUAL_TEST_CASE_DELETED: 'MANUAL_TEST_CASE_DELETED',
   MANUAL_TEST_CASE_EXECUTED: 'MANUAL_TEST_CASE_EXECUTED',
+
+  BUG_CREATED: 'BUG_CREATED',
+  BUG_UPDATED: 'BUG_UPDATED',
+  BUG_DELETED: 'BUG_DELETED',
 };

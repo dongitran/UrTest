@@ -192,3 +192,30 @@ export const ManualTestCaseTable = pgTable('tbl_manual_test_cases', {
   projectId: varchar('project_id', { length: 255 }).notNull(),
   ...commonTable,
 });
+
+export const enumBugSeverity = pgEnum('bug_severity', ['Critical', 'High', 'Medium', 'Low']);
+export const enumBugPriority = pgEnum('bug_priority', ['High', 'Medium', 'Low']);
+export const enumBugStatus = pgEnum('bug_status', [
+  'Open',
+  'In Progress',
+  'Resolved',
+  'Closed',
+  'Reopened',
+]);
+
+export const BugTable = pgTable('tbl_bugs', {
+  manualTestCaseId: varchar('manual_test_case_id', { length: 255 })
+    .notNull()
+    .references(() => ManualTestCaseTable.id),
+  projectId: varchar('project_id', { length: 255 })
+    .notNull()
+    .references(() => ProjectTable.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text(),
+  severity: enumBugSeverity('severity').default('Medium').notNull(),
+  priority: enumBugPriority('priority').default('Medium').notNull(),
+  status: enumBugStatus('status').default('Open').notNull(),
+  assignedToEmail: varchar('assigned_to_email', { length: 255 }),
+  reporterEmail: varchar('reporter_email', { length: 255 }).notNull(),
+  ...commonTable,
+});
