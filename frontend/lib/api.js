@@ -198,6 +198,11 @@ export const ManualTestApi = (path = "/api/manual-test") => {
     return res.data;
   };
 
+  const updateBug = async (id, data) => {
+    const res = await apiClient.patch(`${path}/bugs/${id}`, data);
+    return res.data;
+  };
+
   return {
     getStats,
     getTestCases,
@@ -210,6 +215,7 @@ export const ManualTestApi = (path = "/api/manual-test") => {
     createBugForTestCase,
     getBugsForTestCase,
     updateBugStatus,
+    updateBug,
   };
 };
 

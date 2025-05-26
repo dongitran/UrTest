@@ -588,6 +588,93 @@ ManualTestRoute.patch(
   }
 );
 
+ManualTestRoute.patch(
+  '/bugs/:id',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  zValidator('param', BugSchema.schemaForBugIdParam),
+  zValidator(
+    'json',
+    z.object({
+      title: z.string().min(1, 'Title is required').max(255).optional(),
+      description: z.string().optional(),
+      severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
+      priority: z.enum(['High', 'Medium', 'Low']).optional(),
+      assignedToEmail: z.string().email().optional().nullable(),
+    })
+  ),
+  async (ctx) => {
+    const { id: bugId } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const bug = await db.query.BugTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, bugId), isNull(clm.deletedAt)),
+      with: { project: true },
+    });
+
+    if (!bug) {
+      return ctx.json({ message: 'Bug not found' }, 404);
+    }
+
+    if (!bug.project) {
+      return ctx.json({ message: 'Bug is not associated with a valid project' }, 400);
+    }
+
+    const isAdminOrManager = user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
+    if (!isAdminOrManager) {
+      const assignment = await db.query.ProjectAssignmentTable.findFirst({
+        where: (clm, { eq, and, isNull: dbIsNull }) =>
+          and(
+            eq(clm.projectId, bug.projectId),
+            eq(clm.userEmail, user.email),
+            dbIsNull(clm.deletedAt)
+          ),
+      });
+      if (!assignment) {
+        return ctx.json(
+          { message: "Forbidden: You don't have access to this project's bugs" },
+          403
+        );
+      }
+    }
+
+    const updateData: any = {
+      updatedAt: dayjs().toISOString(),
+      updatedBy: user.email,
+    };
+
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.severity !== undefined) updateData.severity = body.severity;
+    if (body.priority !== undefined) updateData.priority = body.priority;
+    if (body.assignedToEmail !== undefined) updateData.assignedToEmail = body.assignedToEmail;
+
+    const updatedBug = await db
+      .update(BugTable)
+      .set(updateData)
+      .where(eq(BugTable.id, bugId))
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_UPDATED,
+      bug.projectId,
+      user.email,
+      `Updated bug "${updatedBug.title}"`,
+      bug.id,
+      'bug',
+      {
+        previousTitle: bug.title,
+        newTitle: updatedBug.title,
+        previousSeverity: bug.severity,
+        newSeverity: updatedBug.severity,
+      }
+    );
+
+    return ctx.json(updatedBug);
+  }
+);
+
 function getCategoryLabel(category: string | null): string {
   if (!category) return 'Unknown';
   const categoryMap = {

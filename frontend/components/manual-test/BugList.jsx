@@ -15,10 +15,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useState } from "react";
+import EditBugModal from "./EditBugModal";
 
 dayjs.extend(relativeTime);
 
-const BugItem = ({ bug, onUpdateStatus }) => {
+const BugItem = ({ bug, onUpdateStatus, onEdit }) => {
   const getSeverityBadgeClass = (severity) => {
     switch (severity) {
       case "Critical":
@@ -101,7 +103,7 @@ const BugItem = ({ bug, onUpdateStatus }) => {
           variant="outline"
           size="sm"
           className="text-xs h-7"
-          onClick={() => toast.info("Edit bug functionality coming soon!")}
+          onClick={() => onEdit(bug)}
         >
           <Edit className="h-3 w-3 mr-1" /> Edit
         </Button>
@@ -167,6 +169,9 @@ const BugItem = ({ bug, onUpdateStatus }) => {
 
 const BugList = ({ testCaseId }) => {
   const queryClient = useQueryClient();
+  const [isEditBugModalOpen, setIsEditBugModalOpen] = useState(false);
+  const [selectedBug, setSelectedBug] = useState(null);
+
   const {
     data: bugs,
     isLoading,
@@ -195,6 +200,15 @@ const BugList = ({ testCaseId }) => {
 
   const handleUpdateStatus = (bugId, status) => {
     updateBugStatusMutation.mutate({ bugId, status });
+  };
+
+  const handleEditBug = (bug) => {
+    setSelectedBug(bug);
+    setIsEditBugModalOpen(true);
+  };
+
+  const handleBugUpdated = () => {
+    queryClient.invalidateQueries(["bugs-for-test-case", testCaseId]);
   };
 
   if (isLoading) {
@@ -228,12 +242,26 @@ const BugList = ({ testCaseId }) => {
   }
 
   return (
-    <div className="space-y-3 mt-4 max-h-[calc(100vh-380px)] overflow-y-auto pr-2 pb-4">
-      {" "}
-      {bugs.map((bug) => (
-        <BugItem key={bug.id} bug={bug} onUpdateStatus={handleUpdateStatus} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-3 mt-4 max-h-[calc(100vh-380px)] overflow-y-auto pr-2 pb-4">
+        {bugs.map((bug) => (
+          <BugItem
+            key={bug.id}
+            bug={bug}
+            onUpdateStatus={handleUpdateStatus}
+            onEdit={handleEditBug}
+          />
+        ))}
+      </div>
+
+      <EditBugModal
+        open={isEditBugModalOpen}
+        setOpen={setIsEditBugModalOpen}
+        bug={selectedBug}
+        projectId={selectedBug?.projectId}
+        onBugUpdated={handleBugUpdated}
+      />
+    </>
   );
 };
 
