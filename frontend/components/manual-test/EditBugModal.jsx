@@ -67,6 +67,7 @@ const EditBugModal = ({ open, setOpen, bug, projectId, onBugUpdated }) => {
         onBugUpdated();
       }
       setOpen(false);
+      localStorage.setItem("bug_updated_trigger", "true");
     },
     onError: (error) => {
       console.error("Error updating bug:", error);

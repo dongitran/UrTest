@@ -203,6 +203,25 @@ export default function ManualTestCaseEditor() {
       }
     },
     onSuccess: async (data, variables) => {
+      const bugUpdatedFlag = localStorage.getItem("bug_updated_trigger");
+      if (bugUpdatedFlag) {
+        localStorage.removeItem("bug_updated_trigger");
+        await queryClient.invalidateQueries({
+          queryKey: ["manual-test-case", testCaseId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["available-staff", projectId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: [PROJECT_DETAIL_QUERY_KEY, projectId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["manual-test-cases", projectId],
+        });
+        localStorage.setItem("manual_test_updated", "true");
+        return;
+      }
+
       if (variables.action === "create") {
         toast.success("Test case created successfully");
       } else if (variables.action === "update") {
@@ -239,6 +258,10 @@ export default function ManualTestCaseEditor() {
       } else if (data && variables.action === "update") {
         setLastSaved(data.updatedAt || data.createdAt);
         setCurrentStatus(data.status);
+      }
+
+      if (variables.redirectAfterSave && variables.action === "update") {
+        router.push(`/manual-test?projectId=${projectId}`);
       }
     },
     onError: (error) => {
@@ -277,11 +300,9 @@ export default function ManualTestCaseEditor() {
       data: apiPayload,
       action: actionType,
       isSaveAndAddAnother: shouldResetForm,
+      redirectAfterSave: redirectAfterSave,
     });
 
-    if (redirectAfterSave && actionType === "update") {
-      router.push(`/manual-test?projectId=${projectId}`);
-    }
     if (shouldResetForm) {
       resetFormWithData(null);
       toast.success("Ready to create another test case");
@@ -441,9 +462,9 @@ export default function ManualTestCaseEditor() {
               disabled={isTestCaseFormSubmitting}
               variant="outline"
               className="w-full mt-2 border-dashed border-2 
-border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
-dark:border-green-500 dark:text-green-300 
-dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
+              border-green-300 text-green-700 hover:bg-green-50 hover:text-green-700 hover:border-green-400 
+              dark:border-green-500 dark:text-green-300 
+              dark:hover:bg-green-700 dark:hover:text-green-100 dark:hover:border-green-600"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create and Add Another Test Case
