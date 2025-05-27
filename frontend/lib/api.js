@@ -178,6 +178,31 @@ export const ManualTestApi = (path = "/api/manual-test") => {
     return res.data;
   };
 
+  const createBugForTestCase = async (testCaseId, data) => {
+    const res = await apiClient.post(
+      `${path}/test-cases/${testCaseId}/bugs`,
+      data
+    );
+    return res.data;
+  };
+
+  const getBugsForTestCase = async (testCaseId) => {
+    const res = await apiClient.get(`${path}/test-cases/${testCaseId}/bugs`);
+    return res.data;
+  };
+
+  const updateBugStatus = async (bugId, status) => {
+    const res = await apiClient.patch(`${path}/bugs/${bugId}/status`, {
+      status,
+    });
+    return res.data;
+  };
+
+  const updateBug = async (id, data) => {
+    const res = await apiClient.patch(`${path}/bugs/${id}`, data);
+    return res.data;
+  };
+
   return {
     getStats,
     getTestCases,
@@ -187,6 +212,10 @@ export const ManualTestApi = (path = "/api/manual-test") => {
     deleteTestCase,
     executeTestCase,
     updateTestCaseStatus,
+    createBugForTestCase,
+    getBugsForTestCase,
+    updateBugStatus,
+    updateBug,
   };
 };
 

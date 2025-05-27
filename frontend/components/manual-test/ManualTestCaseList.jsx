@@ -47,7 +47,6 @@ import { PROJECT_DETAIL_QUERY_KEY } from "@/hooks/useProjects";
 
 const statusFilters = [
   { key: "all", label: "All Cases" },
-  { key: "draft", label: "Draft" },
   { key: "not-started", label: "Not Started" },
   { key: "in-progress", label: "In Progress" },
   { key: "passed", label: "Passed" },

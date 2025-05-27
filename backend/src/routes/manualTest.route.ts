@@ -1,15 +1,17 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import db from 'db/db';
-import { ManualTestCaseTable } from 'db/schema';
-import { eq, and, isNull, inArray, count, sql } from 'drizzle-orm';
+import { ManualTestCaseTable, BugTable } from 'db/schema';
+import { eq, and, isNull, desc as drizzleDesc } from 'drizzle-orm';
 import dayjs from 'dayjs';
 import fromNow from 'dayjs/plugin/relativeTime';
 import { ulid } from 'ulid';
 import * as ManualTestCaseSchema from 'lib/Zod/ManualTestCaseSchema';
+import * as BugSchema from 'lib/Zod/BugSchema';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
 import CheckProjectAccess from '@middlewars/CheckProjectAccess';
 import { logActivity, ACTIVITY_TYPES } from '../lib/ActivityLogger';
+import { z } from 'zod';
 
 dayjs.extend(fromNow);
 
@@ -140,7 +142,7 @@ ManualTestRoute.get(
 
     const responseTc = {
       ...testCase,
-      assignedTo: testCase.assignedToEmail, // Ensure frontend gets the email for the select value
+      assignedTo: testCase.assignedToEmail,
     };
 
     return ctx.json(responseTc);
@@ -174,7 +176,7 @@ ManualTestRoute.post(
         priority: body.priority || 'Medium',
         estimatedTime: body.estimatedTime,
         description: body.description,
-        assignedTo: body.assignedTo ? body.assignedTo.split('@')[0] : null, // Store username part or full email
+        assignedTo: body.assignedTo ? body.assignedTo.split('@')[0] : null,
         assignedToEmail: body.assignedTo,
         dueDate: body.dueDate,
         tags: body.tags,
@@ -186,12 +188,12 @@ ManualTestRoute.post(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_CREATED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_CREATED,
       body.projectId,
       user.email,
       `Created manual test case "${body.name}"`,
       testCase.id,
-      'manual_test_case' as any
+      'manual_test_case'
     );
 
     return ctx.json(testCase);
@@ -260,12 +262,12 @@ ManualTestRoute.patch(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_UPDATED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_UPDATED,
       testCase.projectId,
       user.email,
       `Updated manual test case "${updatedTestCase.name}"`,
       testCase.id,
-      'manual_test_case' as any,
+      'manual_test_case',
       {
         previousName: testCase.name,
         newName: updatedTestCase.name,
@@ -317,12 +319,12 @@ ManualTestRoute.delete(
       .where(eq(ManualTestCaseTable.id, id));
 
     await logActivity(
-      'MANUAL_TEST_CASE_DELETED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_DELETED,
       testCase.projectId,
       user.email,
       `Deleted manual test case "${testCase.name}"`,
       testCase.id,
-      'manual_test_case' as any
+      'manual_test_case'
     );
 
     return ctx.json({ message: 'Test case deleted successfully' });
@@ -371,12 +373,12 @@ ManualTestRoute.post(
       .then((res) => res[0]);
 
     await logActivity(
-      'MANUAL_TEST_CASE_EXECUTED' as any,
+      ACTIVITY_TYPES.MANUAL_TEST_CASE_EXECUTED,
       testCase.projectId,
       user.email,
       `Executed manual test case "${testCase.name}" with status: ${body.status}`,
       testCase.id,
-      'manual_test_case' as any,
+      'manual_test_case',
       {
         status: body.status,
         notes: body.notes,
@@ -427,6 +429,249 @@ ManualTestRoute.patch(
       .then((res) => res[0]);
 
     return ctx.json(updatedTestCase);
+  }
+);
+
+ManualTestRoute.post(
+  '/test-cases/:testCaseId/bugs',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
+  zValidator('param', BugSchema.schemaForTestCaseIdParam),
+  zValidator(
+    'json',
+    BugSchema.schemaForCreateBug.omit({ priority: true }).extend({
+      priority: z.enum(['High', 'Medium', 'Low']).optional(),
+    })
+  ),
+  async (ctx) => {
+    const { testCaseId } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const manualTestCase = await db.query.ManualTestCaseTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, testCaseId), isNull(clm.deletedAt)),
+    });
+
+    if (!manualTestCase) {
+      return ctx.json({ message: 'Manual Test Case not found' }, 404);
+    }
+
+    if (manualTestCase.projectId !== body.projectId) {
+      return ctx.json({ message: 'Project ID mismatch with test case' }, 400);
+    }
+
+    const bug = await db
+      .insert(BugTable)
+      .values({
+        id: ulid(),
+        manualTestCaseId: testCaseId,
+        projectId: body.projectId,
+        title: body.title,
+        description: body.description,
+        severity: body.severity,
+        priority: body.priority || 'Medium',
+        status: 'Open',
+        assignedToEmail: body.assignedToEmail,
+        reporterEmail: user.email,
+        createdAt: dayjs().toISOString(),
+        createdBy: user.email,
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_CREATED,
+      body.projectId,
+      user.email,
+      `Created bug "${bug.title}" for test case "${manualTestCase.name}"`,
+      bug.id,
+      'bug'
+    );
+
+    return ctx.json(bug, 201);
+  }
+);
+
+ManualTestRoute.get(
+  '/test-cases/:testCaseId/bugs',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  CheckProjectAccess(),
+  zValidator('param', BugSchema.schemaForTestCaseIdParam),
+  async (ctx) => {
+    const { testCaseId } = ctx.req.valid('param');
+
+    const manualTestCase = await db.query.ManualTestCaseTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, testCaseId), isNull(clm.deletedAt)),
+    });
+
+    if (!manualTestCase) {
+      return ctx.json({ message: 'Manual Test Case not found, cannot fetch bugs.' }, 404);
+    }
+
+    const bugs = await db.query.BugTable.findMany({
+      where: (clm, { eq, and, isNull }) =>
+        and(eq(clm.manualTestCaseId, testCaseId), isNull(clm.deletedAt)),
+      orderBy: (clm, { desc }) => drizzleDesc(clm.createdAt),
+    });
+    return ctx.json(bugs);
+  }
+);
+
+ManualTestRoute.patch(
+  '/bugs/:id/status',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  zValidator('param', BugSchema.schemaForBugIdParam),
+  zValidator(
+    'json',
+    z.object({
+      status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed', 'Reopened']),
+    })
+  ),
+  async (ctx) => {
+    const { id: bugId } = ctx.req.valid('param');
+    const { status: newStatus } = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const bug = await db.query.BugTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, bugId), isNull(clm.deletedAt)),
+      with: { project: true },
+    });
+
+    if (!bug) {
+      return ctx.json({ message: 'Bug not found' }, 404);
+    }
+
+    if (!bug.project) {
+      return ctx.json({ message: 'Bug is not associated with a valid project' }, 400);
+    }
+
+    const isAdminOrManager = user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
+    if (!isAdminOrManager) {
+      const assignment = await db.query.ProjectAssignmentTable.findFirst({
+        where: (clm, { eq, and, isNull: dbIsNull }) =>
+          and(
+            eq(clm.projectId, bug.projectId),
+            eq(clm.userEmail, user.email),
+            dbIsNull(clm.deletedAt)
+          ),
+      });
+      if (!assignment) {
+        return ctx.json(
+          { message: "Forbidden: You don't have access to this project's bugs" },
+          403
+        );
+      }
+    }
+
+    const updatedBug = await db
+      .update(BugTable)
+      .set({
+        status: newStatus,
+        updatedAt: dayjs().toISOString(),
+        updatedBy: user.email,
+      })
+      .where(eq(BugTable.id, bugId))
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_UPDATED,
+      bug.projectId,
+      user.email,
+      `Updated status of bug "${bug.title}" to ${newStatus}`,
+      bug.id,
+      'bug',
+      { oldStatus: bug.status, newStatus }
+    );
+
+    return ctx.json(updatedBug);
+  }
+);
+
+ManualTestRoute.patch(
+  '/bugs/:id',
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
+  zValidator('param', BugSchema.schemaForBugIdParam),
+  zValidator(
+    'json',
+    z.object({
+      title: z.string().min(1, 'Title is required').max(255).optional(),
+      description: z.string().optional(),
+      severity: z.enum(['Critical', 'High', 'Medium', 'Low']).optional(),
+      priority: z.enum(['High', 'Medium', 'Low']).optional(),
+      assignedToEmail: z.string().email().optional().nullable(),
+    })
+  ),
+  async (ctx) => {
+    const { id: bugId } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
+    const user = ctx.get('user');
+
+    const bug = await db.query.BugTable.findFirst({
+      where: (clm, { eq, and, isNull }) => and(eq(clm.id, bugId), isNull(clm.deletedAt)),
+      with: { project: true },
+    });
+
+    if (!bug) {
+      return ctx.json({ message: 'Bug not found' }, 404);
+    }
+
+    if (!bug.project) {
+      return ctx.json({ message: 'Bug is not associated with a valid project' }, 400);
+    }
+
+    const isAdminOrManager = user.roles.includes(ROLES.ADMIN) || user.roles.includes(ROLES.MANAGER);
+    if (!isAdminOrManager) {
+      const assignment = await db.query.ProjectAssignmentTable.findFirst({
+        where: (clm, { eq, and, isNull: dbIsNull }) =>
+          and(
+            eq(clm.projectId, bug.projectId),
+            eq(clm.userEmail, user.email),
+            dbIsNull(clm.deletedAt)
+          ),
+      });
+      if (!assignment) {
+        return ctx.json(
+          { message: "Forbidden: You don't have access to this project's bugs" },
+          403
+        );
+      }
+    }
+
+    const updateData: any = {
+      updatedAt: dayjs().toISOString(),
+      updatedBy: user.email,
+    };
+
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.severity !== undefined) updateData.severity = body.severity;
+    if (body.priority !== undefined) updateData.priority = body.priority;
+    if (body.assignedToEmail !== undefined) updateData.assignedToEmail = body.assignedToEmail;
+
+    const updatedBug = await db
+      .update(BugTable)
+      .set(updateData)
+      .where(eq(BugTable.id, bugId))
+      .returning()
+      .then((res) => res[0]);
+
+    await logActivity(
+      ACTIVITY_TYPES.BUG_UPDATED,
+      bug.projectId,
+      user.email,
+      `Updated bug "${updatedBug.title}"`,
+      bug.id,
+      'bug',
+      {
+        previousTitle: bug.title,
+        newTitle: updatedBug.title,
+        previousSeverity: bug.severity,
+        newSeverity: updatedBug.severity,
+      }
+    );
+
+    return ctx.json(updatedBug);
   }
 );
 
