@@ -13,6 +13,10 @@ import TestResourceRoute from '@route/testResource.route';
 import AIChatRoute from '@route/ai-chat.route';
 import CommentRoute from '@route/comment.route';
 import ActivityRoute from '@route/activity.route';
+import JiraOAuthRoute from '@route/jiraOauth.route';
+import JiraRoute from '@route/jira.route';
+import JiraLinkRoute from '@route/jiraLink.route';
+import ManualTestRoute from '@route/manualTest.route';
 
 const app = new Hono();
 
@@ -29,6 +33,10 @@ app.route('/api/test-resource', TestResourceRoute);
 app.route('/api/ai', AIChatRoute);
 app.route('/api/comment', CommentRoute);
 app.route('/api/activities', ActivityRoute);
+app.route('/api/jira-oauth', JiraOAuthRoute);
+app.route('/api/jira', JiraRoute);
+app.route('/api/jira-link', JiraLinkRoute);
+app.route('/api/manual-test', ManualTestRoute);
 
 app.onError(ErrorLog);
 

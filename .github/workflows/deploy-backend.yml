@@ -1,4 +1,4 @@
-name: Deploy Keyword Extractor Service
+name: Deploy Backend Service
 
 on:
   push:

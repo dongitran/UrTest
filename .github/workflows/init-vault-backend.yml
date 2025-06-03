@@ -33,7 +33,9 @@ jobs:
             RUNNER_API_URL="${{ secrets.RUNNER_API_URL }}" \
             RUNNER_X_API_KEY="${{ secrets.RUNNER_X_API_KEY }}" \
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
-            DEEPSEEK_API_URL="${{ secrets.DEEPSEEK_API_URL }}"
+            DEEPSEEK_API_URL="${{ secrets.DEEPSEEK_API_URL }}" \
+            BACKEND_ATLASSIAN_CLIENT_ID="${{ secrets.BACKEND_ATLASSIAN_CLIENT_ID }}" \
+            BACKEND_ATLASSIAN_CLIENT_SECRET="${{ secrets.BACKEND_ATLASSIAN_CLIENT_SECRET }}"
 
           kubectl exec -n vault -i vault-0 -- vault policy write urtest-backend-svc-policy - <<EOH
           path "kv/data/urtest-backend-dev" {

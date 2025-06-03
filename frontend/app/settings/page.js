@@ -4,6 +4,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import JiraIntegration from "@/components/JiraIntegration";
 
 export default function SettingsPage() {
   const { settings, updateEditorSettings, resetSettings, isLoaded } =
@@ -57,7 +58,7 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full mt-2">
-      <div className="space-y-2 bg-card rounded-lg border shadow-sm">
+      <div className="space-y-2 bg-card rounded-lg border shadow-lg">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-semibold">Editor Settings</h2>
           <p className="text-muted-foreground text-sm">
@@ -214,6 +215,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <JiraIntegration />
     </div>
   );
 }

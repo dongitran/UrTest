@@ -19,9 +19,23 @@ export type ActivityType =
   | 'TEST_RESOURCE_UPDATED'
   | 'TEST_RESOURCE_DELETED'
   | 'COMMENT_ADDED'
-  | 'COMMENT_DELETED';
+  | 'COMMENT_DELETED'
+  | 'MANUAL_TEST_CASE_CREATED'
+  | 'MANUAL_TEST_CASE_UPDATED'
+  | 'MANUAL_TEST_CASE_DELETED'
+  | 'MANUAL_TEST_CASE_EXECUTED'
+  | 'BUG_CREATED'
+  | 'BUG_UPDATED'
+  | 'BUG_DELETED';
 
-export type TargetType = 'project' | 'test_suite' | 'test_resource' | 'comment' | null;
+export type TargetType =
+  | 'project'
+  | 'test_suite'
+  | 'test_resource'
+  | 'comment'
+  | 'manual_test_case'
+  | 'bug'
+  | null;
 
 export type ActivityMetadata = Record<string, any>;
 
@@ -71,4 +85,13 @@ export const ACTIVITY_TYPES: Record<string, ActivityType> = {
 
   COMMENT_ADDED: 'COMMENT_ADDED',
   COMMENT_DELETED: 'COMMENT_DELETED',
+
+  MANUAL_TEST_CASE_CREATED: 'MANUAL_TEST_CASE_CREATED',
+  MANUAL_TEST_CASE_UPDATED: 'MANUAL_TEST_CASE_UPDATED',
+  MANUAL_TEST_CASE_DELETED: 'MANUAL_TEST_CASE_DELETED',
+  MANUAL_TEST_CASE_EXECUTED: 'MANUAL_TEST_CASE_EXECUTED',
+
+  BUG_CREATED: 'BUG_CREATED',
+  BUG_UPDATED: 'BUG_UPDATED',
+  BUG_DELETED: 'BUG_DELETED',
 };

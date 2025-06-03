@@ -55,7 +55,12 @@ const setupMutationObserver = () => {
   window._bodyObserver = observer;
 };
 
-const ManageStaffModal = ({ open, setOpen, project }) => {
+const ManageStaffModal = ({
+  open,
+  setOpen,
+  project,
+  hasAdminManagerAccess,
+}) => {
   const [assignedStaff, setAssignedStaff] = useState([]);
   const [availableStaff, setAvailableStaff] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -317,8 +322,9 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
                                       handleRemoveStaff(staff.email)
                                     }
                                     disabled={
-                                      loadingAction &&
-                                      actionStaffId === staff.email
+                                      (loadingAction &&
+                                        actionStaffId === staff.email) ||
+                                      !hasAdminManagerAccess
                                     }
                                   >
                                     {loadingAction &&
@@ -380,8 +386,9 @@ const ManageStaffModal = ({ open, setOpen, project }) => {
                                     size="icon"
                                     onClick={() => handleAddStaff(staff.email)}
                                     disabled={
-                                      loadingAction &&
-                                      actionStaffId === staff.email
+                                      (loadingAction &&
+                                        actionStaffId === staff.email) ||
+                                      !hasAdminManagerAccess
                                     }
                                   >
                                     {loadingAction &&

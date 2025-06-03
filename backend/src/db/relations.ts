@@ -6,6 +6,9 @@ import {
   ProjectAssignmentTable,
   CommentTable,
   ActivityLogTable,
+  RemoteLinkLocksTable,
+  ManualTestCaseTable,
+  BugTable,
 } from './schema';
 
 export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
@@ -14,6 +17,8 @@ export const ProjectTableRelations = relations(ProjectTable, ({ many }) => ({
   assignments: many(ProjectAssignmentTable),
   comments: many(CommentTable),
   activities: many(ActivityLogTable),
+  manualTestCases: many(ManualTestCaseTable),
+  bugs: many(BugTable),
 }));
 
 export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one, many }) => ({
@@ -22,6 +27,7 @@ export const TestSuiteTableRelations = relations(TestSuiteTable, ({ one, many })
     references: [ProjectTable.id],
   }),
   comments: many(CommentTable),
+  remoteLinks: many(RemoteLinkLocksTable),
 }));
 
 export const TestResourceTableRelations = relations(TestResourceTable, ({ one, many }) => ({
@@ -57,6 +63,32 @@ export const CommentTableRelations = relations(CommentTable, ({ one }) => ({
 export const ActivityLogTableRelations = relations(ActivityLogTable, ({ one }) => ({
   project: one(ProjectTable, {
     fields: [ActivityLogTable.projectId],
+    references: [ProjectTable.id],
+  }),
+}));
+
+export const RemoteLinkLocksTableRelations = relations(RemoteLinkLocksTable, ({ one }) => ({
+  testSuite: one(TestSuiteTable, {
+    fields: [RemoteLinkLocksTable.testSuiteId],
+    references: [TestSuiteTable.id],
+  }),
+}));
+
+export const ManualTestCaseTableRelations = relations(ManualTestCaseTable, ({ one, many }) => ({
+  project: one(ProjectTable, {
+    fields: [ManualTestCaseTable.projectId],
+    references: [ProjectTable.id],
+  }),
+  bugs: many(BugTable),
+}));
+
+export const BugTableRelations = relations(BugTable, ({ one }) => ({
+  manualTestCase: one(ManualTestCaseTable, {
+    fields: [BugTable.manualTestCaseId],
+    references: [ManualTestCaseTable.id],
+  }),
+  project: one(ProjectTable, {
+    fields: [BugTable.projectId],
     references: [ProjectTable.id],
   }),
 }));

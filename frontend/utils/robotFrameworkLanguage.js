@@ -1,8 +1,10 @@
+import { projectNameToSlug } from "./projectUtils";
+
 let cachedKeywords = null;
 let lastFetchTime = 0;
 const CACHE_TTL = 60000;
 
-export async function fetchRobotFrameworkKeywords(slug = null) {
+export async function fetchRobotFrameworkKeywords(projectName = null) {
   const currentTime = Date.now();
 
   if (cachedKeywords && currentTime - lastFetchTime < CACHE_TTL) {
@@ -11,7 +13,8 @@ export async function fetchRobotFrameworkKeywords(slug = null) {
 
   try {
     let url = "https://s0.dtur.xyz/urtest/robotFrameworkKeywords.json"; // TODO: remove
-    if (slug) {
+    if (projectName) {
+      const slug = projectNameToSlug(projectName);
       url = `https://s0.dtur.xyz/urtest/keywords/${slug}/robotFrameworkKeywords.json`;
     }
 
@@ -36,14 +39,17 @@ export async function fetchRobotFrameworkKeywords(slug = null) {
   }
 }
 
-export async function registerRobotFrameworkLanguage(monaco, slug = null) {
+export async function registerRobotFrameworkLanguage(
+  monaco,
+  projectName = null
+) {
   if (
     monaco.languages.getLanguages().some((lang) => lang.id === "robotframework")
   ) {
     return;
   }
 
-  const keywords = await fetchRobotFrameworkKeywords(slug);
+  const keywords = await fetchRobotFrameworkKeywords(projectName);
 
   const functionKeywordsList = keywords
     .filter((item) => item.kind === "Function")
@@ -81,9 +87,9 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
       { token: "section", foreground: "8A2BE2", fontStyle: "bold" },
     ],
     colors: {
-      'editor.background': '#f9f9f9',
-      'editor.lineHighlightBackground': '#f9f9f9',
-      'editorGutter.background': '#f9f9f9',
+      "editor.background": "#f9f9f9",
+      "editor.lineHighlightBackground": "#f9f9f9",
+      "editorGutter.background": "#f9f9f9",
     },
   });
 
@@ -160,7 +166,7 @@ export async function registerRobotFrameworkLanguage(monaco, slug = null) {
               insertTextRules:
                 item.kind === "Snippet" || insertText.includes("${")
                   ? monaco.languages.CompletionItemInsertTextRule
-                    .InsertAsSnippet
+                      .InsertAsSnippet
                   : undefined,
               documentation: item.documentation,
               range: {
