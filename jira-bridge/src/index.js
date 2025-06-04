@@ -76,4 +76,3 @@ app.use(errorHandler);
 app.listen(JIRA_BRIDGE_PORT, () => {
   console.log(`Server running on http://localhost:${JIRA_BRIDGE_PORT}`);
 });
-
