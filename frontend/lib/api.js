@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken, updateToken, logout } from "./keycloak";
+import { getToken, updateToken, logout, isTokenExpired } from "./keycloak";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -8,16 +8,25 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const tokenUpdated = await updateToken(60);
+      const tokenUpdated = await updateToken(60, 3, 1000);
 
       if (!tokenUpdated) {
-        await logout();
-        return Promise.reject(new Error("Token refresh failed"));
+        if (isTokenExpired()) {
+          await logout();
+          return Promise.reject(new Error("Token expired and refresh failed"));
+        }
       }
     } catch (error) {
       console.error("Token update error:", error);
-      await logout();
-      return Promise.reject(error);
+      if (
+        error.name !== "TypeError" ||
+        (!error.message.includes("Failed to fetch") &&
+          !error.message.includes("NetworkError") &&
+          !error.message.includes("Network request failed"))
+      ) {
+        await logout();
+        return Promise.reject(error);
+      }
     }
 
     const token = getToken();
@@ -38,7 +47,8 @@ apiClient.interceptors.response.use(
 
     if (
       error.response?.status === 401 ||
-      (error.response?.data?.error === "invalid_grant" && !originalRequest._retry)
+      (error.response?.data?.error === "invalid_grant" &&
+        !originalRequest._retry)
     ) {
       originalRequest._retry = true;
 
@@ -53,147 +63,160 @@ apiClient.interceptors.response.use(
   }
 );
 
-export const fetchUserDrawings = async () => {
-  try {
-    const response = await apiClient.get("/drawings");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching drawings:", error);
-    throw error;
-  }
+export const TestResourceApi = (path = "/api/test-resource") => {
+  const list = async (params = {}) => {
+    const res = await apiClient.get(path, { params });
+    return res.data;
+  };
+  const create = async (data) => {
+    const res = await apiClient.post(path, data);
+    return res;
+  };
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, params);
+    return res;
+  };
+  const patch = async (id, data) => {
+    const res = await apiClient.patch(`${path}/${id}`, data);
+    return res;
+  };
+  const get = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, params);
+    return res.data;
+  };
+  return { patch, create, list, delete: _delete, get };
 };
 
-export const deleteDrawing = async (drawingId) => {
-  try {
-    const response = await apiClient.delete(`/drawings/${drawingId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting drawing:", error);
-    throw error;
-  }
-};
-
-export const createDrawing = async (drawingData) => {
-  try {
-    const response = await apiClient.post("/drawings", drawingData);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating drawing:", error);
-    throw error;
-  }
-};
-
-export const initializeDrawingContent = async (drawId, title, type = "excalidraw") => {
-  try {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const token = getToken();
-
-    const response = await axios.post(
-      `${backendUrl}/drawing`,
-      { drawId, title, type },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Error initializing drawing content:", error);
-    return null;
-  }
-};
-
-export const getDrawingDetails = async (drawingId) => {
-  try {
-    const response = await apiClient.get(`/drawings/${drawingId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error getting drawing details:", error);
-    throw error;
-  }
-};
-
-export const updateDrawing = async (drawingId, updateData) => {
-  try {
-    const response = await apiClient.put(`/drawings/${drawingId}`, updateData);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating drawing:", error);
-    throw error;
-  }
-};
-
-export const fetchUserCollections = async () => {
-  try {
-    const response = await apiClient.get("/collections");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching collections:", error);
-    throw error;
-  }
-};
-
-export const getCollectionDetails = async (collectionId) => {
-  try {
-    const response = await apiClient.get(`/collections/${collectionId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error getting collection details:", error);
-    throw error;
-  }
-};
-
-export const fetchCollectionDrawings = async (collectionId) => {
-  try {
-    const response = await apiClient.get(`/collections/${collectionId}/drawings`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching collection drawings:", error);
-    throw error;
-  }
-};
-
-export const createCollection = async (collectionData) => {
-  try {
-    const response = await apiClient.post("/collections", collectionData);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating collection:", error);
-    throw error;
-  }
-};
 export const TestSuiteApi = (path = "/api/testsuite") => {
   const draftExecute = async (data) => {
     const res = await apiClient.post(`${path}/draft-execute`, data);
     return res.data;
   };
+  const retrySync = async (id) => {
+    const res = await apiClient.post(`${path}/${id}/retry-sync`);
+    return res;
+  };
   const post = async (data) => {
     const res = await apiClient.post(path, data);
     return res;
   };
-  const detail = async (id) => {
-    const res = await apiClient.get(`${path}/${id}`);
+  const detail = async (id, params = {}) => {
+    const res = await apiClient.get(`${path}/${id}`, { params });
     return res.data;
   };
   const patch = async (id, data) => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  const _delete = async (id) => {
-    const res = await apiClient.delete(`${path}/${id}`);
+  const _delete = async (id, params = {}) => {
+    const res = await apiClient.delete(`${path}/${id}`, { params });
     return res;
   };
-  const execute = async (id, data) => {
-    const res = await apiClient.post(`${path}/${id}/execute`, data);
+  const execute = async (id, data, params = {}) => {
+    const res = await apiClient.post(`${path}/${id}/execute`, data, { params });
     return res;
   };
   const executeAll = async (data) => {
     const res = await apiClient.post(`${path}/execute/all`, data);
     return res;
   };
-  return { executeAll, draftExecute, post, patch, detail, execute, delete: _delete };
+  return {
+    retrySync,
+    executeAll,
+    draftExecute,
+    post,
+    patch,
+    detail,
+    execute,
+    delete: _delete,
+  };
+};
+
+export const ManualTestApi = (path = "/api/manual-test") => {
+  const getStats = async (projectId) => {
+    const res = await apiClient.get(`${path}/stats`, { params: { projectId } });
+    return res.data;
+  };
+
+  const getTestCases = async (projectId, params = {}) => {
+    const res = await apiClient.get(`${path}/test-cases`, {
+      params: { projectId, ...params },
+    });
+    return res.data;
+  };
+
+  const getTestCase = async (id) => {
+    const res = await apiClient.get(`${path}/test-cases/${id}`);
+    return res.data;
+  };
+
+  const createTestCase = async (data) => {
+    const res = await apiClient.post(`${path}/test-cases`, data);
+    return res.data;
+  };
+
+  const updateTestCase = async (id, data) => {
+    const res = await apiClient.patch(`${path}/test-cases/${id}`, data);
+    return res.data;
+  };
+
+  const deleteTestCase = async (id) => {
+    const res = await apiClient.delete(`${path}/test-cases/${id}`);
+    return res.data;
+  };
+
+  const executeTestCase = async (id, data) => {
+    const res = await apiClient.post(`${path}/test-cases/${id}/execute`, data);
+    return res.data;
+  };
+
+  const updateTestCaseStatus = async (id, status, notes = "") => {
+    const res = await apiClient.patch(`${path}/test-cases/${id}/status`, {
+      status,
+      notes,
+    });
+    return res.data;
+  };
+
+  const createBugForTestCase = async (testCaseId, data) => {
+    const res = await apiClient.post(
+      `${path}/test-cases/${testCaseId}/bugs`,
+      data
+    );
+    return res.data;
+  };
+
+  const getBugsForTestCase = async (testCaseId) => {
+    const res = await apiClient.get(`${path}/test-cases/${testCaseId}/bugs`);
+    return res.data;
+  };
+
+  const updateBugStatus = async (bugId, status) => {
+    const res = await apiClient.patch(`${path}/bugs/${bugId}/status`, {
+      status,
+    });
+    return res.data;
+  };
+
+  const updateBug = async (id, data) => {
+    const res = await apiClient.patch(`${path}/bugs/${id}`, data);
+    return res.data;
+  };
+
+  return {
+    getStats,
+    getTestCases,
+    getTestCase,
+    createTestCase,
+    updateTestCase,
+    deleteTestCase,
+    executeTestCase,
+    updateTestCaseStatus,
+    createBugForTestCase,
+    getBugsForTestCase,
+    updateBugStatus,
+    updateBug,
+  };
 };
 
 export const ProjectApi = (path = "/api/project") => {
@@ -214,8 +237,38 @@ export const ProjectApi = (path = "/api/project") => {
     const res = await apiClient.patch(`${path}/${id}`, data);
     return res;
   };
-  return { patch, detail, delete: _delete, get };
+  const getAssignments = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/assignments`);
+    return res.data;
+  };
+  const addAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.post(`${path}/${projectId}/assignments`, {
+      userEmail,
+    });
+    return res.data;
+  };
+  const removeAssignment = async (projectId, userEmail) => {
+    const res = await apiClient.delete(
+      `${path}/${projectId}/assignments/${userEmail}`
+    );
+    return res.data;
+  };
+  const getAvailableStaff = async (projectId) => {
+    const res = await apiClient.get(`${path}/${projectId}/available-staff`);
+    return res.data;
+  };
+  return {
+    patch,
+    detail,
+    delete: _delete,
+    get,
+    getAssignments,
+    addAssignment,
+    removeAssignment,
+    getAvailableStaff,
+  };
 };
+
 export const DashboardApi = (path = "/api/dashboard") => {
   const get = async (params) => {
     const res = await apiClient.get(path, {
@@ -224,120 +277,6 @@ export const DashboardApi = (path = "/api/dashboard") => {
     return res.data;
   };
   return { get };
-};
-
-export const updateCollection = async (collectionId, collectionData) => {
-  try {
-    const response = await apiClient.put(`/collections/${collectionId}`, collectionData);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating collection:", error);
-    throw error;
-  }
-};
-
-export const deleteCollection = async (collectionId) => {
-  try {
-    const response = await apiClient.delete(`/collections/${collectionId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting collection:", error);
-    throw error;
-  }
-};
-export const CollectionShareApi = (path = "/shares") => {
-  const invite = async (data) => {
-    const res = await apiClient.post(`${path}/invite`, data);
-    return res.data;
-  };
-  return { invite };
-};
-export const createCollectionInvite = async (data) => {
-  try {
-    const response = await apiClient.post("/shares/invite", data);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating collection invite:", error);
-    throw error;
-  }
-};
-
-export const joinCollectionWithCode = async (inviteCode) => {
-  try {
-    const response = await apiClient.post("/shares/join", { inviteCode });
-    return response.data;
-  } catch (error) {
-    console.error("Error joining collection:", error);
-    throw error;
-  }
-};
-
-export const getSharedCollections = async () => {
-  try {
-    const response = await apiClient.get("/shares/collections");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching shared collections:", error);
-    throw error;
-  }
-};
-
-export const getCollectionShares = async (collectionId) => {
-  try {
-    const response = await apiClient.get(`/shares/collection/${collectionId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching collection shares:", error);
-    throw error;
-  }
-};
-
-export const updateSharePermission = async (shareId, permission) => {
-  try {
-    const response = await apiClient.put(`/shares/${shareId}`, { permission });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating share permission:", error);
-    throw error;
-  }
-};
-
-export const removeCollectionShare = async (shareId) => {
-  try {
-    const response = await apiClient.delete(`/shares/${shareId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error removing collection share:", error);
-    throw error;
-  }
-};
-
-export const getAllCollectionsAndDrawings = async () => {
-  try {
-    const response = await apiClient.get("/collections/all/data");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching all collections and drawings:", error);
-    throw error;
-  }
-};
-
-export const getDrawingContentFromBackend = async (drawingId) => {
-  try {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const token = getToken();
-
-    const response = await axios.get(`${backendUrl}/drawing/${drawingId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching drawing content from backend:", error);
-    throw error;
-  }
 };
 
 export default apiClient;

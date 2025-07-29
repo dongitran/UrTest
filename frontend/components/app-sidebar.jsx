@@ -1,17 +1,12 @@
-"use client";
-
 import {
   BarChart3Icon,
   BookOpenIcon,
-  HelpCircleIcon,
   LayoutDashboardIcon,
-  Lightbulb,
   SearchIcon,
   SettingsIcon,
   ClipboardListIcon,
-  BugIcon,
   ZapIcon,
-  CodeIcon,
+  CheckSquareIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -27,80 +22,103 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-
-const navMainItems = [
-  {
-    id: "1",
-    name: "Dashboard",
-    description: "View dashboard and analytics",
-    icon: LayoutDashboardIcon,
-    url: "/dashboard",
-  },
-  {
-    id: "2",
-    name: "Test Management",
-    description: "Manage your test cases",
-    icon: ClipboardListIcon,
-    url: "/test-management",
-  },
-  {
-    id: "3",
-    name: "Reports",
-    description: "View test reports and metrics",
-    icon: BarChart3Icon,
-    url: "/reports",
-  },
-  {
-    id: "4",
-    name: "Test Execution",
-    description: "Execute test cases",
-    icon: ZapIcon,
-    url: "/test-execution",
-  },
-];
-
-const navSecondaryItems = [
-  {
-    title: "Documentation",
-    url: "/documentation",
-    icon: BookOpenIcon,
-  },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: SettingsIcon,
-  },
-  {
-    title: "Help",
-    url: "/help",
-    icon: HelpCircleIcon,
-  },
-  {
-    title: "Search",
-    url: "/search",
-    icon: SearchIcon,
-  },
-];
+import { useEffect, useState } from "react";
+import { useProjects } from "@/hooks/useProjects";
 
 export function AppSidebar({ ...props }) {
   const { user } = useAuth();
+  const [navItems, setNavItems] = useState([
+    {
+      id: "1",
+      name: "Dashboard",
+      description: "View dashboard and analytics",
+      icon: LayoutDashboardIcon,
+      url: "/dashboard",
+    },
+    {
+      id: "2",
+      name: "Automation Test",
+      description: "Manage your automated test cases",
+      icon: ZapIcon,
+      url: "/automation-test",
+    },
+    {
+      id: "3",
+      name: "Manual Test",
+      description: "Manage your manual test cases",
+      icon: CheckSquareIcon,
+      url: "/manual-test",
+    },
+    {
+      id: "4",
+      name: "Reports",
+      description: "View test reports and metrics",
+      icon: BarChart3Icon,
+      url: "/reports",
+    },
+  ]);
+
+  const { data } = useProjects();
+
+  useEffect(() => {
+    if (data?.projects?.length > 0) {
+      const firstProjectId = data.projects[0].id;
+
+      setNavItems((prevItems) =>
+        prevItems.map((item) => {
+          if (item.id === "2") {
+            return {
+              ...item,
+              url: `/automation-test?projectId=${firstProjectId}`,
+            };
+          }
+          if (item.id === "3") {
+            return {
+              ...item,
+              url: `/manual-test?projectId=${firstProjectId}`,
+            };
+          }
+          return item;
+        })
+      );
+    }
+  }, [data?.projects]);
+
+  const navSecondaryItems = [
+    {
+      title: "Documentation",
+      url: "https://docs.urtest.click",
+      icon: BookOpenIcon,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: SettingsIcon,
+    },
+  ];
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="p-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="#" className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
-                <span className="text-base font-semibold">UrTest</span>
+            <SidebarMenuButton
+              asChild
+              className="data-[slot=sidebar-menu-button]:!p-0 h-auto hover:bg-transparent"
+            >
+              <a href="#" className="block w-full p-0">
+                <img
+                  src="https://s0.dtur.xyz/cover/urtest-dash-banner.jpg"
+                  alt="UrTest Dashboard Banner"
+                  className="w-full h-auto object-cover"
+                />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainItems} />
+        <NavMain items={navItems} />
         <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

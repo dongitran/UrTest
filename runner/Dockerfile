@@ -12,16 +12,30 @@ FROM node:18-alpine
 
 RUN apk add --no-cache git openssh python3 py3-pip postgresql-dev gcc python3-dev musl-dev
 
+RUN apk add --no-cache chromium chromium-chromedriver xvfb curl unzip
+
+ENV CHROME_BIN=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/lib/chromium/ \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver \
+    DISPLAY=:99 \
+    PATH="/usr/bin:/usr/local/bin:${PATH}"
+
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip3 install --no-cache-dir \
-    robotframework \
+    selenium==4.8.3 \
+    robotframework==6.1.1 \
     robotframework-requests \
-    robotframework-seleniumlibrary \
+    robotframework-seleniumlibrary==6.1.0 \
     robotframework-databaselibrary \
     psycopg2-binary \
-    jsonschema
+    jsonschema \
+    robotframework-faker
+
+RUN chromium-browser --version && \
+    chromedriver --version && \
+    ls -la /usr/bin/chromedriver
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
@@ -34,11 +48,22 @@ COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
 
-ENV NODE_ENV=production \
-    PORT=3000
+RUN chmod 755 /usr/bin/chromium-browser && \
+    chmod +x /usr/bin/chromedriver
 
-USER appuser
+ENV NODE_ENV=production \
+    PORT=3000 \
+    PYTHONPATH=/app
+
+USER root
 
 EXPOSE 3000
 
-CMD ["node", "app.js"]
+CMD Xvfb :99 -screen 0 1280x1024x24 -ac & \
+    export DISPLAY=:99 && \
+    sleep 2 && \
+    echo "Chrome version: $(chromium-browser --version)" && \
+    echo "ChromeDriver version: $(chromedriver --version)" && \
+    chmod +x $(which chromedriver) && \
+    chmod +x $(which chromium-browser) && \
+    node app.js

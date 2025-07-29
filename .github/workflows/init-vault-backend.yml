@@ -1,0 +1,50 @@
+name: Init Vault Backend
+
+on:
+  push:
+    branches:
+      - init-vault-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up kubectl
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+          version: "latest"
+
+      - name: Apply Kubernetes deployment
+        run: |
+          kubectl exec -n vault -i vault-0 -- vault kv put \
+            kv/urtest-backend-dev \
+            BACKEND_PORT="${{ secrets.BACKEND_PORT }}" \
+            BACKEND_NODE_ENV="${{ secrets.BACKEND_NODE_ENV }}" \
+            PG_DATABASE_URL="${{ secrets.PG_DATABASE_URL }}" \
+            KEYCLOAK_URL="${{ secrets.KEYCLOAK_URL }}" \
+            KEYCLOAK_REALM="${{ secrets.KEYCLOAK_REALM }}" \
+            KEYCLOAK_CLIENT_ID="${{ secrets.KEYCLOAK_CLIENT_ID }}" \
+            KEYCLOAK_ADMIN_CLIENT_ID="${{ secrets.KEYCLOAK_ADMIN_CLIENT_ID }}" \
+            KEYCLOAK_ADMIN_CLIENT_SECRET="${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}" \
+            MONGO_URI="${{ secrets.MONGO_URI }}" \
+            GH_URTEST_WORKFLOW_API="${{ secrets.GH_URTEST_WORKFLOW_API }}" \
+            GH_TOKEN="${{ secrets.GH_TOKEN }}" \
+            RUNNER_API_URL="${{ secrets.RUNNER_API_URL }}" \
+            RUNNER_X_API_KEY="${{ secrets.RUNNER_X_API_KEY }}" \
+            DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+            DEEPSEEK_API_URL="${{ secrets.DEEPSEEK_API_URL }}" \
+            BACKEND_ATLASSIAN_CLIENT_ID="${{ secrets.BACKEND_ATLASSIAN_CLIENT_ID }}" \
+            BACKEND_ATLASSIAN_CLIENT_SECRET="${{ secrets.BACKEND_ATLASSIAN_CLIENT_SECRET }}"
+
+          kubectl exec -n vault -i vault-0 -- vault policy write urtest-backend-svc-policy - <<EOH
+          path "kv/data/urtest-backend-dev" {
+            capabilities = ["read"]
+          }
+          EOH
+
+          kubectl exec -n vault -i vault-0 -- vault write auth/kubernetes/role/urtest-backend-dev \
+            bound_service_account_names=urtest-backend-dev-auth \
+            bound_service_account_namespaces=urtest \
+            policies=urtest-backend-svc-policy \
+            ttl=72h

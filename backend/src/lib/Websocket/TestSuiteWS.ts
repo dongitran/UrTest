@@ -56,7 +56,6 @@ export const checkStatusTestSuiteAll = async (ws: Bun.ServerWebSocket<unknown>, 
         where: (clm, { eq, isNull, and }) =>
           and(eq(clm.projectId, project.id), isNull(clm.deletedAt), eq(clm.status, "Running")),
       });
-      console.log("listTestSuite :>> ", JSON.stringify(listTestSuite));
       if (listTestSuite.length <= 0) {
         break;
       }
