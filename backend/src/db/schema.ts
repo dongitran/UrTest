@@ -118,8 +118,8 @@ export const OAuthTokensTable = pgTable('oauth_tokens', {
   userId: varchar('user_id', { length: 255 }).notNull(),
   userName: varchar('user_name', { length: 255 }),
   userEmail: varchar('user_email', { length: 255 }),
-  accessToken: text('access_token').notNull(),
-  refreshToken: text('refresh_token').notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
   tokenExpiresAt: bigint('token_expires_at', { mode: 'number' }).notNull(),
   cloudId: varchar('cloud_id', { length: 255 }),
   cloudName: varchar('cloud_name', { length: 255 }),
@@ -127,6 +127,7 @@ export const OAuthTokensTable = pgTable('oauth_tokens', {
   scopes: text('scopes').array(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
 });
 
 export const RemoteLinkLocksTable = pgTable('remote_link_locks', {
@@ -139,4 +140,82 @@ export const RemoteLinkLocksTable = pgTable('remote_link_locks', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
+});
+
+export const enumManualTestCaseStatus = pgEnum('manual_test_case_status', [
+  'Not Started',
+  'In Progress',
+  'Passed',
+  'Failed',
+  'Draft',
+]);
+
+export const enumManualTestCasePriority = pgEnum('manual_test_case_priority', [
+  'Low',
+  'Medium',
+  'High',
+]);
+
+export const enumManualTestCaseCategory = pgEnum('manual_test_case_category', [
+  'functional',
+  'ui',
+  'integration',
+  'api',
+  'performance',
+  'security',
+]);
+
+export const enumBugStatusType = pgEnum('bug_status_type', [
+  'none',
+  'bug',
+  'fixed',
+  'testing',
+  'pending',
+]);
+
+export const ManualTestCaseTable = pgTable('tbl_manual_test_cases', {
+  name: varchar({ length: 255 }).notNull(),
+  category: enumManualTestCaseCategory().notNull(),
+  priority: enumManualTestCasePriority().default('Medium'),
+  estimatedTime: integer('estimated_time'),
+  description: text().notNull(),
+  assignedTo: varchar('assigned_to', { length: 255 }),
+  assignedToEmail: varchar('assigned_to_email', { length: 255 }),
+  dueDate: timestamp('due_date', { withTimezone: true, mode: 'string' }),
+  status: enumManualTestCaseStatus().default('Not Started'),
+  bugStatusType: enumBugStatusType('bug_status_type').default('none'),
+  bugReporter: varchar('bug_reporter', { length: 255 }),
+  bugMessage: varchar('bug_message', { length: 255 }),
+  tags: text().array(),
+  notes: text(),
+  executionHistory: jsonb('execution_history').default([]),
+  projectId: varchar('project_id', { length: 255 }).notNull(),
+  ...commonTable,
+});
+
+export const enumBugSeverity = pgEnum('bug_severity', ['Critical', 'High', 'Medium', 'Low']);
+export const enumBugPriority = pgEnum('bug_priority', ['High', 'Medium', 'Low']);
+export const enumBugStatus = pgEnum('bug_status', [
+  'Open',
+  'In Progress',
+  'Resolved',
+  'Closed',
+  'Reopened',
+]);
+
+export const BugTable = pgTable('tbl_bugs', {
+  manualTestCaseId: varchar('manual_test_case_id', { length: 255 })
+    .notNull()
+    .references(() => ManualTestCaseTable.id),
+  projectId: varchar('project_id', { length: 255 })
+    .notNull()
+    .references(() => ProjectTable.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text(),
+  severity: enumBugSeverity('severity').default('Medium').notNull(),
+  priority: enumBugPriority('priority').default('Medium').notNull(),
+  status: enumBugStatus('status').default('Open').notNull(),
+  assignedToEmail: varchar('assigned_to_email', { length: 255 }),
+  reporterEmail: varchar('reporter_email', { length: 255 }).notNull(),
+  ...commonTable,
 });

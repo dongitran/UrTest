@@ -57,6 +57,7 @@ router.get("/callback", async (req, res) => {
 
   try {
     const stateData = await oauthStateService.getAndValidateState(state);
+    console.log(stateData, 'stateData')
 
     if (!stateData) {
       return res.status(403).render("error", {
@@ -64,7 +65,7 @@ router.get("/callback", async (req, res) => {
       });
     }
 
-    const { email, callback_url, keycloak_access_token, user_id } = stateData;
+    const { email, callback_url, user_id } = stateData;
 
     const tokenResponse = await axios.post(
       "https://auth.atlassian.com/oauth/token",
@@ -76,6 +77,7 @@ router.get("/callback", async (req, res) => {
         redirect_uri: process.env.JIRA_BRIDGE_REDIRECT_URI,
       }
     );
+    console.log(tokenResponse, 'tokenResponse')
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
     const token_expires_at = Date.now() + expires_in * 1000;
@@ -88,6 +90,8 @@ router.get("/callback", async (req, res) => {
         },
       }
     );
+
+    console.log(resourcesResponse, 'resourcesResponse')
 
     let userData = { user_name: null, user_email: null };
     try {
@@ -104,6 +108,7 @@ router.get("/callback", async (req, res) => {
     } catch (userError) {
       console.error("Error fetching user info:", userError.message);
     }
+    console.log(userData, 'userData')
 
     let resourceData = {};
     if (resourcesResponse.data && resourcesResponse.data.length > 0) {

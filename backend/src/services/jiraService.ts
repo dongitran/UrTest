@@ -1,7 +1,8 @@
 import axios from 'axios';
 import db from '../db/db';
 import { OAuthTokensTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, and } from 'drizzle-orm';
+import dayjs from 'dayjs';
 
 export interface JiraTask {
   issueKey: string;
@@ -45,7 +46,7 @@ class JiraService {
   async getTokenByEmail(email: string) {
     try {
       const tokenData = await db.query.OAuthTokensTable.findFirst({
-        where: eq(OAuthTokensTable.userEmail, email),
+        where: and(eq(OAuthTokensTable.userEmail, email), isNull(OAuthTokensTable.deletedAt)),
       });
       return tokenData;
     } catch (error) {
@@ -115,6 +116,25 @@ class JiraService {
       accessToken,
       cloudId: tokenData.cloudId,
     };
+  }
+
+  async unlinkJiraConnection(email: string): Promise<void> {
+    try {
+      await db
+        .update(OAuthTokensTable)
+        .set({
+          accessToken: null,
+          refreshToken: null,
+          deletedAt: dayjs().toISOString(),
+          updatedAt: dayjs().toISOString(),
+        })
+        .where(and(eq(OAuthTokensTable.userEmail, email), isNull(OAuthTokensTable.deletedAt)));
+
+      console.log(`Successfully unlinked JIRA account for user: ${email}`);
+    } catch (error) {
+      console.error('Error unlinking JIRA connection:', error);
+      throw error;
+    }
   }
 
   async getRemoteLinks(email: string, issueKey: string): Promise<JiraRemoteLink[]> {
@@ -267,7 +287,7 @@ class JiraService {
   async checkJiraConnection(email: string): Promise<boolean> {
     try {
       const tokenData = await this.getTokenByEmail(email);
-      return !!tokenData;
+      return !!tokenData && !!tokenData.accessToken;
     } catch (error) {
       console.error('Error checking Jira connection:', error);
       return false;

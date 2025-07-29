@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { LoaderCircle } from "lucide-react";
-import MonacoEditor from "@/components/MonacoEditor";
+import MonacoEditor from "@/components/automation-test/MonacoEditor";
 import { TestResourceApi } from "@/lib/api";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel from "@/components/automation-test/ChatPanel";
 
 export default function NewResourcePage() {
   const searchParams = useSearchParams();
@@ -80,7 +80,7 @@ export default function NewResourcePage() {
       localStorage.setItem("resource_updated", "true");
 
       toast.success("Resource edited successfully");
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       toast.error("Error editing resource");
     } finally {
@@ -114,7 +114,7 @@ export default function NewResourcePage() {
       localStorage.setItem("resource_updated", "true");
 
       toast.success("Resource created successfully");
-      router.push(`/test-management?projectId=${projectId}`);
+      router.push(`/automation-test?projectId=${projectId}`);
     } catch (error) {
       console.error("Error saving resource:", error);
       toast.error("Failed to save resource");
@@ -180,7 +180,7 @@ export default function NewResourcePage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  router.push(`/test-management?projectId=${projectId}`)
+                  router.push(`/automation-test?projectId=${projectId}`)
                 }
                 size="sm"
                 className="mr-2"

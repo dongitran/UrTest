@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function DashboardStats({ data = {} }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="flex items-center p-6">
           <div className="mr-4 bg-blue-100 rounded-full p-3">
             <svg
@@ -28,7 +28,7 @@ export default function DashboardStats({ data = {} }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="flex items-center p-6">
           <div className="mr-4 bg-green-100 rounded-full p-3">
             <svg
@@ -54,7 +54,7 @@ export default function DashboardStats({ data = {} }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="flex items-center p-6">
           <div className="mr-4 bg-purple-100 rounded-full p-3">
             <svg
@@ -79,7 +79,7 @@ export default function DashboardStats({ data = {} }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="flex items-center p-6">
           <div className="mr-4 bg-amber-100 rounded-full p-3">
             <svg

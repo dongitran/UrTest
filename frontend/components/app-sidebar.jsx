@@ -6,6 +6,7 @@ import {
   SettingsIcon,
   ClipboardListIcon,
   ZapIcon,
+  CheckSquareIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -36,24 +37,24 @@ export function AppSidebar({ ...props }) {
     },
     {
       id: "2",
-      name: "Test Management",
-      description: "Manage your test cases",
-      icon: ClipboardListIcon,
-      url: "/test-management",
+      name: "Automation Test",
+      description: "Manage your automated test cases",
+      icon: ZapIcon,
+      url: "/automation-test",
     },
     {
       id: "3",
+      name: "Manual Test",
+      description: "Manage your manual test cases",
+      icon: CheckSquareIcon,
+      url: "/manual-test",
+    },
+    {
+      id: "4",
       name: "Reports",
       description: "View test reports and metrics",
       icon: BarChart3Icon,
       url: "/reports",
-    },
-    {
-      id: "4",
-      name: "Test Execution",
-      description: "Execute test cases",
-      icon: ZapIcon,
-      url: "/test-execution",
     },
   ]);
 
@@ -64,14 +65,21 @@ export function AppSidebar({ ...props }) {
       const firstProjectId = data.projects[0].id;
 
       setNavItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === "2"
-            ? {
-                ...item,
-                url: `/test-management?projectId=${firstProjectId}`,
-              }
-            : item
-        )
+        prevItems.map((item) => {
+          if (item.id === "2") {
+            return {
+              ...item,
+              url: `/automation-test?projectId=${firstProjectId}`,
+            };
+          }
+          if (item.id === "3") {
+            return {
+              ...item,
+              url: `/manual-test?projectId=${firstProjectId}`,
+            };
+          }
+          return item;
+        })
       );
     }
   }, [data?.projects]);
@@ -86,11 +94,6 @@ export function AppSidebar({ ...props }) {
       title: "Settings",
       url: "/settings",
       icon: SettingsIcon,
-    },
-    {
-      title: "Search",
-      url: "/search",
-      icon: SearchIcon,
     },
   ];
 
