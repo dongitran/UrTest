@@ -16,7 +16,7 @@ const testTypeStats = [
 
 export default function TestTypeStats() {
   return (
-    <Card>
+    <Card className="shadow-lg">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle>Success Rate by Test Type</CardTitle>

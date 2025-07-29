@@ -1,5 +1,18 @@
 import dayjs from "dayjs";
 
+export const projectNameToSlug = (projectName) => {
+  if (!projectName) return "";
+
+  return projectName
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-]+/g, "")
+    .replace(/\-\-+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
+};
+
 export const mapProjectToUIFormat = (project) => {
   const randomProgress = Math.floor(Math.random() * 100);
   const randomSuccessRate = Math.floor(Math.random() * 100);

@@ -2,12 +2,12 @@ import { zValidator } from '@hono/zod-validator';
 import fp from 'lodash/fp';
 import dayjs from 'dayjs';
 import db from 'db/db';
-import { ProjectTable, ProjectAssignmentTable } from 'db/schema';
+import { ProjectTable, ProjectAssignmentTable, TestSuiteExecuteTable } from 'db/schema';
 import { Hono } from 'hono';
 import { get } from 'lodash';
 import { ulid } from 'ulid';
 import { z } from 'zod';
-import { eq, isNull, and, desc, inArray } from 'drizzle-orm';
+import { eq, isNull, and, desc, inArray, or } from 'drizzle-orm';
 import CreateOrUpdateFile from 'lib/Github/CreateOrUpdateFile';
 import { DeleteProjectDirectory } from '../lib/Github/DeleteProjectDirectory';
 import CheckPermission, { ROLES } from '@middlewars/CheckPermission';
@@ -86,7 +86,14 @@ ProjectRoute.get(
       }
       const listTestSuiteId = project.listTestSuite.map((i) => i.id);
       const listTestSuiteExecute = await db.query.TestSuiteExecuteTable.findMany({
-        where: (clm, { inArray }) => inArray(clm.testSuiteId, listTestSuiteId),
+        where: (clm, { inArray, eq, or, and, isNull }) =>
+          and(
+            isNull(clm.deletedAt),
+            or(
+              inArray(clm.testSuiteId, listTestSuiteId),
+              and(eq(clm.projectId, project.id), isNull(clm.testSuiteId))
+            )
+          ),
         orderBy: (clm, { desc }) => desc(clm.id),
         limit: 24,
       });
@@ -95,14 +102,17 @@ ProjectRoute.get(
         project: {
           ...project,
           recentTestRun: listTestSuiteExecute.map((item) => {
-            const testSuite = project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }));
+            const testSuite = item.testSuiteId
+              ? project.listTestSuite.find(fp.isMatch({ id: item.testSuiteId }))
+              : null;
             return {
               id: item.id,
               reportUrl: get(item?.params, 'resultRunner.reportUrl'),
-              testSuiteName: testSuite?.name,
+              testSuiteName: testSuite?.name || 'Project Execution',
               status: item.status,
               createdAt: item.createdAt,
               createdBy: item.createdBy,
+              results: get(item?.params, 'resultRunner.results'),
             };
           }),
         },
@@ -395,7 +405,7 @@ ProjectRoute.delete(
 
 ProjectRoute.get(
   '/:id/assignments',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({
@@ -415,7 +425,7 @@ ProjectRoute.get(
 
 ProjectRoute.get(
   '/:id/available-staff',
-  CheckPermission([ROLES.ADMIN, ROLES.MANAGER]),
+  CheckPermission([ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF]),
   zValidator(
     'param',
     z.object({
