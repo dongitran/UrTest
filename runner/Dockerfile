@@ -30,6 +30,7 @@ RUN pip3 install --no-cache-dir \
     robotframework-seleniumlibrary==6.1.0 \
     robotframework-databaselibrary \
     psycopg2-binary \
+    pymysql \
     jsonschema \
     robotframework-faker \
     robotframework-appiumlibrary \
