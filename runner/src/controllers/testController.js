@@ -3,6 +3,8 @@ const testService = require("../services/testService");
 exports.runTest = async (req, res) => {
   try {
     const { requestId, project, content, testResultTitle } = req.body;
+    console.log(req.body);
+    console.log({ requestId, project, testResultTitle });
 
     if (!requestId || !project || !content) {
       return res.status(400).json({
