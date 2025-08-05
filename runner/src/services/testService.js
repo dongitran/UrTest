@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs-extra");
 const { exec, spawn } = require("child_process");
 const util = require("util");
-const minioService = require("./minioService");
+const uploadService = require("./uploadService");
 const config = require("../config");
 
 const execPromise = util.promisify(exec);
@@ -268,6 +268,7 @@ Setup ChromeDriver
         });
       });
     } catch (error) {
+      console.log("errorRunTest:", error);
       stdout = error.stdout || "";
       stderr = error.stderr || "";
     }
@@ -276,6 +277,8 @@ Setup ChromeDriver
       console.error("Robot test stderr:", stderr);
     }
 
+    console.log("stdoutRunTest:", stdout);
+    console.log("stderrRunTest:", stderr);
     const testResults = extractTestResults(stdout);
 
     const reportFiles = [
@@ -284,11 +287,14 @@ Setup ChromeDriver
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
     ];
 
-    const minioFolder = `manual-running/${requestId}`;
+    const uploadFolder = `manual-running/${requestId}`;
 
     for (const file of reportFiles) {
       if (await fs.pathExists(file.path)) {
-        await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
+        const uploadResult = await uploadService.uploadFile(
+          file.path,
+          `${uploadFolder}/${file.name}`
+        );
       }
     }
 
@@ -302,9 +308,9 @@ Setup ChromeDriver
       for (const screenshotFile of screenshotFiles) {
         const screenshotPath = path.join(process.cwd(), screenshotFile);
         if (await fs.pathExists(screenshotPath)) {
-          await minioService.uploadFile(
+          await uploadService.uploadFile(
             screenshotPath,
-            `${minioFolder}/${screenshotFile}`
+            `${uploadFolder}/${screenshotFile}`
           );
           console.log(`Uploaded screenshot: ${screenshotFile}`);
 
@@ -316,10 +322,8 @@ Setup ChromeDriver
       console.error("Error uploading screenshots:", err);
     }
 
-    const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
-
     return {
-      reportUrl,
+      reportUrl: `${config.UPLOAD_RESPONSE_URL}/${uploadFolder}`,
       results: testResults,
       isUITest,
     };
@@ -396,11 +400,18 @@ exports.runProjectTests = async (requestId, project) => {
       { name: "output.xml", path: path.join(process.cwd(), "output.xml") },
     ];
 
-    const minioFolder = `project-running/${requestId}`;
+    const uploadFolder = `project-running/${requestId}`;
+    let reportUrl = "";
 
     for (const file of reportFiles) {
       if (await fs.pathExists(file.path)) {
-        await minioService.uploadFile(file.path, `${minioFolder}/${file.name}`);
+        const uploadResult = await uploadService.uploadFile(
+          file.path,
+          `${uploadFolder}/${file.name}`
+        );
+        if (file.name === "report.html") {
+          reportUrl = uploadResult.url;
+        }
       }
     }
 
@@ -414,9 +425,9 @@ exports.runProjectTests = async (requestId, project) => {
       for (const screenshotFile of screenshotFiles) {
         const screenshotPath = path.join(process.cwd(), screenshotFile);
         if (await fs.pathExists(screenshotPath)) {
-          await minioService.uploadFile(
+          await uploadService.uploadFile(
             screenshotPath,
-            `${minioFolder}/${screenshotFile}`
+            `${uploadFolder}/${screenshotFile}`
           );
           console.log(`Uploaded screenshot: ${screenshotFile}`);
 
@@ -444,10 +455,10 @@ exports.runProjectTests = async (requestId, project) => {
       console.error("Error cleaning up remaining screenshots:", error);
     }
 
-    const reportUrl = `https://${config.MINIO_CONFIG.endPoint}/${config.MINIO_BUCKET}/${minioFolder}`;
-
     return {
-      reportUrl,
+      reportUrl:
+        reportUrl ||
+        `https://urbox-outline-docs.s3.ap-southeast-1.amazonaws.com/${uploadFolder}/report.html`,
       results: testResults.totalTests
         ? testResults
         : { totalTests: 0, passed: 0, failed: 0 },
