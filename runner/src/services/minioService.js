@@ -33,6 +33,19 @@ exports.uploadFile = async (filePath, objectName) => {
       contentType = 'application/xml';
     }
 
+    const uploadOptions = { 'Content-Type': contentType };
+    
+    if (fileStats.size > 50 * 1024 * 1024) {
+      uploadOptions.partSize = 10 * 1024 * 1024;
+    }
+
+    console.log({
+      bucket: config.MINIO_BUCKET,
+      object: objectName,
+      size: fileStats.size,
+      uploadOptions
+    });
+
     await minioClient.putObject(
       config.MINIO_BUCKET,
       objectName,
