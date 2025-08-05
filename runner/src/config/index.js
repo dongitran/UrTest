@@ -16,5 +16,9 @@ module.exports = {
     accessKey: process.env.MINIO_ACCESS_KEY,
     secretKey: process.env.MINIO_SECRET_KEY
   },
-  MINIO_BUCKET: process.env.MINIO_BUCKET
+  MINIO_BUCKET: process.env.MINIO_BUCKET,
+  
+  UPLOAD_API_URL: process.env.UPLOAD_API_URL,
+  UPLOAD_API_KEY: process.env.UPLOAD_API_KEY,
+  UPLOAD_RESPONSE_URL: process.env.UPLOAD_RESPONSE_URL,
 };
