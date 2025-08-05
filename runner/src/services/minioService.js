@@ -3,7 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 
-const minioClient = new Minio.Client(config.MINIO_CONFIG);
+const minioClient = new Minio.Client({
+  ...config.MINIO_CONFIG,
+  requestOptions: {
+    timeout: 300000,
+  }
+});
 
 const ensureBucket = async () => {
   try {
@@ -33,12 +38,18 @@ exports.uploadFile = async (filePath, objectName) => {
       contentType = 'application/xml';
     }
 
+    const uploadOptions = { 'Content-Type': contentType };
+    
+    if (fileStats.size > 50 * 1024 * 1024) {
+      uploadOptions.partSize = 10 * 1024 * 1024;
+    }
+
     await minioClient.putObject(
       config.MINIO_BUCKET,
       objectName,
       fileStream,
       fileStats.size,
-      { 'Content-Type': contentType }
+      uploadOptions
     );
 
     return {

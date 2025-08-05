@@ -30,8 +30,11 @@ RUN pip3 install --no-cache-dir \
     robotframework-seleniumlibrary==6.1.0 \
     robotframework-databaselibrary \
     psycopg2-binary \
+    pymysql \
     jsonschema \
-    robotframework-faker
+    robotframework-faker \
+    robotframework-appiumlibrary \
+    appium-python-client
 
 RUN chromium-browser --version && \
     chromedriver --version && \
@@ -47,7 +50,6 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/app.js ./
 
 RUN mkdir -p tests/tests && chown -R appuser:appgroup /app
-
 RUN chmod 755 /usr/bin/chromium-browser && \
     chmod +x /usr/bin/chromedriver
 
