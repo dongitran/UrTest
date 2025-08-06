@@ -34,7 +34,8 @@ RUN pip3 install --no-cache-dir \
     jsonschema \
     robotframework-faker \
     robotframework-appiumlibrary \
-    appium-python-client
+    appium-python-client \
+    robotframework-jsonlibrary
 
 RUN chromium-browser --version && \
     chromedriver --version && \
