@@ -11,10 +11,10 @@ export async function connectDB() {
 
     client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
-    
-    await client.db("admin").command({ ping: 1 });
-    console.log("✅ Connected to MongoDB successfully!");
-    
+
+    await client.db('admin').command({ ping: 1 });
+    console.log('✅ Connected to MongoDB successfully!');
+
     db = client.db();
     return db;
   } catch (error) {

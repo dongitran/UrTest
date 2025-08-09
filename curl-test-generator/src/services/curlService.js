@@ -19,6 +19,7 @@ export class CurlService {
     });
     this.db = null;
     this.maxFieldLength = 128;
+    this.maxRetries = 3;
   }
 
   getDatabase() {
@@ -28,7 +29,14 @@ export class CurlService {
     return this.db;
   }
 
-  async saveAiInteraction(processId, prompt, response, model = 'gemini-2.5-flash') {
+  async saveAiInteraction(
+    processId,
+    prompt,
+    response,
+    model = 'gemini-2.5-flash',
+    retryAttempt = 0,
+    isRetry = false
+  ) {
     try {
       const db = this.getDatabase();
       const aiCollection = db.collection('ai_interactions');
@@ -39,15 +47,38 @@ export class CurlService {
         prompt,
         response,
         model,
+        retryAttempt,
+        isRetry,
         createdAt: new Date(),
         promptLength: prompt.length,
-        responseLength: response.length
+        responseLength: response.length,
       };
 
       await aiCollection.insertOne(interactionDoc);
-      console.log('✅ AI interaction saved to database');
+      console.log(
+        `✅ AI interaction saved to database (retry: ${retryAttempt})`
+      );
     } catch (error) {
       console.error('❌ Error saving AI interaction:', error);
+    }
+  }
+
+  async updateProcessRetryCount(processId, retryCount) {
+    try {
+      const db = this.getDatabase();
+      const collection = db.collection('curl_processes');
+
+      await collection.updateOne(
+        { processId },
+        {
+          $set: {
+            retryCount,
+            updatedAt: new Date(),
+          },
+        }
+      );
+    } catch (error) {
+      console.error('❌ Error updating retry count:', error);
     }
   }
 
@@ -331,20 +362,157 @@ export class CurlService {
   }
 
   async generateMultipleTestCases(curlData, processId) {
-    try {
-      console.log('🤖 Generating comprehensive test cases using AI...');
+    let retryCount = 0;
+    let lastError = null;
 
-      const optimizedBody = this.optimizeBodyForPrompt(curlData.body);
+    while (retryCount <= this.maxRetries) {
+      try {
+        console.log(
+          `🤖 Generating test cases (attempt ${retryCount + 1}/${
+            this.maxRetries + 1
+          })...`
+        );
 
-      const prompt = `You are an expert API testing engineer. Analyze this API endpoint and create comprehensive test cases.
+        if (retryCount > 0) {
+          await this.updateProcessRetryCount(processId, retryCount);
+          console.log(
+            `🔄 Retry attempt ${retryCount} for processId: ${processId}`
+          );
+        }
+
+        const optimizedBody = this.optimizeBodyForPrompt(curlData.body);
+
+        const prompt = this.buildPrompt(curlData, optimizedBody, retryCount);
+
+        console.log('🤖 Calling Gemini API...');
+        console.log('📏 Prompt length:', prompt.length);
+
+        const response = await this.ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          generationConfig: {
+            temperature: retryCount > 0 ? 0.1 + retryCount * 0.1 : 0.3,
+            maxOutputTokens: 8192,
+          },
+        });
+
+        const responseText = response.text;
+        console.log('📝 AI response length:', responseText.length);
+
+        await this.saveAiInteraction(
+          processId,
+          prompt,
+          responseText,
+          'gemini-2.5-flash',
+          retryCount,
+          retryCount > 0
+        );
+
+        const jsonString = this.extractJsonFromAiResponse(responseText);
+
+        let testCases;
+        try {
+          testCases = JSON.parse(jsonString);
+        } catch (parseError) {
+          console.error(
+            `❌ JSON parse failed (attempt ${retryCount + 1}):`,
+            parseError.message
+          );
+          lastError = parseError;
+          retryCount++;
+
+          if (retryCount <= this.maxRetries) {
+            console.log(`🔄 Retrying... (${retryCount}/${this.maxRetries})`);
+            continue;
+          } else {
+            console.error('❌ Max retries reached, throwing error');
+            throw new Error(
+              `Failed to parse AI response after ${this.maxRetries} retries: ${parseError.message}`
+            );
+          }
+        }
+
+        if (!Array.isArray(testCases)) {
+          console.log('❌ Response is not an array, wrapping...');
+          testCases = [testCases];
+        }
+
+        if (testCases.length === 0) {
+          const arrayError = new Error('AI generated no test cases');
+          lastError = arrayError;
+          retryCount++;
+
+          if (retryCount <= this.maxRetries) {
+            console.log(
+              `🔄 No test cases generated, retrying... (${retryCount}/${this.maxRetries})`
+            );
+            continue;
+          } else {
+            throw arrayError;
+          }
+        }
+
+        console.log(
+          `✅ Successfully parsed ${testCases.length} test cases on attempt ${
+            retryCount + 1
+          }`
+        );
+
+        testCases.forEach((testCase, index) => {
+          testCase.url = curlData.url;
+          testCase.method = curlData.method;
+
+          if (testCase.body && typeof testCase.body === 'object') {
+            for (const [key, value] of Object.entries(testCase.body)) {
+              if (
+                typeof value === 'string' &&
+                value.length > this.maxFieldLength
+              ) {
+                testCase.body[key] = this.limitFieldLength(value);
+              }
+            }
+          }
+
+          console.log(`📋 Test case ${index + 1}: ${testCase.testCaseName}`);
+        });
+
+        if (retryCount > 0) {
+          await this.updateProcessRetryCount(processId, retryCount);
+        }
+
+        return testCases;
+      } catch (error) {
+        console.error(`❌ Error on attempt ${retryCount + 1}:`, error.message);
+        lastError = error;
+        retryCount++;
+
+        if (retryCount <= this.maxRetries) {
+          console.log(
+            `🔄 Retrying due to error... (${retryCount}/${this.maxRetries})`
+          );
+          continue;
+        }
+      }
+    }
+
+    await this.updateProcessRetryCount(processId, this.maxRetries);
+    throw new Error(
+      `Test case generation failed after ${
+        this.maxRetries
+      } retries. Last error: ${lastError?.message || 'Unknown error'}`
+    );
+  }
+
+  buildPrompt(curlData, optimizedBody, retryCount) {
+    const basePrompt = `You are an expert API testing engineer. Analyze this API endpoint and create comprehensive test cases.
 
 API Endpoint Analysis:
 - URL: ${curlData.url}
 - Method: ${curlData.method}
 - Headers: ${JSON.stringify(curlData.headers, null, 2)}
 - Request Body: ${
-        optimizedBody ? JSON.stringify(optimizedBody, null, 2) : 'None'
-      }
+      optimizedBody ? JSON.stringify(optimizedBody, null, 2) : 'None'
+    }
 
 Please create a comprehensive set of test cases that cover:
 - Happy path scenarios (2-3 different valid data sets)
@@ -361,8 +529,8 @@ CRITICAL REQUIREMENTS:
 - Do NOT use any JavaScript functions like .repeat(), .join(), etc.
 - Use actual literal string values for all test data
 - For long string tests, write out actual long strings (max ${
-        this.maxFieldLength
-      } chars per field)
+      this.maxFieldLength
+    } chars per field)
 - For boundary testing, use realistic field lengths
 - Ensure all JSON values are properly quoted and escaped
 
@@ -386,70 +554,16 @@ Return format:
   }
 ]`;
 
-      console.log('🤖 Calling Gemini API...');
-      console.log('📏 Prompt length:', prompt.length);
+    if (retryCount > 0) {
+      return (
+        basePrompt +
+        `
 
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 8192,
-        },
-      });
-
-      const responseText = response.text;
-      console.log('📝 AI response length:', responseText.length);
-
-      await this.saveAiInteraction(processId, prompt, responseText);
-
-      const jsonString = this.extractJsonFromAiResponse(responseText);
-
-      let testCases;
-      try {
-        testCases = JSON.parse(jsonString);
-      } catch (parseError) {
-        console.error('❌ JSON parse failed:', parseError.message);
-        console.error('❌ Raw response text:', responseText.substring(0, 500));
-        console.error('❌ Extracted JSON:', jsonString.substring(0, 500));
-        throw new Error(`Failed to parse AI response: ${parseError.message}`);
-      }
-
-      if (!Array.isArray(testCases)) {
-        console.log('❌ Response is not an array, wrapping...');
-        testCases = [testCases];
-      }
-
-      if (testCases.length === 0) {
-        throw new Error('AI generated no test cases');
-      }
-
-      console.log('✅ Successfully parsed', testCases.length, 'test cases');
-
-      testCases.forEach((testCase, index) => {
-        testCase.url = curlData.url;
-        testCase.method = curlData.method;
-
-        if (testCase.body && typeof testCase.body === 'object') {
-          for (const [key, value] of Object.entries(testCase.body)) {
-            if (
-              typeof value === 'string' &&
-              value.length > this.maxFieldLength
-            ) {
-              testCase.body[key] = this.limitFieldLength(value);
-            }
-          }
-        }
-
-        console.log(`📋 Test case ${index + 1}: ${testCase.testCaseName}`);
-      });
-
-      return testCases;
-    } catch (error) {
-      console.error('❌ Error generating test cases:', error);
-      console.error('❌ Error details:', error.message);
-      throw new Error(`Test case generation failed: ${error.message}`);
+IMPORTANT: This is retry attempt ${retryCount}. Please ensure your response is STRICTLY valid JSON format only. Do not include any explanatory text, comments, or markdown formatting. Start immediately with [ and end with ].`
+      );
     }
+
+    return basePrompt;
   }
 
   async executeTestCase(testCase) {
@@ -514,6 +628,7 @@ Return format:
         status: 'initialized',
         totalTestCases: 0,
         completedTestCases: 0,
+        retryCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

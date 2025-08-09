@@ -24,19 +24,20 @@ app.use(authMiddleware);
 app.use('/api/curl', curlRoutes);
 
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV 
+    env: process.env.NODE_ENV,
+    version: '1.0.0',
   });
 });
 
 app.use(errorHandler);
 
 app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found' 
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
   });
 });
 
@@ -47,6 +48,7 @@ async function startServer() {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
+      console.log(`🔄 Retry mechanism: Enabled (max 3 retries)`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
