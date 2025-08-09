@@ -20,6 +20,7 @@ export class CurlController {
       const { text, processId } = value;
       
       console.log(`🔄 Processing curl for processId: ${processId}`);
+      console.log(`📏 Curl text length: ${text.length} characters`);
       
       const result = await this.curlService.initializeProcess(text, processId);
       
@@ -31,6 +32,7 @@ export class CurlController {
       
       this.curlService.processInBackground(processId, text);
     } catch (error) {
+      console.error('❌ Controller error:', error);
       next(error);
     }
   }
@@ -38,6 +40,13 @@ export class CurlController {
   async getProcess(req, res, next) {
     try {
       const { processId } = req.params;
+      
+      if (!processId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Process ID is required'
+        });
+      }
       
       const result = await this.curlService.getProcessWithTestCases(processId);
       
@@ -53,6 +62,7 @@ export class CurlController {
         data: result
       });
     } catch (error) {
+      console.error('❌ Controller error:', error);
       next(error);
     }
   }

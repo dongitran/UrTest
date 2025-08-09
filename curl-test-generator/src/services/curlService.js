@@ -18,6 +18,7 @@ export class CurlService {
       apiKey: process.env.GEMINI_API_KEY,
     });
     this.db = null;
+    this.maxFieldLength = 128;
   }
 
   getDatabase() {
@@ -51,14 +52,75 @@ export class CurlService {
     }
   }
 
+  limitFieldLength(value, maxLength = this.maxFieldLength) {
+    if (typeof value === 'string' && value.length > maxLength) {
+      return value.substring(0, maxLength - 3) + '...';
+    }
+    return value;
+  }
+
+  optimizeBodyForPrompt(body) {
+    if (!body || typeof body !== 'object') return body;
+
+    const optimized = {};
+    for (const [key, value] of Object.entries(body)) {
+      if (typeof value === 'string') {
+        optimized[key] = this.limitFieldLength(value, 50);
+      } else {
+        optimized[key] = value;
+      }
+    }
+    return optimized;
+  }
+
   extractJsonFromAiResponse(responseText) {
     console.log('🔍 Extracting JSON from AI response...');
     console.log('📝 Raw AI response length:', responseText.length);
-    console.log('📝 First 300 chars:', responseText.substring(0, 300));
+    console.log('📝 First 200 chars:', responseText.substring(0, 200));
+
+    let cleaned = responseText
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim();
+
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+
+    if (
+      firstBracket === -1 ||
+      lastBracket === -1 ||
+      lastBracket <= firstBracket
+    ) {
+      throw new Error('No valid JSON array found in AI response');
+    }
+
+    cleaned = cleaned.substring(firstBracket, lastBracket + 1);
+
+    cleaned = cleaned
+      .replace(/,\s*]/g, ']')
+      .replace(/,\s*}/g, '}')
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    console.log('✅ Extracted JSON length:', cleaned.length);
+    console.log('📝 Extracted JSON preview:', cleaned.substring(0, 300));
+
+    try {
+      JSON.parse(cleaned);
+      return cleaned;
+    } catch (e) {
+      console.log('❌ Simple extraction failed, trying complex parsing...');
+      return this.complexJsonExtraction(responseText);
+    }
+  }
+
+  complexJsonExtraction(responseText) {
+    console.log('🔧 Using complex JSON extraction...');
 
     responseText = responseText
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
       .trim();
 
     const firstBracket = responseText.indexOf('[');
@@ -110,62 +172,180 @@ export class CurlService {
       }
     }
 
-    console.log('✅ Extracted JSON length:', extracted.length);
-    console.log('📝 Extracted JSON preview:', extracted.substring(0, 200));
+    let cleaned = extracted
+      .replace(/,\s*]/g, ']')
+      .replace(/,\s*}/g, '}')
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     try {
-      JSON.parse(extracted);
-      return extracted;
+      JSON.parse(cleaned);
+      return cleaned;
     } catch (e) {
-      console.log('❌ Extracted JSON is invalid, cleaning up...');
+      console.log(
+        '❌ Complex extraction also failed, trying individual parsing...'
+      );
+      return this.parseIndividualTestCases(responseText);
+    }
+  }
 
-      let cleaned = extracted
-        .replace(/,\s*]/g, ']')
+  parseIndividualTestCases(responseText) {
+    console.log('🔄 Parsing individual test cases...');
+
+    const testCases = [];
+    const testCasePattern = /"testCaseName"\s*:\s*"[^"]*"/g;
+    const matches = responseText.match(testCasePattern);
+
+    if (!matches || matches.length === 0) {
+      throw new Error('No test cases found in AI response');
+    }
+
+    console.log(`🔍 Found ${matches.length} potential test cases`);
+
+    const testCasePositions = [];
+    let searchPos = 0;
+
+    for (const match of matches) {
+      const pos = responseText.indexOf(match, searchPos);
+      if (pos !== -1) {
+        let objectStart = pos;
+        while (objectStart > 0 && responseText[objectStart] !== '{') {
+          objectStart--;
+        }
+        testCasePositions.push(objectStart);
+        searchPos = pos + match.length;
+      }
+    }
+
+    for (let i = 0; i < testCasePositions.length; i++) {
+      const startPos = testCasePositions[i];
+      const endPos =
+        i < testCasePositions.length - 1
+          ? testCasePositions[i + 1]
+          : responseText.length;
+
+      const objectStr = this.extractSingleObject(
+        responseText,
+        startPos,
+        endPos
+      );
+
+      if (objectStr) {
+        try {
+          const testCase = JSON.parse(objectStr);
+          if (testCase.testCaseName && testCase.url && testCase.method) {
+            testCases.push(testCase);
+            console.log(`✅ Extracted test case: ${testCase.testCaseName}`);
+          }
+        } catch (objError) {
+          console.log(
+            `⚠️ Failed to parse test case ${i + 1}: ${objError.message}`
+          );
+        }
+      }
+    }
+
+    if (testCases.length === 0) {
+      throw new Error('Failed to parse any test cases from AI response');
+    }
+
+    return JSON.stringify(testCases);
+  }
+
+  extractSingleObject(text, startPos, endPos) {
+    let objectDepth = 0;
+    let inString = false;
+    let escaping = false;
+    let objectEnd = startPos;
+
+    for (let j = startPos; j < endPos && j < text.length; j++) {
+      const char = text[j];
+
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaping = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (char === '{') {
+        objectDepth++;
+      } else if (char === '}') {
+        objectDepth--;
+        if (objectDepth === 0) {
+          objectEnd = j + 1;
+          break;
+        }
+      }
+    }
+
+    if (objectDepth === 0) {
+      let objectStr = text.substring(startPos, objectEnd);
+
+      objectStr = objectStr
         .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']')
         .replace(/\n/g, ' ')
         .replace(/\s+/g, ' ')
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
         .trim();
 
-      console.log('🔧 Cleaned JSON preview:', cleaned.substring(0, 200));
-      return cleaned;
+      return objectStr;
     }
+
+    return null;
   }
 
   async generateMultipleTestCases(curlData) {
     try {
-      console.log('🤖 Generating multiple test cases using AI...');
+      console.log('🤖 Generating comprehensive test cases using AI...');
 
-      const prompt = `You are an expert API testing engineer. Analyze this API endpoint and create comprehensive test cases to thoroughly test all aspects of the API.
+      const optimizedBody = this.optimizeBodyForPrompt(curlData.body);
+
+      const prompt = `You are an expert API testing engineer. Analyze this API endpoint and create comprehensive test cases.
 
 API Endpoint Analysis:
 - URL: ${curlData.url}
 - Method: ${curlData.method}
 - Headers: ${JSON.stringify(curlData.headers, null, 2)}
 - Request Body: ${
-        curlData.body ? JSON.stringify(curlData.body, null, 2) : 'None'
+        optimizedBody ? JSON.stringify(optimizedBody, null, 2) : 'None'
       }
 
 Please create a comprehensive set of test cases that cover:
-- Happy path scenarios
-- Validation testing (empty fields, missing fields, invalid data types)
-- Boundary testing (min/max values, edge cases)
-- Security testing (injection attacks, malicious input)
-- Error handling (malformed data, invalid headers)
+- Happy path scenarios (2-3 different valid data sets)
+- Validation testing (empty fields, missing required fields, invalid data types)
+- Boundary testing (min/max values, edge cases, field length limits)
+- Security testing (SQL injection, XSS, malicious input)
+- Error handling (malformed data, invalid headers, unsupported content types)
 - Edge cases and corner scenarios
-- Performance considerations (large payloads)
-- Different data formats and encodings
+- Performance considerations (reasonable payload sizes)
+- Different data formats and character encodings
 
-CRITICAL: Your response must be pure JSON with actual data values. Do NOT use any JavaScript functions, expressions, or code like .repeat(), .join(), etc. All string values must be literal strings, not function calls.
+CRITICAL REQUIREMENTS:
+- Your response must be ONLY a valid JSON array, no additional text
+- Do NOT use any JavaScript functions like .repeat(), .join(), etc.
+- Use actual literal string values for all test data
+- For long string tests, write out actual long strings (max ${
+        this.maxFieldLength
+      } chars per field)
+- For boundary testing, use realistic field lengths
+- Ensure all JSON values are properly quoted and escaped
 
-For large string testing, provide actual long strings like:
-- For testing long names: use actual long strings like "VeryLongFirstNameWithManyCharactersToTestBoundaryLimits"
-- For testing very large payloads: use strings with hundreds of actual characters
-- Do NOT use "A".repeat(1000) or any functions - write out actual long strings
+Generate as many relevant test cases as you think are necessary to thoroughly test this API endpoint. Be creative and think of real-world scenarios.
 
-Generate as many relevant test cases as you think are necessary to thoroughly test this API endpoint. Be creative and think of real-world scenarios that could break or stress the API.
-
-Return your response as a JSON array only, no additional text. Ensure all values are valid JSON data types (string, number, boolean, null, object, array):
-
+Return format:
 [
   {
     "testCaseName": "descriptive name",
@@ -183,205 +363,31 @@ Return your response as a JSON array only, no additional text. Ensure all values
   }
 ]`;
 
-      console.log('🤖 Calling Gemini API for multiple test cases...');
+      console.log('🤖 Calling Gemini API...');
+      console.log('📏 Prompt length:', prompt.length);
 
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 8192,
+        },
       });
 
-      console.log('🤖 AI Response received:', JSON.stringify(response));
-
       const responseText = response.text;
+      console.log('📝 AI response length:', responseText.length);
+
       const jsonString = this.extractJsonFromAiResponse(responseText);
 
       let testCases;
       try {
         testCases = JSON.parse(jsonString);
       } catch (parseError) {
-        console.log('❌ JSON parse failed, trying to fix common issues...');
-        console.log('🔧 Parse error:', parseError.message);
-
-        let fixedJson = jsonString
-          .replace(/,\s*]/g, ']')
-          .replace(/,\s*}/g, '}')
-          .replace(/\n/g, ' ')
-          .replace(/\s+/g, ' ')
-          .replace(/'/g, '"')
-          .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
-          .replace(/:\s*([^",\[\]{}\s]+)(\s*[,\]}])/g, ':"$1"$2')
-          .trim();
-
-        console.log('🔧 Fixed JSON preview:', fixedJson.substring(0, 300));
-
-        try {
-          testCases = JSON.parse(fixedJson);
-        } catch (secondError) {
-          console.log(
-            '❌ Second parse failed, extracting individual test cases...'
-          );
-
-          testCases = [];
-
-          // Strategy 1: Split by test case pattern and parse each one
-          const testCasePattern = /"testCaseName"\s*:\s*"[^"]*"/g;
-          const matches = jsonString.match(testCasePattern);
-
-          if (matches && matches.length > 0) {
-            console.log(
-              `🔍 Found ${matches.length} potential test cases by pattern matching`
-            );
-
-            // Find the start positions of each test case
-            const testCasePositions = [];
-            let searchPos = 0;
-
-            for (const match of matches) {
-              const pos = jsonString.indexOf(match, searchPos);
-              if (pos !== -1) {
-                // Find the start of the object (go back to find '{')
-                let objectStart = pos;
-                while (objectStart > 0 && jsonString[objectStart] !== '{') {
-                  objectStart--;
-                }
-                testCasePositions.push(objectStart);
-                searchPos = pos + match.length;
-              }
-            }
-
-            // Extract each test case object
-            for (let i = 0; i < testCasePositions.length; i++) {
-              const startPos = testCasePositions[i];
-              const endPos =
-                i < testCasePositions.length - 1
-                  ? testCasePositions[i + 1]
-                  : jsonString.length;
-
-              let objectDepth = 0;
-              let inString = false;
-              let escaping = false;
-              let objectEnd = startPos;
-
-              for (let j = startPos; j < endPos && j < jsonString.length; j++) {
-                const char = jsonString[j];
-
-                if (escaping) {
-                  escaping = false;
-                  continue;
-                }
-
-                if (char === '\\') {
-                  escaping = true;
-                  continue;
-                }
-
-                if (char === '"') {
-                  inString = !inString;
-                  continue;
-                }
-
-                if (inString) continue;
-
-                if (char === '{') {
-                  objectDepth++;
-                } else if (char === '}') {
-                  objectDepth--;
-                  if (objectDepth === 0) {
-                    objectEnd = j + 1;
-                    break;
-                  }
-                }
-              }
-
-              if (objectDepth === 0) {
-                const objectStr = jsonString.substring(startPos, objectEnd);
-
-                try {
-                  // Clean up the object string
-                  let cleanObject = objectStr
-                    .replace(/,\s*}/g, '}')
-                    .replace(/,\s*]/g, ']')
-                    .replace(/\n/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-
-                  // Fix unquoted keys
-                  cleanObject = cleanObject.replace(
-                    /([{,]\s*)(\w+):/g,
-                    '$1"$2":'
-                  );
-
-                  const testCase = JSON.parse(cleanObject);
-
-                  if (
-                    testCase.testCaseName &&
-                    testCase.url &&
-                    testCase.method
-                  ) {
-                    testCases.push(testCase);
-                    console.log(
-                      `✅ Extracted test case: ${testCase.testCaseName}`
-                    );
-                  } else {
-                    console.log(
-                      `⚠️ Invalid test case structure, missing required fields`
-                    );
-                  }
-                } catch (objError) {
-                  console.log(
-                    `⚠️ Failed to parse test case ${i + 1}: ${objError.message}`
-                  );
-                  // Try to save what we can
-                  const truncatedObj = objectStr.substring(
-                    0,
-                    Math.min(500, objectStr.length)
-                  );
-                  console.log(
-                    `📝 Problematic object preview: ${truncatedObj}...`
-                  );
-                }
-              } else {
-                console.log(
-                  `⚠️ Unmatched braces for test case ${i + 1}, skipping...`
-                );
-              }
-            }
-          }
-
-          // Strategy 2: If strategy 1 didn't work well, try regex approach
-          if (testCases.length === 0) {
-            console.log('🔄 Trying regex-based extraction as fallback...');
-
-            const simplePattern = /{[^{}]*?"testCaseName"[^{}]*?}/g;
-            let match;
-            while ((match = simplePattern.exec(jsonString)) !== null) {
-              try {
-                let cleanMatch = match[0]
-                  .replace(/,\s*}/g, '}')
-                  .replace(/'/g, '"')
-                  .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
-
-                const testCase = JSON.parse(cleanMatch);
-                if (testCase.testCaseName) {
-                  testCases.push(testCase);
-                  console.log(`✅ Regex extracted: ${testCase.testCaseName}`);
-                }
-              } catch (matchError) {
-                console.log('⚠️ Failed to parse regex match, skipping...');
-              }
-            }
-          }
-
-          console.log(
-            '✅ Successfully extracted',
-            testCases.length,
-            'test cases individually'
-          );
-
-          if (testCases.length === 0) {
-            throw new Error('Failed to parse any test cases from AI response');
-          }
-        }
+        console.error('❌ JSON parse failed:', parseError.message);
+        console.error('❌ Raw response text:', responseText.substring(0, 500));
+        console.error('❌ Extracted JSON:', jsonString.substring(0, 500));
+        throw new Error(`Failed to parse AI response: ${parseError.message}`);
       }
 
       if (!Array.isArray(testCases)) {
@@ -389,11 +395,27 @@ Return your response as a JSON array only, no additional text. Ensure all values
         testCases = [testCases];
       }
 
+      if (testCases.length === 0) {
+        throw new Error('AI generated no test cases');
+      }
+
       console.log('✅ Successfully parsed', testCases.length, 'test cases');
 
       testCases.forEach((testCase, index) => {
         testCase.url = curlData.url;
         testCase.method = curlData.method;
+
+        if (testCase.body && typeof testCase.body === 'object') {
+          for (const [key, value] of Object.entries(testCase.body)) {
+            if (
+              typeof value === 'string' &&
+              value.length > this.maxFieldLength
+            ) {
+              testCase.body[key] = this.limitFieldLength(value);
+            }
+          }
+        }
+
         console.log(`📋 Test case ${index + 1}: ${testCase.testCaseName}`);
       });
 
@@ -401,145 +423,8 @@ Return your response as a JSON array only, no additional text. Ensure all values
     } catch (error) {
       console.error('❌ Error generating test cases:', error);
       console.error('❌ Error details:', error.message);
-
-      console.log('🔄 Falling back to simple test cases...');
-      return this.generateFallbackTestCases(curlData);
+      throw new Error(`Test case generation failed: ${error.message}`);
     }
-  }
-
-  generateFallbackTestCases(curlData) {
-    console.log('🛠️ Generating fallback test cases...');
-
-    const fallbackCases = [
-      {
-        testCaseName: 'Happy Path Test',
-        description: 'Test with original valid data',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body,
-        expectedResponse: {
-          statusCode: 201,
-          contentType: 'application/json',
-          description: 'Successful creation',
-        },
-        testPurpose: 'Verify successful API call with valid data',
-      },
-      {
-        testCaseName: 'Empty Field Validation',
-        description: 'Test with empty firstName',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body ? { ...curlData.body, firstName: '' } : null,
-        expectedResponse: {
-          statusCode: 400,
-          contentType: 'application/json',
-          description: 'Validation error for empty field',
-        },
-        testPurpose: 'Test field validation',
-      },
-      {
-        testCaseName: 'Missing Required Field',
-        description: 'Test without lastName field',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body
-          ? (() => {
-              const { lastName, ...bodyWithoutLastName } = curlData.body;
-              return bodyWithoutLastName;
-            })()
-          : null,
-        expectedResponse: {
-          statusCode: 400,
-          contentType: 'application/json',
-          description: 'Missing required field',
-        },
-        testPurpose: 'Test required field validation',
-      },
-      {
-        testCaseName: 'Invalid Content Type',
-        description: 'Test with wrong content type',
-        url: curlData.url,
-        method: curlData.method,
-        headers: { ...curlData.headers, 'Content-Type': 'text/plain' },
-        body: curlData.body,
-        expectedResponse: {
-          statusCode: 415,
-          contentType: 'application/json',
-          description: 'Unsupported media type',
-        },
-        testPurpose: 'Test content type validation',
-      },
-      {
-        testCaseName: 'Boundary Value Test',
-        description: 'Test with long telephone number',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body
-          ? { ...curlData.body, telephone: '1'.repeat(30) }
-          : null,
-        expectedResponse: {
-          statusCode: 400,
-          contentType: 'application/json',
-          description: 'Field length validation error',
-        },
-        testPurpose: 'Test field length boundaries',
-      },
-      {
-        testCaseName: 'Special Characters Test',
-        description: 'Test with special characters',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body
-          ? { ...curlData.body, firstName: 'José', lastName: 'García' }
-          : null,
-        expectedResponse: {
-          statusCode: 201,
-          contentType: 'application/json',
-          description: 'Should handle special characters',
-        },
-        testPurpose: 'Test special character support',
-      },
-      {
-        testCaseName: 'SQL Injection Test',
-        description: 'Test with SQL injection attempt',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body
-          ? { ...curlData.body, firstName: "'; DROP TABLE users; --" }
-          : null,
-        expectedResponse: {
-          statusCode: 400,
-          contentType: 'application/json',
-          description: 'Should prevent SQL injection',
-        },
-        testPurpose: 'Test security against SQL injection',
-      },
-      {
-        testCaseName: 'XSS Injection Test',
-        description: 'Test with XSS script injection',
-        url: curlData.url,
-        method: curlData.method,
-        headers: curlData.headers,
-        body: curlData.body
-          ? { ...curlData.body, firstName: "<script>alert('xss')</script>" }
-          : null,
-        expectedResponse: {
-          statusCode: 400,
-          contentType: 'application/json',
-          description: 'Should prevent XSS injection',
-        },
-        testPurpose: 'Test security against XSS attacks',
-      },
-    ];
-
-    console.log('✅ Generated', fallbackCases.length, 'fallback test cases');
-    return fallbackCases;
   }
 
   async executeTestCase(testCase) {
@@ -550,7 +435,7 @@ Return your response as a JSON array only, no additional text. Ensure all values
         method: testCase.method.toLowerCase(),
         url: testCase.url,
         headers: testCase.headers,
-        timeout: 10000,
+        timeout: 15000,
         validateStatus: () => true,
       };
 
@@ -634,7 +519,22 @@ Return your response as a JSON array only, no additional text. Ensure all values
         const curlData = await this.parseCurl(curlText);
 
         await this.updateProcessStatus(processId, 'generating_test_cases');
-        const testCases = await this.generateMultipleTestCases(curlData);
+
+        let testCases;
+        try {
+          testCases = await this.generateMultipleTestCases(curlData);
+        } catch (testGenError) {
+          console.error(
+            '❌ Test case generation failed:',
+            testGenError.message
+          );
+          await this.updateProcessStatus(
+            processId,
+            'error',
+            `Test generation failed: ${testGenError.message}`
+          );
+          return;
+        }
 
         await this.updateProcessStatus(processId, 'executing_test_cases');
         await this.updateProcessTestCaseCount(processId, testCases.length);
