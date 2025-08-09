@@ -1,3 +1,4 @@
+import { getDB } from '../../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import { CurlParser } from '../parsers/curlParser.js';
 import { JsonExtractor } from '../extractors/jsonExtractor.js';
@@ -5,19 +6,17 @@ import { TestCaseGenerator } from '../generators/testCaseGenerator.js';
 import { TestCaseExecutor } from '../executors/testCaseExecutor.js';
 import { ProcessManager } from '../managers/processManager.js';
 import { AiInteractionManager } from '../managers/aiInteractionManager.js';
-import { TestCaseRepository } from '../../repositories/testCaseRepository.js';
-import { logger } from '../../utils/logger.js';
-import { DatabaseError } from '../../errors/index.js';
 
 export class CurlService {
   constructor() {
+    this.db = null;
+
     this.curlParser = new CurlParser();
     this.jsonExtractor = new JsonExtractor();
-    this.processManager = new ProcessManager();
-    this.aiInteractionManager = new AiInteractionManager();
-    this.testCaseRepo = new TestCaseRepository();
-    
+    this.processManager = new ProcessManager(() => this.getDatabase());
+    this.aiInteractionManager = new AiInteractionManager(() => this.getDatabase());
     this.testCaseGenerator = new TestCaseGenerator(
+      () => this.getDatabase(),
       this.jsonExtractor,
       this.processManager,
       this.aiInteractionManager
@@ -25,20 +24,29 @@ export class CurlService {
     this.testCaseExecutor = new TestCaseExecutor();
   }
 
+  getDatabase() {
+    if (!this.db) {
+      this.db = getDB();
+    }
+    return this.db;
+  }
+
   async initializeProcess(curlText, processId) {
     try {
       const curlData = await this.curlParser.parseCurl(curlText);
       return await this.processManager.initializeProcess(curlText, processId, curlData);
     } catch (error) {
-      logger.error('Failed to initialize process', { processId, error: error.message });
-      throw new DatabaseError(`Failed to initialize process: ${error.message}`);
+      console.error('❌ Error initializing process:', error);
+      throw new Error(`Failed to initialize process: ${error.message}`);
     }
   }
 
   async processInBackground(processId, curlText) {
     setImmediate(async () => {
       try {
-        logger.processing('Background processing started', { processId });
+        console.log(
+          `🔄 Background processing started for processId: ${processId}`
+        );
 
         await this.processManager.updateProcessStatus(processId, 'parsing_curl');
         const curlData = await this.curlParser.parseCurl(curlText);
@@ -49,10 +57,10 @@ export class CurlService {
         try {
           testCases = await this.testCaseGenerator.generateMultipleTestCases(curlData, processId);
         } catch (testGenError) {
-          logger.error('Test case generation failed', { 
-            processId,
-            error: testGenError.message 
-          });
+          console.error(
+            '❌ Test case generation failed:',
+            testGenError.message
+          );
           await this.processManager.updateProcessStatus(
             processId,
             'error',
@@ -64,12 +72,17 @@ export class CurlService {
         await this.processManager.updateProcessStatus(processId, 'executing_test_cases');
         await this.processManager.updateProcessTestCaseCount(processId, testCases.length);
 
+        const db = this.getDatabase();
+        const testCaseCollection = db.collection('test_cases');
+
         for (let i = 0; i < testCases.length; i++) {
           const testCase = testCases[i];
 
-          logger.processing(`Processing test case ${i + 1}/${testCases.length}: ${testCase.testCaseName}`, {
-            processId
-          });
+          console.log(
+            `🧪 Processing test case ${i + 1}/${testCases.length}: ${
+              testCase.testCaseName
+            }`
+          );
 
           const result = await this.testCaseExecutor.executeTestCase(testCase);
 
@@ -87,19 +100,21 @@ export class CurlService {
             result: result,
             order: i + 1,
             createdAt: new Date(),
-            executedAt: new Date()
+            executedAt: new Date(),
           };
 
-          await this.testCaseRepo.createTestCase(testCaseDoc);
+          await testCaseCollection.insertOne(testCaseDoc);
           await this.processManager.updateCompletedTestCases(processId, i + 1);
 
-          logger.success(`Test case ${i + 1} completed and saved`, { processId });
+          console.log(`✅ Test case ${i + 1} completed and saved`);
         }
 
         await this.processManager.updateProcessStatus(processId, 'completed');
-        logger.success('Background processing completed', { processId });
+        console.log(
+          `🎉 Background processing completed for processId: ${processId}`
+        );
       } catch (error) {
-        logger.error('Error in background processing', { processId, error: error.message });
+        console.error('❌ Error in background processing:', error);
         await this.processManager.updateProcessStatus(processId, 'error', error.message);
       }
     });

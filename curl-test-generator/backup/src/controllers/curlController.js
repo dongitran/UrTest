@@ -1,7 +1,5 @@
 import { CurlService } from '../services/core/curlService.js';
 import { validateCurlRequest } from '../utils/validation.js';
-import { logger } from '../utils/logger.js';
-import { NotFoundError, ValidationError } from '../errors/index.js';
 
 export class CurlController {
   constructor() {
@@ -10,24 +8,31 @@ export class CurlController {
 
   async parseAndTest(req, res, next) {
     try {
-      const validatedData = validateCurlRequest(req.body);
-      const { text, processId } = validatedData;
+      const { error, value } = validateCurlRequest(req.body);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          details: error.details,
+        });
+      }
 
-      logger.processing('Processing curl request', { 
-        processId,
-        curlLength: text.length 
-      });
+      const { text, processId } = value;
+
+      console.log(`🔄 Processing curl for processId: ${processId}`);
+      console.log(`📏 Curl text length: ${text.length} characters`);
 
       const result = await this.curlService.initializeProcess(text, processId);
 
       res.json({
         success: true,
         message: 'Process initialized successfully',
-        data: result
+        data: result,
       });
 
       this.curlService.processInBackground(processId, text);
     } catch (error) {
+      console.error('❌ Controller error:', error);
       next(error);
     }
   }
@@ -37,20 +42,27 @@ export class CurlController {
       const { processId } = req.params;
 
       if (!processId) {
-        throw new ValidationError('Process ID is required');
+        return res.status(400).json({
+          success: false,
+          message: 'Process ID is required',
+        });
       }
 
       const result = await this.curlService.getProcessWithTestCases(processId);
 
       if (!result) {
-        throw new NotFoundError('Process not found');
+        return res.status(404).json({
+          success: false,
+          message: 'Process not found',
+        });
       }
 
       res.json({
         success: true,
-        data: result
+        data: result,
       });
     } catch (error) {
+      console.error('❌ Controller error:', error);
       next(error);
     }
   }
@@ -60,16 +72,20 @@ export class CurlController {
       const { processId } = req.params;
 
       if (!processId) {
-        throw new ValidationError('Process ID is required');
+        return res.status(400).json({
+          success: false,
+          message: 'Process ID is required',
+        });
       }
 
       const result = await this.curlService.getAiInteractions(processId);
 
       res.json({
         success: true,
-        data: result
+        data: result,
       });
     } catch (error) {
+      console.error('❌ Controller error:', error);
       next(error);
     }
   }

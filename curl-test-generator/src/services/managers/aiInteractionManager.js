@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
+import { AiInteractionRepository } from '../../repositories/aiInteractionRepository.js';
+import { logger } from '../../utils/logger.js';
 
 export class AiInteractionManager {
-  constructor(getDatabase) {
-    this.getDatabase = getDatabase;
+  constructor() {
+    this.aiRepo = new AiInteractionRepository();
   }
 
   async saveAiInteraction(
@@ -14,9 +16,6 @@ export class AiInteractionManager {
     isRetry = false
   ) {
     try {
-      const db = this.getDatabase();
-      const aiCollection = db.collection('ai_interactions');
-
       const interactionDoc = {
         interactionId: uuidv4(),
         processId,
@@ -27,32 +26,30 @@ export class AiInteractionManager {
         isRetry,
         createdAt: new Date(),
         promptLength: prompt.length,
-        responseLength: response.length,
+        responseLength: response.length
       };
 
-      await aiCollection.insertOne(interactionDoc);
-      console.log(
-        `✅ AI interaction saved to database (retry: ${retryAttempt})`
-      );
+      await this.aiRepo.saveInteraction(interactionDoc);
+      logger.success('AI interaction saved to database', { 
+        processId, 
+        retryAttempt,
+        promptLength: prompt.length,
+        responseLength: response.length
+      });
     } catch (error) {
-      console.error('❌ Error saving AI interaction:', error);
+      logger.error('Failed to save AI interaction', { 
+        processId, 
+        error: error.message 
+      });
     }
   }
 
   async getAiInteractions(processId) {
     try {
-      const db = this.getDatabase();
-      const aiCollection = db.collection('ai_interactions');
-
-      const interactions = await aiCollection
-        .find({ processId })
-        .sort({ createdAt: 1 })
-        .toArray();
-
-      return interactions;
+      return await this.aiRepo.findByProcessId(processId);
     } catch (error) {
-      console.error('❌ Error getting AI interactions:', error);
-      throw new Error(`Failed to get AI interactions: ${error.message}`);
+      logger.error('Failed to get AI interactions', { processId, error: error.message });
+      throw new DatabaseError(`Failed to get AI interactions: ${error.message}`);
     }
   }
 }

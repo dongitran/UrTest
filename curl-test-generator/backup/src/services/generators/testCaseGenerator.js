@@ -1,24 +1,24 @@
 import { GoogleGenAI } from '@google/genai';
-import { AiProcessingError } from '../../errors/index.js';
-import { logger } from '../../utils/logger.js';
-import { config } from '../../config/index.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export class TestCaseGenerator {
-  constructor(jsonExtractor, processManager, aiInteractionManager) {
+  constructor(getDatabase, jsonExtractor, processManager, aiInteractionManager) {
+    this.getDatabase = getDatabase;
     this.jsonExtractor = jsonExtractor;
     this.processManager = processManager;
     this.aiInteractionManager = aiInteractionManager;
-    this.maxFieldLength = config.get('processing.maxFieldLength');
-    this.maxRetries = config.get('ai.maxRetries');
+    this.maxFieldLength = 128;
+    this.maxRetries = 3;
 
-    logger.processing('Initializing Google AI client');
+    console.log('🔑 Initializing Google AI...');
 
-    if (!config.get('ai.geminiApiKey')) {
+    if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
     this.ai = new GoogleGenAI({
-      apiKey: config.get('ai.geminiApiKey')
+      apiKey: process.env.GEMINI_API_KEY,
     });
   }
 
@@ -28,43 +28,43 @@ export class TestCaseGenerator {
 
     while (retryCount <= this.maxRetries) {
       try {
-        logger.processing(`Generating test cases (attempt ${retryCount + 1}/${this.maxRetries + 1})`, {
-          processId,
-          retryCount
-        });
+        console.log(
+          `🤖 Generating test cases (attempt ${retryCount + 1}/${
+            this.maxRetries + 1
+          })...`
+        );
 
         if (retryCount > 0) {
           await this.processManager.updateProcessRetryCount(processId, retryCount);
+          console.log(
+            `🔄 Retry attempt ${retryCount} for processId: ${processId}`
+          );
         }
 
         const optimizedBody = this.optimizeBodyForPrompt(curlData.body);
+
         const prompt = this.buildPrompt(curlData, optimizedBody, retryCount);
 
-        logger.processing('Calling Gemini API', { 
-          promptLength: prompt.length,
-          processId 
-        });
+        console.log('🤖 Calling Gemini API...');
+        console.log('📏 Prompt length:', prompt.length);
 
         const response = await this.ai.models.generateContent({
-          model: config.get('ai.model'),
+          model: 'gemini-2.5-flash',
           contents: prompt,
           generationConfig: {
-            temperature: retryCount > 0 ? 0.1 + retryCount * 0.1 : config.get('ai.temperature'),
-            maxOutputTokens: config.get('ai.maxOutputTokens')
-          }
+            temperature: retryCount > 0 ? 0.1 + retryCount * 0.1 : 0.3,
+            maxOutputTokens: 8192,
+          },
         });
 
         const responseText = response.text;
-        logger.debug('AI response received', { 
-          responseLength: responseText.length,
-          processId 
-        });
+        console.log('📝 AI response length:', responseText.length);
 
         await this.aiInteractionManager.saveAiInteraction(
           processId,
           prompt,
           responseText,
-          config.get('ai.model'),
+          'gemini-2.5-flash',
           retryCount,
           retryCount > 0
         );
@@ -75,47 +75,49 @@ export class TestCaseGenerator {
         try {
           testCases = JSON.parse(jsonString);
         } catch (parseError) {
-          logger.error(`JSON parse failed (attempt ${retryCount + 1})`, { 
-            processId,
-            error: parseError.message 
-          });
+          console.error(
+            `❌ JSON parse failed (attempt ${retryCount + 1}):`,
+            parseError.message
+          );
           lastError = parseError;
           retryCount++;
 
           if (retryCount <= this.maxRetries) {
-            logger.processing(`Retrying... (${retryCount}/${this.maxRetries})`, { processId });
+            console.log(`🔄 Retrying... (${retryCount}/${this.maxRetries})`);
             continue;
           } else {
-            throw new AiProcessingError(
+            console.error('❌ Max retries reached, throwing error');
+            throw new Error(
               `Failed to parse AI response after ${this.maxRetries} retries: ${parseError.message}`
             );
           }
         }
 
         if (!Array.isArray(testCases)) {
-          logger.debug('Response is not an array, wrapping', { processId });
+          console.log('❌ Response is not an array, wrapping...');
           testCases = [testCases];
         }
 
         if (testCases.length === 0) {
-          const arrayError = new AiProcessingError('AI generated no test cases');
+          const arrayError = new Error('AI generated no test cases');
           lastError = arrayError;
           retryCount++;
 
           if (retryCount <= this.maxRetries) {
-            logger.processing(`No test cases generated, retrying... (${retryCount}/${this.maxRetries})`, { 
-              processId 
-            });
+            console.log(
+              `🔄 No test cases generated, retrying... (${retryCount}/${this.maxRetries})`
+            );
             continue;
           } else {
             throw arrayError;
           }
         }
 
-        logger.success(`Successfully parsed ${testCases.length} test cases on attempt ${retryCount + 1}`, {
-          processId,
-          testCaseCount: testCases.length
-        });
+        console.log(
+          `✅ Successfully parsed ${testCases.length} test cases on attempt ${
+            retryCount + 1
+          }`
+        );
 
         testCases.forEach((testCase, index) => {
           testCase.url = curlData.url;
@@ -123,13 +125,16 @@ export class TestCaseGenerator {
 
           if (testCase.body && typeof testCase.body === 'object') {
             for (const [key, value] of Object.entries(testCase.body)) {
-              if (typeof value === 'string' && value.length > this.maxFieldLength) {
+              if (
+                typeof value === 'string' &&
+                value.length > this.maxFieldLength
+              ) {
                 testCase.body[key] = this.limitFieldLength(value);
               }
             }
           }
 
-          logger.debug(`Test case ${index + 1}: ${testCase.testCaseName}`, { processId });
+          console.log(`📋 Test case ${index + 1}: ${testCase.testCaseName}`);
         });
 
         if (retryCount > 0) {
@@ -138,25 +143,24 @@ export class TestCaseGenerator {
 
         return testCases;
       } catch (error) {
-        logger.error(`Error on attempt ${retryCount + 1}`, { 
-          processId,
-          error: error.message 
-        });
+        console.error(`❌ Error on attempt ${retryCount + 1}:`, error.message);
         lastError = error;
         retryCount++;
 
         if (retryCount <= this.maxRetries) {
-          logger.processing(`Retrying due to error... (${retryCount}/${this.maxRetries})`, { 
-            processId 
-          });
+          console.log(
+            `🔄 Retrying due to error... (${retryCount}/${this.maxRetries})`
+          );
           continue;
         }
       }
     }
 
     await this.processManager.updateProcessRetryCount(processId, this.maxRetries);
-    throw new AiProcessingError(
-      `Test case generation failed after ${this.maxRetries} retries. Last error: ${lastError?.message || 'Unknown error'}`
+    throw new Error(
+      `Test case generation failed after ${
+        this.maxRetries
+      } retries. Last error: ${lastError?.message || 'Unknown error'}`
     );
   }
 
@@ -188,7 +192,9 @@ API Endpoint Analysis:
 - URL: ${curlData.url}
 - Method: ${curlData.method}
 - Headers: ${JSON.stringify(curlData.headers, null, 2)}
-- Request Body: ${optimizedBody ? JSON.stringify(optimizedBody, null, 2) : 'None'}
+- Request Body: ${
+      optimizedBody ? JSON.stringify(optimizedBody, null, 2) : 'None'
+    }
 
 Please create a comprehensive set of test cases that cover:
 - Happy path scenarios (2-3 different valid data sets)
@@ -204,7 +210,9 @@ CRITICAL REQUIREMENTS:
 - Your response must be ONLY a valid JSON array, no additional text
 - Do NOT use any JavaScript functions like .repeat(), .join(), etc.
 - Use actual literal string values for all test data
-- For long string tests, write out actual long strings (max ${this.maxFieldLength} chars per field)
+- For long string tests, write out actual long strings (max ${
+      this.maxFieldLength
+    } chars per field)
 - For boundary testing, use realistic field lengths
 - Ensure all JSON values are properly quoted and escaped
 
@@ -229,9 +237,12 @@ Return format:
 ]`;
 
     if (retryCount > 0) {
-      return basePrompt + `
+      return (
+        basePrompt +
+        `
 
-IMPORTANT: This is retry attempt ${retryCount}. Please ensure your response is STRICTLY valid JSON format only. Do not include any explanatory text, comments, or markdown formatting. Start immediately with [ and end with ].`;
+IMPORTANT: This is retry attempt ${retryCount}. Please ensure your response is STRICTLY valid JSON format only. Do not include any explanatory text, comments, or markdown formatting. Start immediately with [ and end with ].`
+      );
     }
 
     return basePrompt;

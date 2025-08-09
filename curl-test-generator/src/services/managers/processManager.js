@@ -1,15 +1,16 @@
-import { v4 as uuidv4 } from 'uuid';
+import { ProcessRepository } from '../../repositories/processRepository.js';
+import { TestCaseRepository } from '../../repositories/testCaseRepository.js';
+import { logger } from '../../utils/logger.js';
+import { NotFoundError, DatabaseError } from '../../errors/index.js';
 
 export class ProcessManager {
-  constructor(getDatabase) {
-    this.getDatabase = getDatabase;
+  constructor() {
+    this.processRepo = new ProcessRepository();
+    this.testCaseRepo = new TestCaseRepository();
   }
 
   async initializeProcess(curlText, processId, curlData) {
     try {
-      const db = this.getDatabase();
-      const processCollection = db.collection('curl_processes');
-
       const processDoc = {
         processId,
         originalCurl: curlData,
@@ -19,124 +20,78 @@ export class ProcessManager {
         completedTestCases: 0,
         retryCount: 0,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       };
 
-      await processCollection.insertOne(processDoc);
-      console.log('✅ Process initialized in database');
+      await this.processRepo.insertOne(processDoc);
+      logger.success('Process initialized in database', { processId });
 
       return {
         processId,
         status: 'initialized',
-        message:
-          'Process started, test cases are being generated in background',
+        message: 'Process started, test cases are being generated in background'
       };
     } catch (error) {
-      console.error('❌ Error initializing process:', error);
-      throw new Error(`Failed to initialize process: ${error.message}`);
+      logger.error('Failed to initialize process', { processId, error: error.message });
+      throw new DatabaseError(`Failed to initialize process: ${error.message}`);
     }
   }
 
   async updateProcessStatus(processId, status, errorMessage = null) {
     try {
-      const db = this.getDatabase();
-      const collection = db.collection('curl_processes');
-
-      const updateData = {
-        status,
-        updatedAt: new Date(),
-      };
-
-      if (errorMessage) {
-        updateData.error = errorMessage;
-      }
-
-      await collection.updateOne({ processId }, { $set: updateData });
+      await this.processRepo.updateStatus(processId, status, errorMessage);
+      logger.debug('Process status updated', { processId, status });
     } catch (error) {
-      console.error('❌ Error updating process status:', error);
+      logger.error('Failed to update process status', { processId, error: error.message });
     }
   }
 
   async updateProcessRetryCount(processId, retryCount) {
     try {
-      const db = this.getDatabase();
-      const collection = db.collection('curl_processes');
-
-      await collection.updateOne(
-        { processId },
-        {
-          $set: {
-            retryCount,
-            updatedAt: new Date(),
-          },
-        }
-      );
+      await this.processRepo.updateRetryCount(processId, retryCount);
+      logger.debug('Process retry count updated', { processId, retryCount });
     } catch (error) {
-      console.error('❌ Error updating retry count:', error);
+      logger.error('Failed to update retry count', { processId, error: error.message });
     }
   }
 
   async updateProcessTestCaseCount(processId, totalTestCases) {
     try {
-      const db = this.getDatabase();
-      const collection = db.collection('curl_processes');
-
-      await collection.updateOne(
-        { processId },
-        {
-          $set: {
-            totalTestCases,
-            updatedAt: new Date(),
-          },
-        }
-      );
+      await this.processRepo.updateTestCaseCount(processId, totalTestCases);
+      logger.debug('Process test case count updated', { processId, totalTestCases });
     } catch (error) {
-      console.error('❌ Error updating test case count:', error);
+      logger.error('Failed to update test case count', { processId, error: error.message });
     }
   }
 
   async updateCompletedTestCases(processId, completedTestCases) {
     try {
-      const db = this.getDatabase();
-      const collection = db.collection('curl_processes');
-
-      await collection.updateOne(
-        { processId },
-        {
-          $set: {
-            completedTestCases,
-            updatedAt: new Date(),
-          },
-        }
-      );
+      await this.processRepo.updateCompletedTestCases(processId, completedTestCases);
+      logger.debug('Completed test cases updated', { processId, completedTestCases });
     } catch (error) {
-      console.error('❌ Error updating completed test cases:', error);
+      logger.error('Failed to update completed test cases', { processId, error: error.message });
     }
   }
 
   async getProcessWithTestCases(processId) {
     try {
-      const db = this.getDatabase();
-      const processCollection = db.collection('curl_processes');
-      const testCaseCollection = db.collection('test_cases');
-
-      const process = await processCollection.findOne({ processId });
+      const process = await this.processRepo.findByProcessId(processId);
       if (!process) {
-        return null;
+        throw new NotFoundError('Process not found');
       }
 
-      const testCases = await testCaseCollection
-        .find({ processId })
-        .sort({ order: 1 })
-        .toArray();
+      const testCases = await this.testCaseRepo.findByProcessId(processId);
 
       return {
         ...process,
-        testCases: testCases,
+        testCases
       };
     } catch (error) {
-      console.error('❌ Error getting process with test cases:', error);
-      throw new Error(`Failed to get process: ${error.message}`);
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      logger.error('Failed to get process with test cases', { processId, error: error.message });
+      throw new DatabaseError(`Failed to get process: ${error.message}`);
     }
   }
 }

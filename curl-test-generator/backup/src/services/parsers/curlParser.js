@@ -1,16 +1,13 @@
 import * as curlconverter from 'curlconverter';
-import { CurlParsingError } from '../../errors/index.js';
-import { logger } from '../../utils/logger.js';
-import { config } from '../../config/index.js';
 
 export class CurlParser {
   constructor() {
-    this.maxFieldLength = config.get('processing.maxFieldLength');
+    this.maxFieldLength = 128;
   }
 
   async parseCurl(curlText) {
     try {
-      logger.processing('Parsing curl command');
+      console.log('🔄 Parsing curl command...');
 
       const jsonString = curlconverter.toJsonString(curlText);
       const parsed = JSON.parse(jsonString);
@@ -19,23 +16,16 @@ export class CurlParser {
         parsed.raw_url = parsed.raw_url.replace(/^['"]|['"]$/g, '');
       }
 
-      const result = {
+      return {
         url: parsed.raw_url || parsed.url,
         method: parsed.method || 'GET',
         headers: parsed.headers || {},
         body: parsed.data || parsed.json || null,
-        cookies: parsed.cookies || {}
+        cookies: parsed.cookies || {},
       };
-
-      logger.success('Curl command parsed successfully', { 
-        url: result.url, 
-        method: result.method 
-      });
-
-      return result;
     } catch (error) {
-      logger.error('Failed to parse curl command', { error: error.message });
-      throw new CurlParsingError(`Failed to parse curl command: ${error.message}`);
+      console.error('❌ Error parsing curl:', error);
+      throw new Error(`Failed to parse curl command: ${error.message}`);
     }
   }
 

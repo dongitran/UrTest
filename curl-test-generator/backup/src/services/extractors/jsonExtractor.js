@@ -1,11 +1,12 @@
-import { AiProcessingError } from '../../errors/index.js';
-import { logger } from '../../utils/logger.js';
-
 export class JsonExtractor {
+  constructor() {
+    this.maxFieldLength = 128;
+  }
+
   extractJsonFromAiResponse(responseText) {
-    logger.processing('Extracting JSON from AI response', { 
-      responseLength: responseText.length 
-    });
+    console.log('🔍 Extracting JSON from AI response...');
+    console.log('📝 Raw AI response length:', responseText.length);
+    console.log('📝 First 200 chars:', responseText.substring(0, 200));
 
     let cleaned = responseText
       .replace(/```json\s*/g, '')
@@ -15,34 +16,37 @@ export class JsonExtractor {
     const firstBracket = cleaned.indexOf('[');
     const lastBracket = cleaned.lastIndexOf(']');
 
-    if (firstBracket === -1 || lastBracket === -1 || lastBracket <= firstBracket) {
-      throw new AiProcessingError('No valid JSON array found in AI response');
+    if (
+      firstBracket === -1 ||
+      lastBracket === -1 ||
+      lastBracket <= firstBracket
+    ) {
+      throw new Error('No valid JSON array found in AI response');
     }
 
     cleaned = cleaned.substring(firstBracket, lastBracket + 1);
-    cleaned = this.cleanJsonString(cleaned);
 
-    try {
-      JSON.parse(cleaned);
-      logger.success('JSON extracted successfully', { jsonLength: cleaned.length });
-      return cleaned;
-    } catch (e) {
-      logger.warn('Simple extraction failed, trying complex parsing');
-      return this.complexJsonExtraction(responseText);
-    }
-  }
-
-  cleanJsonString(jsonString) {
-    return jsonString
+    cleaned = cleaned
       .replace(/,\s*]/g, ']')
       .replace(/,\s*}/g, '}')
       .replace(/\n/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+
+    console.log('✅ Extracted JSON length:', cleaned.length);
+    console.log('📝 Extracted JSON preview:', cleaned.substring(0, 300));
+
+    try {
+      JSON.parse(cleaned);
+      return cleaned;
+    } catch (e) {
+      console.log('❌ Simple extraction failed, trying complex parsing...');
+      return this.complexJsonExtraction(responseText);
+    }
   }
 
   complexJsonExtraction(responseText) {
-    logger.processing('Using complex JSON extraction');
+    console.log('🔧 Using complex JSON extraction...');
 
     responseText = responseText
       .replace(/```json\s*/g, '')
@@ -51,7 +55,7 @@ export class JsonExtractor {
 
     const firstBracket = responseText.indexOf('[');
     if (firstBracket === -1) {
-      throw new AiProcessingError('No JSON array found in AI response');
+      throw new Error('No JSON array found in AI response');
     }
 
     let depth = 0;
@@ -91,36 +95,43 @@ export class JsonExtractor {
     }
 
     if (depth !== 0) {
-      logger.warn('Unmatched brackets, trying simple extraction');
+      console.log('⚠️ Unmatched brackets, trying simple extraction...');
       const lastBracket = responseText.lastIndexOf(']');
       if (lastBracket > firstBracket) {
         extracted = responseText.substring(firstBracket, lastBracket + 1);
       }
     }
 
-    const cleaned = this.cleanJsonString(extracted);
+    let cleaned = extracted
+      .replace(/,\s*]/g, ']')
+      .replace(/,\s*}/g, '}')
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     try {
       JSON.parse(cleaned);
       return cleaned;
     } catch (e) {
-      logger.warn('Complex extraction failed, trying individual parsing');
+      console.log(
+        '❌ Complex extraction also failed, trying individual parsing...'
+      );
       return this.parseIndividualTestCases(responseText);
     }
   }
 
   parseIndividualTestCases(responseText) {
-    logger.processing('Parsing individual test cases');
+    console.log('🔄 Parsing individual test cases...');
 
     const testCases = [];
     const testCasePattern = /"testCaseName"\s*:\s*"[^"]*"/g;
     const matches = responseText.match(testCasePattern);
 
     if (!matches || matches.length === 0) {
-      throw new AiProcessingError('No test cases found in AI response');
+      throw new Error('No test cases found in AI response');
     }
 
-    logger.debug(`Found ${matches.length} potential test cases`);
+    console.log(`🔍 Found ${matches.length} potential test cases`);
 
     const testCasePositions = [];
     let searchPos = 0;
@@ -139,27 +150,34 @@ export class JsonExtractor {
 
     for (let i = 0; i < testCasePositions.length; i++) {
       const startPos = testCasePositions[i];
-      const endPos = i < testCasePositions.length - 1 
-        ? testCasePositions[i + 1] 
-        : responseText.length;
+      const endPos =
+        i < testCasePositions.length - 1
+          ? testCasePositions[i + 1]
+          : responseText.length;
 
-      const objectStr = this.extractSingleObject(responseText, startPos, endPos);
+      const objectStr = this.extractSingleObject(
+        responseText,
+        startPos,
+        endPos
+      );
 
       if (objectStr) {
         try {
           const testCase = JSON.parse(objectStr);
           if (testCase.testCaseName && testCase.url && testCase.method) {
             testCases.push(testCase);
-            logger.debug(`Extracted test case: ${testCase.testCaseName}`);
+            console.log(`✅ Extracted test case: ${testCase.testCaseName}`);
           }
         } catch (objError) {
-          logger.warn(`Failed to parse test case ${i + 1}`, { error: objError.message });
+          console.log(
+            `⚠️ Failed to parse test case ${i + 1}: ${objError.message}`
+          );
         }
       }
     }
 
     if (testCases.length === 0) {
-      throw new AiProcessingError('Failed to parse any test cases from AI response');
+      throw new Error('Failed to parse any test cases from AI response');
     }
 
     return JSON.stringify(testCases);
@@ -204,8 +222,15 @@ export class JsonExtractor {
 
     if (objectDepth === 0) {
       let objectStr = text.substring(startPos, objectEnd);
-      objectStr = this.cleanJsonString(objectStr)
-        .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
+
+      objectStr = objectStr
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']')
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
+        .trim();
+
       return objectStr;
     }
 

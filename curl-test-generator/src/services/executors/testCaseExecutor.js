@@ -1,24 +1,31 @@
 import axios from 'axios';
+import { TestExecutionError } from '../../errors/index.js';
+import { logger } from '../../utils/logger.js';
+import { config } from '../../config/index.js';
 
 export class TestCaseExecutor {
+  constructor() {
+    this.timeout = config.get('processing.requestTimeout');
+  }
+
   async executeTestCase(testCase) {
     try {
-      console.log('🧪 Executing test case:', testCase.testCaseName);
+      logger.processing(`Executing test case: ${testCase.testCaseName}`);
 
-      const config = {
+      const axiosConfig = {
         method: testCase.method.toLowerCase(),
         url: testCase.url,
         headers: testCase.headers,
-        timeout: 15000,
-        validateStatus: () => true,
+        timeout: this.timeout,
+        validateStatus: () => true
       };
 
-      if (testCase.body && ['post', 'put', 'patch'].includes(config.method)) {
-        config.data = testCase.body;
+      if (testCase.body && ['post', 'put', 'patch'].includes(axiosConfig.method)) {
+        axiosConfig.data = testCase.body;
       }
 
       const startTime = Date.now();
-      const response = await axios(config);
+      const response = await axios(axiosConfig);
       const endTime = Date.now();
 
       const result = {
@@ -27,16 +34,21 @@ export class TestCaseExecutor {
         headers: response.headers,
         data: response.data,
         responseTime: endTime - startTime,
-        success: response.status >= 200 && response.status < 400,
+        success: response.status >= 200 && response.status < 400
       };
 
-      console.log(
-        `✅ Test executed: ${testCase.testCaseName} - Status: ${result.statusCode} - Time: ${result.responseTime}ms`
-      );
+      logger.success(`Test executed: ${testCase.testCaseName}`, {
+        statusCode: result.statusCode,
+        responseTime: result.responseTime
+      });
 
       return result;
     } catch (error) {
-      console.error('❌ Error executing test case:', error.message);
+      logger.error('Test case execution failed', { 
+        testCase: testCase.testCaseName,
+        error: error.message 
+      });
+
       return {
         statusCode: null,
         statusText: 'ERROR',
@@ -44,7 +56,7 @@ export class TestCaseExecutor {
         data: null,
         responseTime: null,
         success: false,
-        error: error.message,
+        error: error.message
       };
     }
   }
