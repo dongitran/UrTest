@@ -1,0 +1,31 @@
+{
+  "name": "curl-test-generator",
+  "version": "1.0.0",
+  "description": "API to generate test cases from curl commands using Google AI",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/*.js"
+  },
+  "keywords": ["curl", "test", "api", "mongodb", "google-ai"],
+  "author": "dongtran",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "1.13.0",
+    "curlconverter": "4.12.0",
+    "express": "^4.19.2",
+    "mongodb": "^6.5.0",
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "helmet": "8.1.0",
+    "morgan": "^1.10.0",
+    "dotenv": "17.2.1",
+    "joi": "18.0.0",
+    "uuid": "11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
