@@ -28,6 +28,29 @@ export class CurlService {
     return this.db;
   }
 
+  async saveAiInteraction(processId, prompt, response, model = 'gemini-2.5-flash') {
+    try {
+      const db = this.getDatabase();
+      const aiCollection = db.collection('ai_interactions');
+
+      const interactionDoc = {
+        interactionId: uuidv4(),
+        processId,
+        prompt,
+        response,
+        model,
+        createdAt: new Date(),
+        promptLength: prompt.length,
+        responseLength: response.length
+      };
+
+      await aiCollection.insertOne(interactionDoc);
+      console.log('✅ AI interaction saved to database');
+    } catch (error) {
+      console.error('❌ Error saving AI interaction:', error);
+    }
+  }
+
   async parseCurl(curlText) {
     try {
       console.log('🔄 Parsing curl command...');
@@ -307,7 +330,7 @@ export class CurlService {
     return null;
   }
 
-  async generateMultipleTestCases(curlData) {
+  async generateMultipleTestCases(curlData, processId) {
     try {
       console.log('🤖 Generating comprehensive test cases using AI...');
 
@@ -377,6 +400,8 @@ Return format:
 
       const responseText = response.text;
       console.log('📝 AI response length:', responseText.length);
+
+      await this.saveAiInteraction(processId, prompt, responseText);
 
       const jsonString = this.extractJsonFromAiResponse(responseText);
 
@@ -522,7 +547,7 @@ Return format:
 
         let testCases;
         try {
-          testCases = await this.generateMultipleTestCases(curlData);
+          testCases = await this.generateMultipleTestCases(curlData, processId);
         } catch (testGenError) {
           console.error(
             '❌ Test case generation failed:',
@@ -668,6 +693,23 @@ Return format:
     } catch (error) {
       console.error('❌ Error getting process with test cases:', error);
       throw new Error(`Failed to get process: ${error.message}`);
+    }
+  }
+
+  async getAiInteractions(processId) {
+    try {
+      const db = this.getDatabase();
+      const aiCollection = db.collection('ai_interactions');
+
+      const interactions = await aiCollection
+        .find({ processId })
+        .sort({ createdAt: 1 })
+        .toArray();
+
+      return interactions;
+    } catch (error) {
+      console.error('❌ Error getting AI interactions:', error);
+      throw new Error(`Failed to get AI interactions: ${error.message}`);
     }
   }
 }
