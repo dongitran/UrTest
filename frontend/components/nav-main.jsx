@@ -69,43 +69,6 @@ const MySidebarMenuItem = ({ item = {} }) => {
           )}
           <span>{item.name}</span>
         </SidebarMenuButton>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuAction
-              showOnHover
-              className="rounded-sm data-[state=open]:bg-accent"
-            >
-              <MoreHorizontalIcon />
-              <span className="sr-only">More</span>
-            </SidebarMenuAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-24 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align={isMobile ? "end" : "start"}
-          >
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenWorkspaceModal("edit");
-              }}
-            >
-              <Pen className="mr-2 h-4 w-4" />
-              <span>Edit</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenWorkspaceModal("delete");
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Delete</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </SidebarMenuItem>
     </Fragment>
   );

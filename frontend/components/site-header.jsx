@@ -84,6 +84,8 @@ export function SiteHeader() {
     }
     if (pathname.startsWith("/automation-test"))
       return { title: "Automation Test" };
+    if (pathname.startsWith("/api-test-generator"))
+      return { title: "API Test Generator" };
     if (pathname.startsWith("/manual-test")) return { title: "Manual Test" };
     if (pathname.startsWith("/test-execution"))
       return { title: "Test Execution" };

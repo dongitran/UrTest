@@ -51,6 +51,13 @@ export function AppSidebar({ ...props }) {
     },
     {
       id: "4",
+      name: "API Test Generator",
+      description: "Generate API test scenarios automatically",
+      icon: ClipboardListIcon,
+      url: "/api-test-generator",
+    },
+    {
+      id: "5",
       name: "Reports",
       description: "View test reports and metrics",
       icon: BarChart3Icon,
