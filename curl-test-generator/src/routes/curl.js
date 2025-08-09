@@ -6,5 +6,6 @@ const curlController = new CurlController();
 
 router.post('/parse-and-test', curlController.parseAndTest.bind(curlController));
 router.get('/process/:processId', curlController.getProcess.bind(curlController));
+router.get('/ai-interactions/:processId', curlController.getAiInteractions.bind(curlController));
 
 export default router;

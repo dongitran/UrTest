@@ -1,4 +1,4 @@
-import { CurlService } from '../services/curlService.js';
+import { CurlService } from '../services/core/curlService.js';
 import { validateCurlRequest } from '../utils/validation.js';
 
 export class CurlController {
